@@ -1,9 +1,50 @@
-### Exploring UMCA stem infection through time
+--------
+# Exploring UMCA stem infection through time #
+# Superspreaders chapter of dissertation      
+--------
 
-setwd("~/Dropbox/DISSERTATION/superspreaders/analysis")
+######Set working directory, read in all stem data, examine data structure ####
+      #This is only the biologically related field data
+setwd("~/GitHub/superspreaders/analysis")
+stems <- read.csv("data/all_stems.csv")
+head(stems)
+str(stems)
 
+
+
+#### Need to do some data cleaning and prep ####
+
+######Create date variable as posix and integer/factor year variable ####
+library(lubridate)
+stems$Date <- as.character(stems$Date)
+class(stems$Date)
+stems$year <- gsub("/", "-",stems$Date)
+stems$date <- stems$year
+stems$year <- year(stems$date)
+
+######Load plyr, dplyr, tidyr packages ####
+library(plyr)
+library(dplyr)
+library(tidyr)
+
+######Rename columns using `rename` funcion from `plyr` ####
+stems <- rename(stems, c("PlotID" = "plot", "Date" = "old_date"))
+stems <- rename(stems, c("ClusterID" = "cluster", "TagNumber" = "tag", 
+                          "SpeciesID" = "species", "StemStatus" = "status",
+                          "AliveClass" = "alive_class", 
+                          "DeadClass" = "dead_class", "SympLeafCount" = "slc", 
+                          "CankerPresent" = "canker", "DBH" = "dbh",
+                          "LideFoliarSymp" = "lide_lf_symp", 
+                          "SOD_Dead" = "sod_dead", "Location" = "location"))
+str(stems)
+write.csv(stems,"data/stems.csv")
+stems <- read.csv("data/stems.csv")
+
+
+
+####### Older code that can and will likely be abandoned ######
 library(foreign)
-plot_dat1<-read.dbf("data/UMCA_slc_dbh_04-12.dbf")
+plot_dat1<-read.dbf("analysis/data/UMCA_slc_dbh_04-12.dbf")
 str(plot_dat1)
 summary(plot_dat1)
 head(plot_dat1)
@@ -13,7 +54,6 @@ plot_dat1$avg_slc_04_12<-with(plot_dat1, rowMeans(cbind(avgslc04,avgslc05,avgslc
 years<-c("2004","2005","2006","2007","2008","2009","2010","2011","2012")
 with(plot_dat1, boxplot(avgslc04,avgslc05,avgslc06,avgslc07,avgslc08,
         avgslc09,avgslc10,avgslc11,avgslc12,names=years,xlab="Year",ylab="Mean SLC"))
-
 
 
 library(reshape)
@@ -34,6 +74,7 @@ rainy_days<-with(plot_202_rain, colMeans(cbind(freq2004,freq2005,freq2006,freq20
 
 df_rain_slc<-as.data.frame(rbind(avg_rain_year,avg_slc_year))
 
+######These may be useful functions for reference #### 
 matplot(cbind(avg_rain_year,avg_slc_year),type="b")
 matplot(cbind(rainy_days,avg_slc_year),type="b")
 
