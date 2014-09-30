@@ -6,7 +6,7 @@
 ######Set working directory, read in all stem data, examine data structure ####
       #This is only the biologically related field data
 setwd("~/GitHub/superspreaders/analysis")
-stems <- read.csv("data/all_stems.csv")
+stems <- read.csv("data/Stem_Summary_Query.txt")
 head(stems)
 str(stems)
 
@@ -18,8 +18,8 @@ str(stems)
 library(lubridate)
 stems$Date <- as.character(stems$Date)
 class(stems$Date)
-stems$year <- gsub("/", "-",stems$Date)
-stems$date <- stems$year
+stems$date <- gsub("/", "-",stems$Date)
+stems$date <- dmy_hms(stems$date)
 stems$year <- year(stems$date)
 
 ######Load plyr, dplyr, tidyr packages ####
@@ -37,8 +37,8 @@ stems <- rename(stems, c("ClusterID" = "cluster", "TagNumber" = "tag",
                           "LideFoliarSymp" = "lide_lf_symp", 
                           "SOD_Dead" = "sod_dead", "Location" = "location"))
 str(stems)
-write.csv(stems,"data/stems.csv")
-stems <- read.csv("data/stems.csv")
+write.csv(stems,"data/all_stems.csv")
+stems <- read.csv("data/all_stems.csv")
 
 
 
