@@ -1,0 +1,65 @@
+---
+title: "Intro to `lavaan` pacakage for SEM - Tutorial"
+output: html_document
+---
+
+Load `lavaan` package and create an SEM using appropriate syntax
+```{r load lavaan, echo=TRUE}
+library(lavaan)
+myModel <- ' # regressions
+             y1 + y2 ~ f1 + f2 + x1 + x2
+                  f1 ~ f2 + f3
+                  f2 ~ f3 + x1 + x2
+
+             # latent variable definitions 
+               f1 =~ y1 + y2 + y3 
+               f2 =~ y4 + y5 + y6 
+               f3 =~ y7 + y8 + y9 + y10
+
+             # variances and covariances 
+               y1 ~~ y1 
+               y1 ~~ y2 
+               f1 ~~ f2
+
+             # intercepts 
+               y1 ~ 1 
+               f1 ~ 1
+           '
+```
+
+
+
+Example 1: Fitting a confirmatory factor analysis (CFA) model
+
+```{r CFA Model, echo=TRUE}
+HS.model <- ' visual  =~ x1 + x2 + x3 
+              textual =~ x4 + x5 + x6
+              speed   =~ x7 + x8 + x9 '
+fit <- cfa(HS.model, data = HolzingerSwineford1939)
+summary(fit, fit.measures = TRUE) # Get summary of fitted model
+```
+
+
+Example 2: Fitting a structural equation model (SEM)
+
+```{r SEM Model, echo=TRUE}
+model <- '
+  # measurement model (latent variable definitions, CFA)
+    ind60 =~ x1 + x2 + x3
+    dem60 =~ y1 + y2 + y3 + y4
+    dem65 =~ y5 + y6 + y7 + y8
+
+  # regressions
+    dem60 ~ ind60
+    dem65 ~ ind60 + dem60
+
+  # residual correlations (covariances)
+    y1 ~~ y5
+    y2 ~~ y4 + y6
+    y3 ~~ y7
+    y4 ~~ y8
+    y6 ~~ y8
+'
+fit <- sem(model, data = PoliticalDemocracy)
+summary(fit, standardized = TRUE)
+```

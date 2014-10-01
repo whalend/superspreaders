@@ -1,0 +1,16 @@
+---
+title: "Intro to the `ggm` R package for graphical Markov models"
+output: html_document
+---
+
+From the package description:
+>This package provides functions for defining, manipulating and fitting graphical Markov models.
+
+For application in structural equation modeling and path analysis I am initially interested in the functionality for defining graphs. Particularly, I have a complex time-series path analysis diagramming a 1-year lag-effect. 
+![My almost graph]("CH2_DAG.svg")
+I want to define the graph and independence claims it outlines.
+```{r}
+library(ggm) #Load library
+
+
+```
