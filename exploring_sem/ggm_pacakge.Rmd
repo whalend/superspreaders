@@ -7,10 +7,27 @@ From the package description:
 >This package provides functions for defining, manipulating and fitting graphical Markov models.
 
 For application in structural equation modeling and path analysis I am initially interested in the functionality for defining graphs. Particularly, I have a complex time-series path analysis diagramming a 1-year lag-effect. 
-![My almost graph]("CH2_DAG.svg")
+![My not quite complete graph]("CH2_DAG.svg")
 I want to define the graph and independence claims it outlines.
-```{r}
+```{r create DAG matrix}
 library(ggm) #Load library
-
-
+# From the function description (some slight paraphrasing and defining): "The `DAG` function defines the adjacency matrix of a directed acyclic graph. An adjacency matrix is a square Boolean [e.g. 0/1] matrix that is equal to the number of nodes of the graph, and with a one in a given position (i,j) if there is an arrow from i to j and zero otherwise. The row names of the adjacency matrix are the nodes of the DAG."
+# This means writing composing each the regressions between variables directly connected by arrows in the graph
+my_graph <- DAG(habitat ~ topo, # Static variables
+                temp04 ~ topo + habitat, temp05 ~ topo + habitat, temp06 ~ topo + habitat, temp07 ~ topo + habitat, temp08 ~ topo + habitat, temp09 ~ topo + habitat, temp10 ~ topo + habitat, temp11 ~ topo + habitat, temp12 ~ topo + habitat, temp14 ~ topo + habitat, # Regressions of temperature
+                ppt04 ~ topo, ppt05 ~ topo, ppt06 ~ topo, ppt07 ~ topo, ppt08 ~ topo, ppt09 ~ topo, ppt10 ~ topo, ppt11 ~ topo, ppt12 ~ topo, ppt14 ~ topo, # Regressions of precipitation
+                slc04 ~ temp04 + ppt04 + habitat, slc05 ~ slc04 + temp05 + ppt05 + habitat, slc06 ~ slc05 + temp06 + ppt06 + habitat, slc07 ~ slc06 + temp07 + ppt07 + habitat, slc07 ~ slc06 + temp07 + ppt07 + habitat, slc08 ~ slc07 + temp08 + ppt08 + habitat, slc09 ~ slc08 + temp09 + ppt09 + habitat, slc10 ~ slc09 + temp10 + ppt10 + habitat, slc11 ~ slc10 + temp11 + ppt11 + habitat, slc12 ~ slc11 + temp12 + ppt12 + habitat, slc14 ~ slc12 + temp14 + ppt14 + habitat, # Regressions of **symptomatic leaf count** (slc)
+                prev04 ~ slc04 + temp04 + ppt04 + habitat, prev05 ~ temp05 + ppt05 + ppt04 + slc05 + slc04 + habitat, prev06 ~ temp06 + ppt06 + ppt05 + slc06 + slc05 + habitat, prev07 ~ temp07 + ppt07 + ppt06 + slc07 + slc06 + habitat, prev08 ~ temp08 + ppt08 + ppt07 + slc08 + slc07 + habitat, prev09 ~ temp09 + ppt09 + ppt09 + slc09 + slc09 + habitat, prev10 ~ temp10 + ppt10 + ppt09 + slc10 + slc09 + habitat, prev11 ~ temp11 + ppt11 + ppt10 + slc11 + slc11 + habitat, prev12 ~ temp12 + ppt12 + ppt11 + slc12 + slc11 + habitat, prev14 ~ temp14 + ppt14 + ppt12 + slc14 + slc12 + habitat, # Regressions of **prevalence** (prev)
+                order=TRUE)
 ```
+
+Now I need to find the basis set for the conditional independencies implied by the directed acyclic graph (Shipley 2000, 2009). This can be done using the `basiSet` function. The basis set is often (every time I have seen it) mathematically notated as *Bu*.
+```{r get basis set}
+basis_set <- basiSet(my_graph)
+```
+
+The output of `basiSet` is a list, for my convoluted and complex graph of relationships across time it is pretty large.
+```{r print basis set}
+basis_set
+```
+
