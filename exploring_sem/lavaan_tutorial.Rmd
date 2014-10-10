@@ -3,7 +3,7 @@ title: "Intro to `lavaan` pacakage for SEM - Tutorial"
 output: html_document
 ---
 
-Load `lavaan` package and create an SEM using appropriate syntax
+#### Load `lavaan` package and create an SEM using appropriate syntax
 ```{r load lavaan, echo=TRUE}
 library(lavaan)
 myModel <- ' # regressions
@@ -29,8 +29,7 @@ myModel <- ' # regressions
 
 
 
-Example 1: Fitting a confirmatory factor analysis (CFA) model
-
+#### Example 1: Fitting a confirmatory factor analysis (CFA) model
 ```{r CFA Model, echo=TRUE}
 HS.model <- ' visual  =~ x1 + x2 + x3 
               textual =~ x4 + x5 + x6
@@ -40,8 +39,7 @@ summary(fit, fit.measures = TRUE) # Get summary of fitted model
 ```
 
 
-Example 2: Fitting a structural equation model (SEM)
-
+#### Example 2: Fitting a structural equation model (SEM)
 ```{r SEM Model, echo=TRUE}
 model <- '
   # measurement model (latent variable definitions, CFA)

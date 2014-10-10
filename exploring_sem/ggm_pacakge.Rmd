@@ -11,7 +11,7 @@ For application in structural equation modeling and path analysis I am initially
 I want to define the graph and independence claims it outlines.
 ```{r create DAG matrix}
 library(ggm) #Load library
-# From the function description (some slight paraphrasing and defining): "The `DAG` function defines the adjacency matrix of a directed acyclic graph. An adjacency matrix is a square Boolean [e.g. 0/1] matrix that is equal to the number of nodes of the graph, and with a one in a given position (i,j) if there is an arrow from i to j and zero otherwise. The row names of the adjacency matrix are the nodes of the DAG."
+# From the function description (some slight paraphrasing and defining of terms): "The `DAG` function defines the adjacency matrix of a directed acyclic graph. An adjacency matrix is a square Boolean [e.g. 0/1] matrix that is equal to the number of nodes of the graph, and with a one in a given position (i,j) if there is an arrow from i to j and zero otherwise. The row names of the adjacency matrix are the nodes of the DAG."
 # This means writing composing each the regressions between variables directly connected by arrows in the graph
 my_graph <- DAG(habitat ~ topo, # Static variables
                 temp04 ~ topo + habitat, temp05 ~ topo + habitat, temp06 ~ topo + habitat, temp07 ~ topo + habitat, temp08 ~ topo + habitat, temp09 ~ topo + habitat, temp10 ~ topo + habitat, temp11 ~ topo + habitat, temp12 ~ topo + habitat, temp14 ~ topo + habitat, # Regressions of temperature
@@ -26,7 +26,7 @@ Now I need to find the basis set for the conditional independencies implied by t
 basis_set <- basiSet(my_graph)
 ```
 
-The output of `basiSet` is a list, for my convoluted and complex graph of relationships across time it is pretty large.
+The output of `basiSet` is a list, for my convoluted and complex graph of relationships across time; it is pretty large at 736 independence claims.
 ```{r print basis set}
 basis_set
 ```

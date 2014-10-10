@@ -12,9 +12,9 @@ str(stems)
 
 
 
-#### Need to do some data cleaning and prep ####
+### Need to do some data cleaning and prep ####
 
-######Create date variable as posix and integer/factor year variable ####
+#### Create date variable as posix and integer/factor year variable ####
 library(lubridate)
 stems$Date <- as.character(stems$Date)
 class(stems$Date)
@@ -22,12 +22,12 @@ stems$date <- gsub("/", "-",stems$Date)
 stems$date <- dmy_hms(stems$date)
 stems$year <- year(stems$date)
 
-######Load plyr, dplyr, tidyr packages ####
+#### Load plyr, dplyr, tidyr packages ####
 library(plyr)
 library(dplyr)
 library(tidyr)
 
-######Rename columns using `rename` funcion from `plyr` ####
+#### Rename columns using `rename` funcion from `plyr` ####
 stems <- rename(stems, c("PlotID" = "plot", "Date" = "old_date"))
 stems <- rename(stems, c("ClusterID" = "cluster", "TagNumber" = "tag", 
                           "SpeciesID" = "species", "StemStatus" = "status",
@@ -74,7 +74,7 @@ rainy_days<-with(plot_202_rain, colMeans(cbind(freq2004,freq2005,freq2006,freq20
 
 df_rain_slc<-as.data.frame(rbind(avg_rain_year,avg_slc_year))
 
-######These may be useful functions for reference #### 
+###### These may be useful functions for reference #### 
 matplot(cbind(avg_rain_year,avg_slc_year),type="b")
 matplot(cbind(rainy_days,avg_slc_year),type="b")
 
