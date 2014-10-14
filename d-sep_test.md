@@ -100,9 +100,18 @@
 
 3. For each of the *k* pairs of variables (*Xi,Xj*), list the set of other variables, {*Z*} that are direct causes of either *Xi* or *Xj*. The pair of variables, (*Xi,Xj*), along with its conditioning set, {*Z*}, define an independence claim, (*Xi,Xj*) | {*Z*}, and the full set of the *k* independence claims defines the basis set, *Bu*. 
 
-4. For each element in this basis set, obtain the probability, *Pk* that the pair (*Xi,Xj*) is statistically independent conditional on the variables *Z*. In other words, perform a regression model using an appropriate method.
+4. For each element in this basis set, obtain the _**exact**_ probability, *Pk* that the pair (*Xi,Xj*) is statistically independent conditional on the variables *Z*. In other words, perform a regression model using an appropriate method.
 
 5. Combine the *k* probabilities into the *C*-statistic:
+
+$$
+C = -2\Sigma_\{i=1}\^k \ln(Pi)
+$$ 
+
+
+
+
+
 
 
 This methodology can be extended into the mixed-model context using standard statistical programs with these capabilities, because you are testing multiple regressions hypothesized to be independent of each other. If too many independence claims are violated, then the model will be found to not fit the data.
