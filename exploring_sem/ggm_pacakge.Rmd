@@ -4,7 +4,7 @@ output: html_document
 ---
 
 From the package description:
->This package provides functions for defining, manipulating and fitting graphical Markov models.
+"This package provides functions for defining, manipulating and fitting graphical Markov models."
 
 For application in structural equation modeling and path analysis I am initially interested in the functionality for defining graphs. Particularly, I have a complex time-series path analysis diagramming a 1-year lag-effect. 
 ![My not quite complete graph]("CH2_DAG.svg")
@@ -30,6 +30,7 @@ Find out if the graph I have defined is in fact acyclic
 isAcyclic(my_graph)
 ```
 It is, so I didn't screw that part up...
+
 
 ```{r plot graph}
 library(tcltk)
