@@ -59,6 +59,6 @@ basis_set
 
 Find the list of all subsets of a set
 ```{r}
-powerset(my_graph)
+ps <- powerset(my_graph)
 ```
 

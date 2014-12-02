@@ -1,6 +1,6 @@
-# Repeated measures analysis ####
-setwd("~/GitHub/superspreaders/analysis")
-stems <- read.csv("data/all_stems.csv")
+## Repeated measures analysis ####
+
+stems <- read.csv("analysis/data/all_stems.csv")
 str(stems)
 summary(stems)
 
@@ -12,10 +12,19 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 
+names(stems)
+stems <- stems %>%
+      select(-X, -date, -year)
+class(stems$old_date)
+stems$old_date <- as.Date(stems$old_date, format = "%m/%d/%Y")
+stems$year <- as.factor(year(stems$old_date))
+class(stems$year)
+
 ### Create bay laurel only data frame ####
 umca <- as.tbl(stems) %>%
       select(plot, cluster, tag, species, status, slc, dbh, year) %>%
       filter(species == "UMCA")
+summary(umca)
 
 # Develop plot level summaries data frame and join to stems data frame
 umca <- left_join(umca, plot_umca <- umca %>%
@@ -26,7 +35,7 @@ umca <- left_join(umca, plot_umca <- umca %>%
                 live_dens = length(tag)), 
       by = c("plot", "year"))
 summary(umca)
-
+umca <- droplevels(umca)
 
 ###Linear Mixed Effects Method ####
 #### A couple of lines from Sarah's code to work from
@@ -52,7 +61,7 @@ summary(umca)
 # lmer1  4 3861.9 3882.1 -1927.0   3853.9                         
 # lmer2  6 3865.2 3895.4 -1926.6   3853.2 0.7407      2     0.6905
 
-#### Plot Level ####
+#### Plot Level Repeated Measures Analysis Using Multi-level Mixed-Effects Regression ####
 # Starting with plot level data b/c simpler w/fewer nested groups
 library(lme4)
 m0 <- lmer(tot_slc ~ 1 + (1 | year), data = plot_umca)
@@ -83,6 +92,7 @@ sigma(m0)
 sigma(m1)
 sigma(m2)
 #### Plot model profiles using `lattice` package
+library(lattice)
 xyplot(profile(m1), conf = c(50, 90, 95, 99)/100)
 densityplot(profile(m1))
 splom(profile(m1), conf = c(50, 90, 95, 99)/100)
@@ -95,7 +105,13 @@ abline(lm(predict(m1) ~ predict(m2)), col = "red")
 plot(predict(m0), predict(m1))
 abline(lm(predict(m0) ~ predict(m1)), col - "red")
 
+plot(predict(m0), predict(m2))
+abline(lm(predict(m0) ~ predict(m2)), col - "red")
+
 summary(lm(predict(m1) ~ predict(m2)))
+summary(lm(predict(m0) ~ predict(m1)))
+summary(lm(predict(m0) ~ predict(m2)))
+
 
 
 

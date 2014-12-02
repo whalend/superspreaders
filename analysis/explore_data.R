@@ -5,8 +5,7 @@
 
 ######Set working directory, read in all stem data, examine data structure ####
       #This is only the biologically related field data
-setwd("~/GitHub/superspreaders/analysis")
-stems <- read.csv("data/Stem_Summary_Query.txt")
+stems <- read.csv("analysis/data/stem_summary_query_2004-2014.txt")
 head(stems)
 str(stems)
 
@@ -22,12 +21,9 @@ stems$date <- gsub("/", "-",stems$Date)
 stems$date <- dmy_hms(stems$date)
 stems$year <- year(stems$date)
 
-#### Load plyr, dplyr, tidyr packages ####
-library(plyr)
-library(dplyr)
-library(tidyr)
 
 #### Rename columns using `rename` funcion from `plyr` ####
+library(plyr)
 stems <- rename(stems, c("PlotID" = "plot", "Date" = "old_date"))
 stems <- rename(stems, c("ClusterID" = "cluster", "TagNumber" = "tag", 
                           "SpeciesID" = "species", "StemStatus" = "status",
@@ -42,7 +38,9 @@ stems <- read.csv("data/all_stems.csv")
 
 
 
-####### Older code that can and will likely be abandoned ######
+### ### ### ### ### ### ### ### ### ### ### ### ### ### #
+### Older code that can and will likely be abandoned ####
+### ### ### ### ### ### ### ### ### ### ### ### ### ### # 
 library(foreign)
 plot_dat1<-read.dbf("analysis/data/UMCA_slc_dbh_04-12.dbf")
 str(plot_dat1)
