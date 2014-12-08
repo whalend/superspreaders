@@ -190,5 +190,5 @@ Combine the p-values into the *C*-statistic
 ln_pvalues <- log(pvalues)
 C_stat <- -2*sum(ln_pvalues)
 ```
-I would like to figure out how to calculate the chi-square cumulative probability based on the degrees of freedom and *C*-statistic, a la this [website](http://stattrek.com/online-calculator/chi-square.aspx)
+I would like to learn how to calculate the chi-square cumulative probability based on the degrees of freedom and *C*-statistic, a la this [website](http://stattrek.com/online-calculator/chi-square.aspx)
 
