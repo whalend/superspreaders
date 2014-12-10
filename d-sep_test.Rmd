@@ -1,3 +1,4 @@
+
 ## Steps for Performing a d-Sep Test
 ###### (Shipley 2000, 2003, 2004, 2009)
 
@@ -39,13 +40,13 @@ This is to demonstrate how to assess a multilevel, repeated measures path model 
 `Latitude` --> `Degree-days` --> `Date of bud burst` --> `Growth` --> `Live`
 
 Load the two libraries and read in the data Shipley uses
-```{r load libraries, eval=FALSE}
+```{r load libraries, eval=TRUE, message=FALSE}
 library(nlme)
 library(lme4)# masked lmList from nlme package
-data <- read.table("d_sep_ex/shipley2009.dat")
-str(data)
-summary(data)
-head(data)
+data1 <- read.table("d_sep_ex/shipley2009.dat")
+str(data1)
+summary(data1)
+head(data1)
 ```
 Shipley (2009) describes these data in the text as a study beginning in 1970 where 20 sites are chosen with different latitudes. Five individual trees are chosen within each site, and each tree is followed every second year until 2006 or death. In each site, each year, for each individual four measurements are recorded: 
 
@@ -72,12 +73,13 @@ Following the directions of the Shipley (2009) supplement I will fit separate mi
 ```{r print basis set, echo=TRUE}
 print(Bu)
 ```
-Six claims equals six models.
+Six claims equals six models. The first two variables listed in each item are claimed to be independent based on the following set of zero or more variables.
 
 The first independence claim is that `Date` is independent of `Latitude` after controlling for `DD`. So, I need to obtain the *precise* null probability for this claim. Choosing the correct modeling procedure requires identifying the appropriate distribution of the dependent variable, in this case `Date`. Using some helper fucntions and the `pairs()` function in the base `graphics` package I can look at the correlations and distributions simultaneously.
-
 ```{r helper functions for scatterplot matrix, echo=FALSE}
-# These were taken from the help pages of the  `pairs` function with minor alterations
+# These were copied from the help pages of the `pairs` function with minor alterations
+
+# Make histograms to put in the diagonal panel
 panel.hist <- function(x, ...)
 {
     usr <- par("usr"); on.exit(par(usr))
@@ -87,6 +89,8 @@ panel.hist <- function(x, ...)
     y <- h$counts; y <- y/max(y)
     rect(breaks[-nB], 0, breaks[-1], y, col = "cyan", ...)
 }
+
+# Print absolute correlations in either upper or lower panel; size proportianal to magnitude of the correlation
 panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)
 {
     usr <- par("usr"); on.exit(par(usr))
@@ -99,17 +103,22 @@ panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)
 }
 ```
 ```{r correlations & distributions}
-pairs(subset(data, select = c(lat, Date, DD, Growth, Live)),
-      diag.panel = panel.hist, lower.panel = panel.cor)
+#pairs(subset(data1, select = c(lat, Date, DD, Growth, Live)), diag.panel = panel.hist, lower.panel = panel.cor)
+sub_data1 <- data1[ ,c(3,5:7,9)] #subset(data1, , select = c("lat","Date","DD","Growth","Live"))
+#library(dplyr)
+#sub_data1 <- data1 %>% select(lat, Date, DD, Growth, Live)
+
+pairs(sub_data1, diag.panel = panel.hist, lower.panel = panel.cor)
 ```
+
 The `Date` variable appears close to a normal distribution, so either the `lmer()` in the `lme4` package or the `lme()` function in the `nlme` package are appropriate. Shipley says that the `lme()` prints out degrees of freedom but `lmer()` does not. I am going to check to see if that is still true.
 ```{r independence claim 1 test}
-fit1 <- lme(Date ~ DD + lat, data = data, 
+fit1 <- lme(Date ~ DD + lat, data = data1, 
             random = ~1|site/tree, 
             na.action = na.omit)
-fit1lme4 <- lmer(Date ~ DD + lat + (1|site) + (1|tree), data = data,
+fit1lme4 <- lmer(Date ~ DD + lat + (1|site) + (1|tree), data = data1,
                  na.action = na.omit)
-summary(fit1nlme)
+summary(fit1)
 summary(fit1lme4)
 ```
 It is correct that `lmer()` does not provide degrees of freedom, and thus no probability estimate (p-value) for the coefficients. Aside from that it appears that the values estimate from both algorithms match up very well. Based on these results the null probability of observing a t-value at least as extreme for latitude (`lat`) is 0.9373, so pretty darn likely. That means that this independence claim is supported by the data.
@@ -117,11 +126,11 @@ It is correct that `lmer()` does not provide degrees of freedom, and thus no pro
 Now to do the same for the other normally distributed dependent variables
 ```{r independence claim test 2 & 3}
 # Independence of Growth and lat conditioned on Date
-fit2 <- lme(Growth ~ Date + lat, data = data, 
+fit2 <- lme(Growth ~ Date + lat, data = data1, 
             random = ~1|site/tree, 
             na.action = na.omit)
 # Independence of Growth and DD conditioned on Date and lat
-fit3 <- lme(Growth ~ Date + lat + DD, data = data, 
+fit3 <- lme(Growth ~ Date + lat + DD, data = data1, 
             random = ~1|site/tree, 
             na.action = na.omit)
 ```
@@ -130,7 +139,7 @@ The other three independence claims have `Live` as the dependent variable. This 
 ```{r binomial independence claim Live & lat}
 # Independence of Live and lat conditioned on Growth
 fit4 <- glmer(Live ~ scale(Growth) + scale(lat) + (1|site) + (1|tree),
-             data = data, na.action = na.omit, family = binomial)
+             data = data1, na.action = na.omit, family = binomial)
 summary(fit4)
 ```
 This currently throws a warning about a large eigenvalue ratio with suggestion to rescale the variables.
@@ -141,10 +150,10 @@ Now to test the remaining independence claims, `Live` & `DD` conditioned on `Gro
 ```{r binomial independence claims 5 & 6}
 # Independence of Live and DD conditioned on Growth and lat
 fit5 <- glmer(Live ~ scale(Growth) + scale(lat) + scale(DD) + (1|site) + (1|tree),
-             data = data, na.action = na.omit, family = binomial)
+             data = data1, na.action = na.omit, family = binomial)
 # Indpendence of Live and Date conditioned on DD and Growth
 fit6 <- glmer(Live ~ scale(Growth) + scale(DD) + scale(Date) + (1|site) + (1|tree),
-             data = data, na.action = na.omit, family = binomial)
+             data = data1, na.action = na.omit, family = binomial)
 summary(fit6)
 ```
 Again got warnings about large eigenvalues, as well as failure of the model to converge, with suggestion to rescale the variables.
@@ -183,12 +192,20 @@ Create a vector of the probabilities for the independence claims (6 values).
 pvalues <- c(summary(fit6)$coefficients[4,4], summary(fit5)$coefficients[4,4],
              summary(fit4)$coefficients[3,4], summary(fit3)$tTable[3,5],
              summary(fit2)$tTable[3,5], summary(fit1)$tTable[3,5])
+print(pvalues)
 ```
+These values do not all match up with the estimates printed in Table 2 of Shipley (2009). Assuming I did the modeling correctly (a substantial assumption), what gives?
 
-Combine the p-values into the *C*-statistic
+Combine the p-values into the *C*-statistic and see what we get anyway.
 ```{r calculate C statistic}
 ln_pvalues <- log(pvalues)
 C_stat <- -2*sum(ln_pvalues)
+print(C_stat)
 ```
-I would like to learn how to calculate the chi-square cumulative probability based on the degrees of freedom and *C*-statistic, a la this [website](http://stattrek.com/online-calculator/chi-square.aspx)
+Checking this value in a $\Chi^2$ look up table against 2*k*(12) degrees of freedom provides an estimated probability of a larger value being somewhere between 0.25 and 0.50.
 
+I would like to learn how to calculate the chi-square cumulative probability based on the degrees of freedom and *C*-statistic, a la the handy tool on this [website](http://stattrek.com/online-calculator/chi-square.aspx).
+
+It's probably simple...
+
+The tool from this website calculates the probability of observing a value smaller than this as 0.63, indicating the probability of observing a larger value is 0.37.
