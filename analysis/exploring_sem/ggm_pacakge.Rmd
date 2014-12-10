@@ -48,7 +48,6 @@ library(dynamicGraph)
 
 Now I need to find the basis set for the conditional independencies implied by the directed acyclic graph (Shipley 2000, 2009). This can be done using the `basiSet` function. The basis set is often (every time I have seen it) mathematically notated as *Bu*.
 ```{r get basis set}
-
 basis_set <- basiSet(my_graph)
 ```
 
