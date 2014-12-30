@@ -91,6 +91,7 @@ confint(m2)
 sigma(m0)
 sigma(m1)
 sigma(m2)
+
 #### Plot model profiles using `lattice` package
 library(lattice)
 xyplot(profile(m1), conf = c(50, 90, 95, 99)/100)
