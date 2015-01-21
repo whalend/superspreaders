@@ -1,0 +1,17 @@
+load libraries	head	library	read.table	str	summary
+get basis set	~	basiSet	DAG	isAcyclic	library
+print basis set	Bu	print
+helper functions for scatterplot matrix	$	abs	c	cor	format	hist	if	length	max	missing	on.exit	par	paste0	rect	strwidth	text
+correlations & distributions	c	data1	pairs	panel.cor	panel.hist
+independence claim 1 test	~	data1	lme	lmer	na.omit	summary
+independence claim test 2 & 3	~	data1	lme	na.omit
+binomial independence claim Live & lat	~	binomial	data1	glmer	na.omit	summary
+binomial independence claims 5 & 6	~	binomial	data1	glmer	na.omit	summary
+nlme model & probability summaries	$	fit1	summary
+unnamed-chunk-1	$	fit2	summary
+unnamed-chunk-2	$	fit3	summary
+lme4 model & probability summaries	$	fit4	summary
+unnamed-chunk-3	$	fit5	summary
+unnamed-chunk-4	$	fit6	summary
+vector of probabilities	$	c	fit1	fit2	fit3	fit4	fit5	fit6	print	summary
+calculate C statistic	log	print	pvalues	sum

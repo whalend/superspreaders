@@ -207,8 +207,6 @@ print(C_stat)
 ```
 Checking this value in a $\Chi^2$ look up table against 2*k*(12) degrees of freedom provides an estimated probability of a larger value being somewhere between 0.25 and 0.50.
 
-I would like to learn how to calculate the chi-square cumulative probability based on the degrees of freedom and *C*-statistic, a la the handy tool on this [website](http://stattrek.com/online-calculator/chi-square.aspx).
-
-It's probably simple...
+I would like to learn how to calculate the chi-square cumulative probability based on the degrees of freedom and *C*-statistic, a la the handy tool on this [website](http://stattrek.com/online-calculator/chi-square.aspx). It's probably simple...
 
 The tool from this website calculates the probability of observing a value smaller than this as 0.63, indicating the probability of observing a larger value is 0.37.

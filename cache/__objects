@@ -1,0 +1,17 @@
+load libraries	data1
+get basis set	Bu	dag
+print basis set	
+helper functions for scatterplot matrix	panel.cor	panel.hist
+correlations & distributions	sub_data1
+independence claim 1 test	fit1	fit1lme4
+independence claim test 2 & 3	fit2	fit3
+binomial independence claim Live & lat	fit4
+binomial independence claims 5 & 6	fit5	fit6
+nlme model & probability summaries	
+unnamed-chunk-1	
+unnamed-chunk-2	
+lme4 model & probability summaries	
+unnamed-chunk-3	
+unnamed-chunk-4	
+vector of probabilities	pvalues
+calculate C statistic	C_stat	ln_pvalues

@@ -1,0 +1,17 @@
+base
+lubridate
+plyr
+dplyr
+editR
+shiny
+shinyBS
+shinyAce
+shinyFiles
+knitr
+rmarkdown
+nlme
+Matrix
+Rcpp
+lme4
+igraph
+ggm
