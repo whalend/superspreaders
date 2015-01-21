@@ -7,34 +7,64 @@
       #This is only the biologically related field data
 stems <- read.csv("analysis/data/stem_summary_query_2004-2014.txt")
 head(stems)
+summary(stems)
 str(stems)
 
 
 
 ### Need to do some data cleaning and prep ####
 
-#### Create date variable as posix and integer/factor year variable ####
-library(lubridate)
+## Create date variable as posix and integer/factor year variable ###
 stems$Date <- as.character(stems$Date)
 class(stems$Date)
-stems$date <- gsub("/", "-",stems$Date)
-stems$date <- dmy_hms(stems$date)
-stems$year <- year(stems$date)
-
-
-#### Rename columns using `rename` funcion from `plyr` ####
+library(lubridate)
+stems$year <- year(as.Date(stems$Date, format = "%m/%d/%Y"))
+summary(stems)
+## Why are there NA's in the `year` variable?
 library(plyr)
-stems <- rename(stems, c("PlotID" = "plot", "Date" = "old_date"))
-stems <- rename(stems, c("ClusterID" = "cluster", "TagNumber" = "tag", 
-                          "SpeciesID" = "species", "StemStatus" = "status",
-                          "AliveClass" = "alive_class", 
-                          "DeadClass" = "dead_class", "SympLeafCount" = "slc", 
-                          "CankerPresent" = "canker", "DBH" = "dbh",
-                          "LideFoliarSymp" = "lide_lf_symp", 
-                          "SOD_Dead" = "sod_dead", "Location" = "location"))
+library(dplyr)
+stems_sub <- filter(stems, is.na(year))
+stems_sub2 <- filter(stems, PlotID == "SECRET02", SpeciesID == "QUAG", year == 2012)
+# So the 19 NA's for in the table are from the SECRET02 plot and belong to 2012. I am not sure why these did not query correctly in the database because the data is entered with the proper date...
+# I replaced the NA's for the `year` variable with 2012
+stems$year[is.na(stems$year)] <- 2012
+summary(stems)
+rm(stems_sub)
+rm(stems_sub2)
+
+## Currently unused code for string substitution and date calculation
+# stems$date <- gsub("/", "-",stems$Date)
+# stems$date <- dmy_hms(stems$date)
+# stems$year <- year(stems$date)
+
+## Replace all `-9999` codes with NA ###
+stems[stems == -9999] <- NA
+summary(stems)
+
+
+#### Rename columns using `rename` funcion from `dplyr` ####
+library(dplyr)
+stems <- rename(stems, plot = PlotID)
+stems <- rename(stems, cluster = ClusterID, tag = TagNumber, 
+                species = SpeciesID, status = StemStatus, 
+                alive_class = AliveClass, dead_class= DeadClass,
+                slc = SympLeafCount, canker = CankerPresent, dbh = DBH,
+                lide_lf_symp = LideFoliarSymp, sod_dead = SOD_Dead, 
+                location = Location)
 str(stems)
-write.csv(stems,"data/all_stems.csv")
-stems <- read.csv("data/all_stems.csv")
+
+write.csv(stems,"analysis/data/all_stems.csv") # Write the revised stem data to CSV
+
+#### Further exploration of revised stem data ####
+stems <- read.csv("analysis/data/all_stems.csv") # Read in if necessary
+str(stems)
+summary(stems)
+summary(stems$species) # 5 host species listed, so this appears legit
+summary(stems$status) # There are a lot of different `X` statuses, which I am not particularly concerned about. These will all just be treated as missing. However, there are 26 stems that appear to have a `blank` status type. 
+class(stems$status)
+View(filter(stems, status == ""))
+## A good number of these stems needed an `X` status, but there were at least 8 that needed correcting in the database. The primary cause for the blank status appeared to be a duplication of the visit date for a single stem. Once one of these records was deleted the data appeared. So, I am going to export the query from the data base again and reassess the data with these corrections.
+
 
 
 

@@ -1,8 +1,8 @@
 ---
-title: "Appendix 2 - Fitting proposed path models"
+title: "Appendix 2 - Fitting proposed path models using the C-statistic"
 author: "Whalen Dillon"
 date: "December 17, 2014"
-output: html_document
+output: word_document
 ---
 ----
 #### This appendix details steps 1-4 of calculating the *C*-statistic for fitting a path model in a generalized multilevel context (Shipley 2009). 
