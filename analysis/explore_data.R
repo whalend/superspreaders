@@ -186,9 +186,24 @@ stems <- left_join(stems, dbh, by = c("tag","plot"))
 str(stems)
 summary(stems)
 filter(stems, tag == 2285)
-stems %>% select(plot, cluster, tag, species, delta_dbh, year, status) %>% 
+stems %>% select(plot, cluster, tag, species, delta_dbh, year, year_dbh1, status) %>% 
       group_by(plot, cluster, tag) %>% 
-      filter(delta_dbh < -5, year == 2014, status == "Alive") 
+      filter(delta_dbh < -15, year == 2014, status == "Alive")
+# I changed values for 9 of these 14 stems
+
+stems %>% select(plot, cluster, tag, species, delta_dbh, year, year_dbh1, status) %>% group_by(plot, cluster, tag) %>% 
+      filter(between(delta_dbh, -15, -10), year == 2014, status == "Alive")
+# I changed values for 7 of 9 stems
+
+stems %>% select(plot, cluster, tag, species, delta_dbh, year, year_dbh1, status) %>% group_by(plot, cluster, tag) %>% 
+      filter(between(delta_dbh, -10, -7), year == 2014, status == "Alive")
+# I changed values for 11 of 20 stems
+
+stems %>% select(plot, cluster, tag, species, delta_dbh, year, year_dbh1, status) %>% group_by(plot, cluster, tag) %>% 
+      filter(between(delta_dbh, -6.9, -5), year == 2014, status == "Alive")
+# I changed values for 6 of 18 stems
+
+
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### #
 ### Older code that can and will likely be abandoned ####
