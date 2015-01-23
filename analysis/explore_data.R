@@ -90,105 +90,111 @@ summary(stems$status) # Now there are no blanks, 36864 Alive records, 2482 dead 
 
 stems <- as.tbl(stems) # coerce to dplyr style data table
 class(stems)
-
-library(ggplot2)
-qplot(year, sum(dbh), data = stems)
-
-dbh <- filter(stems, dbh>0, year == 2014)
-length(unique(dbh$year))
-
 length(unique(stems$tag))
 # 4452 unique tag numbers in the data
 
+
+## Subset DBH data to create a data frame of remeasured stems ####
 dbh2014 <- stems %>% filter(dbh>0, year == 2014)
 length(unique(dbh2014$tag))
 # 4158, indicating there are 294 stems with no dbh measured in 2014
 
 dbh2003 <- stems %>% select(plot, tag, dbh, year) %>% 
       filter(dbh>0, year == 2003) # these 2 are the same as in 2005
-rm(dbh2003)
+# 11 observations
 
 dbh2004 <- stems %>% select(plot, tag, dbh, year) %>%
-      filter(dbh>0, year == 2004, plot == "ANN02")
+      filter(dbh>0, year == 2004)
 # 3109 observations
+anti_join(dbh2003, dbh2004, by = "tag")
+dbh_a <- union(dbh2004, dbh2003)
+
 
 dbh2005 <- stems %>% select(plot, tag, dbh, year) %>%
       filter(dbh>0, year == 2005)
 # 712 observations
-anti_join(dbh2004, dbh2005, by = "tag") # this indicates that the dbh data for 2004 and 2005 are unique
-dbh1 <- union(dbh2004, dbh2005)
+anti_join(dbh2005, dbh_a, by = "tag") # this indicates that the dbh data for 2004 and 2005 are unique
+dbh_a <- union(dbh_a, anti_join(dbh2005, dbh_a, by = "tag"))
 
 dbh2006 <- stems %>% select(plot, tag, dbh, year) %>%
       filter(dbh>0, year == 2006)
-summary(anti_join(dbh2006, dbh1, by = "tag")) # 2004, 2005, 2006 are independent sets
-dbh1 <- union(dbh1, dbh2006)
+anti_join(dbh2006, dbh_a, by = "tag") # 2004, 2005, 2006 are independent sets
+dbh_a <- union(dbh_a, anti_join(dbh2006, dbh_a, by = "tag"))
 
 dbh2007 <- stems %>% select(plot, tag, dbh, year) %>%
       filter(dbh>0, year == 2007)
-anti_join(dbh2007, dbh1, by = "tag") # there is one tag with remeasured dbh in 2007
-inner_join(dbh2007, dbh1, by = "tag")
-dbh1 <- union(dbh1, anti_join(dbh2007, dbh1, by = "tag"))
-length(unique(dbh1$tag))
+anti_join(dbh2007, dbh_a, by = "tag") # there is one tag with remeasured dbh in 2007
+dbh_a <- union(dbh_a, anti_join(dbh2007, dbh_a, by = "tag"))
+length(unique(dbh_a$tag)) # check for repeated tags, if obs > value, then there is a duplicate
 
 dbh2008 <- stems %>% select(plot, tag, dbh, year) %>%
       filter(dbh>0, year == 2008)
-anti_join(dbh2008, dbh1, by = "tag")
-dbh1 <- union(dbh1, anti_join(dbh2008, dbh1, by = "tag"))
+anti_join(dbh2008, dbh_a, by = "tag")
+dbh_a <- union(dbh_a, anti_join(dbh2008, dbh_a, by = "tag"))
 
 dbh2009 <- stems %>% select(plot, tag, dbh, year) %>%
       filter(dbh>0, year == 2009)
-anti_join(dbh2009, dbh1, by = "tag")
-dbh1 <- union(dbh1, anti_join(dbh2009, dbh1, by = "tag"))
+anti_join(dbh2009, dbh_a, by = "tag")
+dbh_a <- union(dbh_a, anti_join(dbh2009, dbh_a, by = "tag"))
 
 dbh2010 <- stems %>% select(plot, tag, dbh, year) %>%
       filter(dbh>0, year == 2010)
-anti_join(dbh2009, dbh1, by = "tag") # no unique dbh values for 2010, so no new recruitment, or stems entering the study
+anti_join(dbh2009, dbh_a, by = "tag") # no unique dbh values for 2010, so no new recruitment, or stems entering the study
 
 dbh2011 <- stems %>% select(plot, tag, dbh, year) %>%
       filter(dbh>0, year == 2011)
-anti_join(dbh2011, dbh1, by = "tag")
-dbh1 <- union(dbh1, anti_join(dbh2011, dbh1, by = "tag"))
+anti_join(dbh2011, dbh_a, by = "tag")
+dbh_a <- union(dbh_a, anti_join(dbh2011, dbh_a, by = "tag"))
 
 dbh2012 <- stems %>% select(plot, tag, dbh, year) %>%
       filter(dbh>0, year == 2012)
-anti_join(dbh2012, dbh1, by = "tag")
-dbh1 <- union(dbh1, anti_join(dbh2012, dbh1, by = "tag"))
+anti_join(dbh2012, dbh_a, by = "tag")
+dbh_a <- union(dbh_a, anti_join(dbh2012, dbh_a, by = "tag"))
 
 dbh2014 <- stems %>% select(plot, tag, dbh, year) %>%
       filter(dbh>0, year == 2014)
-anti_join(dbh2014, dbh1, by = "tag") # this inidcates that there are 113 stems that were measured for the first time in 2014
+anti_join(dbh2014, dbh_a, by = "tag") # this inidcates that there are 113 stems that were measured for the first time in 2014
 
+#### Explore DBH data: change in DBH ####
 library(ggplot2)
 # Scatterplot of first dbh measurement (y-axis) against year
-qplot(year, dbh, data = dbh1, geom="jitter")
+qplot(year, dbh, data = dbh_a, geom="jitter")
 # Scatterplot of most recent dbh measurement
 qplot(year, dbh, data = dbh2014, geom = "jitter")
 
-dbh <- right_join(dbh1, dbh2014, by = c("plot","tag"))
+# Data frame of stems that were measured or remeasured in 2014
+dbh <- right_join(dbh_a, dbh2014, by = c("plot","tag"))
 summary(dbh)
 sum(dbh$dbh.x, na.rm = TRUE)
 sum(dbh$dbh.y, na.rm = TRUE)
 sum(dbh$dbh.y, na.rm = TRUE) - sum(dbh$dbh.x, na.rm = TRUE)
-# [1] 5781.91 centimeters of total growth in diameter for all stems remeasured in 2014
+# [1] 6345.03 centimeters of total growth in diameter for all stems remeasured in 2014
 
 dbh <- rename(dbh, dbh1 = dbh.x, dbh2 = dbh.y, year_dbh1 = year.x, year_dbh2 = year.y) # This data frame has all the stems for which we have an initial measurement AND a remeasurement in 2014
 dbh$delta_dbh <- dbh$dbh2 - dbh$dbh1
 write.csv(dbh, "analysis/data/dbh_remeasures.csv")
 summary(dbh)
-filter(dbh, delta_dbh < -20)
+# filter(dbh, delta_dbh < -20)
 
 library(ggplot2)
 qplot(dbh1, dbh2, data = dbh)
-qplot(delta_dbh, dbh2, data = dbh)
+qplot(delta_dbh, dbh2, data = dbh, color = year_dbh1)
 
 #Join dbh measure, remeasure and change data to `stems` data frame
 stems <- left_join(stems, dbh, by = c("tag","plot"))
 str(stems)
 summary(stems)
-filter(stems, tag == 2285)
+qplot(delta_dbh, dbh2, data = stems %>% select(plot, cluster, tag, species, delta_dbh, dbh2, year, status) %>% 
+            group_by(plot, cluster, tag) %>%
+            filter(year == 2014, status == "Alive" | status == "Dead"), 
+      color = status)
+
+qplot(year, dbh, data = stems %>% filter(status == "Alive" | status == "Dead"), color = status, geom = "jitter")
+
+
 stems %>% select(plot, cluster, tag, species, delta_dbh, year, year_dbh1, status) %>% 
       group_by(plot, cluster, tag) %>% 
-      filter(delta_dbh < -15, year == 2014, status == "Alive")
+      filter(delta_dbh < -5, year == 2014, status == "Alive")
 # I changed values for 9 of these 14 stems
 
 stems %>% select(plot, cluster, tag, species, delta_dbh, year, year_dbh1, status) %>% group_by(plot, cluster, tag) %>% 
@@ -202,6 +208,7 @@ stems %>% select(plot, cluster, tag, species, delta_dbh, year, year_dbh1, status
 stems %>% select(plot, cluster, tag, species, delta_dbh, year, year_dbh1, status) %>% group_by(plot, cluster, tag) %>% 
       filter(between(delta_dbh, -6.9, -5), year == 2014, status == "Alive")
 # I changed values for 6 of 18 stems
+
 
 
 

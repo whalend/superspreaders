@@ -1,9 +1,9 @@
 ## Report on DBH problems
 ###### Whalen Dillon
 
-This is summarizing changes I made to the Sonoma Access Database DBH measurements based on data exploration in the `explore_data.R` document. There were 100 stems that had a negative change in DBH of greater than 5 cm, and 62 of these were alive in the 2014 remeasurement. This reports on those that I could logically make corrections to, and so avoid the incredible dramatically shrinking tree. Stems that are not explicitly listed 
+This is summarizing changes I made to the Sonoma Access Database DBH measurements based on data exploration in the `explore_data.R` document. There were 100 stems that had a negative change in DBH of greater than 5 cm, and 62 of these were alive in the 2014 remeasurement. This reports on the stems still alive in 2014 that I could logically make corrections to, and so avoid the incredible dramatically shrinking tree. Stems that are not explicitly listed 
 
-#### These stems all had a negative change in DBH > 15 cm (14)
+#### Stems with a negative change in DBH > 15 cm (14)
  - For stems 4797 & 4795 I calculated an estimate for the original DBH based on a linear relationship between measurements from 2012 and 2014 because the original measurements recorded were most likelyl circumference. I initially did a simple coversion from circumference to diameter, but this resulted in values that were substantially hire than the measurements in either 2012 or 2014. New values for 2009 will be: stem 4797: 7.8, stem 4795: 10.0 
 
  - Replaced 2004 value (31.5) for stem 945 by treating that as teh circumference, so new initial diameter is 10
@@ -18,4 +18,43 @@ This is summarizing changes I made to the Sonoma Access Database DBH measurement
 
  - Same as above for stem 4319
 
- - Replaced 2004 value (38.8) by treating that as circumference, so new value is 12.4. No written record on 2004 or 2005 data sheets. 
+ - Replaced 2004 value (38.8) by treating that as circumference, so new value is 12.4. No written record on 2004 or 2005 data sheets.
+
+I changed values for 9 of these 14 stems
+
+#### Stems with a negative change in DBH between 10 cm & 15 cm (9)
+ - Assumed 2006 value (31.5) for stem 6023 was the circumference, so new value is 10 - no written record
+ - Assumed 2004 value (26.5) for stem 808 was the circumference, so new value is 8.4 - no written record
+ - Value was entered incorrectly for stem 2755, corrected based on written record to 11.2
+ - Value for stem 1883 was corrected based on note about needed tag switching. The new DBH values are much closer to making sense
+ - Assumed 2004 value (29.0) for stem 1880 was the circumference, so new value is 9.2 - this is contrary to the written record
+ - Assumed 2004 value (14.25) for stem 689 was the circumference, so new value is 4.5 - no written record
+ - Assumed 2004 value (33.5) for stem 576 was the circumference, so new value is 10.7
+ 
+I changed values for 7 of 9 stems
+
+#### Stems with a negative change in DBH between 7 cm & 10 cm (20 stems)
+ - Value was entered incorrectly for stem 3010, corrected based on written record to 20.6
+ - Value was entered incorrectly for stem 3087, corrected based on written record to 12.1
+ - Value was entered incorrectly for stem 3398, corrected based on written record to 10.9
+ - Value in 2004 (29.92, really? wtf?) for stem 157 was corrected based on linear estimate between 2012 and 2014 values, so new value is 19.3.
+ - Changed 2004 value (24.3) for stem 4323 to 14.3 - assuming written recording error
+ - Assumed 2006 value (9.0) for stem 4590 was circumference, so new value is 2.8
+ - Assumed 2004 value (23.2) for stem 1692 was entered or recorded incorrectly, new value is 13.2 - no written record found (missing data sheet)
+ - Same as above for stem 1686, but value changed from 24.7 to 14.7
+ - No written record for stem 604, so back calculated DBH for 2004, new value is 21.5
+ - Back calculated 2004 value (31.5) for stem 654 to new value of 21.9 - no written record
+ - Assumed 2014 value (7.8) was incorrectly recorded, changed to 17.8
+ 
+I changed values for 11 of 20 stems
+
+#### Stems with negative change in DBH between 5 cm and 6.9 cm (18 stems)
+ - Assumed 2004 value (12.0) was circumference, so new value is 3.8
+ - Corrected data entry error for stem 3022, DBH is 17.3
+ - Assumed 2004 value (9.25) for stem 4534 was circumference, new value is 2.9
+ - Assumed 2004 value (17.5) for stem 231 was circumference, new value is 5.6 - no written record
+ - Back calculated 2004 value for stem 529 based on 2012 & 2014 records, it was 19.75, now is 14.0 (19.75 could also have been circumference) - no written record
+ - Same situation as above for stem 4403, value was 19.2, now 8.3
+ 
+ I changed values for 6 of 18 stems
+
