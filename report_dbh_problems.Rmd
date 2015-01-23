@@ -1,0 +1,21 @@
+## Report on DBH problems
+###### Whalen Dillon
+
+This is summarizing changes I made to the Sonoma Access Database DBH measurements based on data exploration in the `explore_data.R` document. There were 100 stems that had a negative change in DBH of greater than 5 cm, and 62 of these were alive in the 2014 remeasurement. This reports on those that I could logically make corrections to, and so avoid the incredible dramatically shrinking tree. Stems that are not explicitly listed 
+
+#### These stems all had a negative change in DBH > 15 cm (14)
+ - For stems 4797 & 4795 I calculated an estimate for the original DBH based on a linear relationship between measurements from 2012 and 2014 because the original measurements recorded were most likelyl circumference. I initially did a simple coversion from circumference to diameter, but this resulted in values that were substantially hire than the measurements in either 2012 or 2014. New values for 2009 will be: stem 4797: 7.8, stem 4795: 10.0 
+
+ - Replaced 2004 value (31.5) for stem 945 by treating that as teh circumference, so new initial diameter is 10
+
+ - Replaced 2004 value (69.25) for stem 423b by treating that as the circumference, so new inital diameter is 22
+
+ - Replaced 2014 value (27.7) for stem 2367 with the measurement from 2012 because the change was ~50% of the initial measurement
+
+ - Replaced 2004 value (40.9) for stem 1347 by treating that as the circumference, so new initial diameter is 13
+
+ - Assumed 2004 measurement for stem 4318 missed a decimal point, so new value is 3.4
+
+ - Same as above for stem 4319
+
+ - Replaced 2004 value (38.8) by treating that as circumference, so new value is 12.4. No written record on 2004 or 2005 data sheets. 
