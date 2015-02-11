@@ -76,6 +76,8 @@ stems$year[is.na(stems$year)] <- 2012
 stems[stems == -9999] <- NA
 summary(stems)
 
+library(plyr)
+library(dplyr)
 stems <- rename(stems, plot = PlotID)
 stems <- rename(stems, cluster = ClusterID, tag = TagNumber, 
                 species = SpeciesID, status = StemStatus, 
@@ -92,7 +94,7 @@ stems <- as.tbl(stems) # coerce to dplyr style data table
 class(stems)
 length(unique(stems$tag))
 # 4452 unique tag numbers in the data
-
+write.csv(stems, "analysis/data/all_stems_corrected.csv")
 
 ## Subset DBH data to create a data frame of remeasured stems ####
 dbh2014 <- stems %>% filter(dbh>0, year == 2014)
@@ -210,6 +212,26 @@ stems %>% select(plot, cluster, tag, species, delta_dbh, year, year_dbh1, status
 # I changed values for 6 of 18 stems
 
 
+#### Create a plot-level data frame ####
+library(plyr)
+library(dplyr)
+
+plots <- stems %>%
+      select(plot, Date, species, slc, year, status) %>%
+      group_by(plot, year) %>%
+      filter(species == "UMCA", status == "Alive") %>%
+      summarise(uninfected_bay_ct = length(which(slc==0)), infected_bay_ct = length(which(slc > 0)), tot_bay = length(species)) 
+
+summary(plots)
+
+plots$infected <- ifelse(plots$infected_bay_ct==0, 0, 1)
+
+length(which(plots$ct_bay_NA > 0))
+filter(plots, infected == 0)
+filter(plots, infected_bay_ct == 0)
+
+write.csv(plots, "analysis/data/plots_umca_infection.csv")
+# I sent this file to Francesco for informing the spread model
 
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### #
