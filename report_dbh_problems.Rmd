@@ -1,12 +1,12 @@
 ## Report on DBH problems
 ###### Whalen Dillon
 
-This is summarizing changes I made to the Sonoma Access Database DBH measurements based on data exploration in the `explore_data.R` document. There were 100 stems that had a negative change in DBH of greater than 5 cm, and 62 of these were alive in the 2014 remeasurement. This reports on the stems still alive in 2014 that I could logically make corrections to, and so avoid the incredible dramatically shrinking tree. Stems that are not explicitly listed 
+This is summarizing changes I made to the Sonoma Access Database DBH measurements based on data exploration in the `explore_data.R` document. There were 100 stems that had a negative change in DBH of greater than 5 cm, and 62 of these were alive in the 2014 remeasurement. This reports on the stems still alive in 2014 that I could logically make corrections to, and so avoid the incredible dramatically shrinking tree.
 
 #### Stems with a negative change in DBH > 15 cm (14)
- - For stems 4797 & 4795 I calculated an estimate for the original DBH based on a linear relationship between measurements from 2012 and 2014 because the original measurements recorded were most likelyl circumference. I initially did a simple coversion from circumference to diameter, but this resulted in values that were substantially hire than the measurements in either 2012 or 2014. New values for 2009 will be: stem 4797: 7.8, stem 4795: 10.0 
+ - For stems 4797 & 4795 I calculated an estimate for the original DBH based on a linear relationship between measurements from 2012 and 2014 because the original measurements recorded were most likelyl circumference. I initially did a simple coversion from circumference to diameter, but this resulted in values that were substantially hire than the measurements in either 2012 or 2014. New values for 2009 will be: stem 4797 = 7.8, stem 4795 = 10.0 
 
- - Replaced 2004 value (31.5) for stem 945 by treating that as teh circumference, so new initial diameter is 10
+ - Replaced 2004 value (31.5) for stem 945 by treating that as the circumference, so new initial diameter is 10
 
  - Replaced 2004 value (69.25) for stem 423b by treating that as the circumference, so new inital diameter is 22
 
@@ -56,5 +56,22 @@ I changed values for 11 of 20 stems
  - Back calculated 2004 value for stem 529 based on 2012 & 2014 records, it was 19.75, now is 14.0 (19.75 could also have been circumference) - no written record
  - Same situation as above for stem 4403, value was 19.2, now 8.3
  
- I changed values for 6 of 18 stems
+I changed values for 6 of 18 stems.
 
+In total, there are now 30 stems with 'Alive' status in 2014 that still have negative growth values > 5cm, so I was able to make corrections for just over half of the 62. 
+
+So I think this covers all the stems I was considering for errors due to shrinkage. I still need to examine the outliers on the positive growth side.
+
+#### These stems had > 20cm growth
+plot    cluster   tag   species year year_dbh1 status delta_dbh dbh1  dbh2
+BOUV01       2    1321    QUAG 2014      2005  Alive      22.1 98.7 120.8 *ok*        
+***BOUV02       4    1325    QUAG 2014      2005  Alive      23.0 63.4  86.4***
+BOWES02      2    423b    UMCA 2014      2004  Alive      31.2 22.0  53.2 *ok*       
+COOK02       3    472     UMCA 2014      2005  Alive      30.0 16.1  46.1 *ok*       
+***LAZY05       2    2073    QUKE 2014      2004  Alive      34.0 63.8  97.8***      
+PFEND02      2    4516    UMCA 2014      2004  Alive      27.1 30.5  57.6 *ok*
+SKILE01      4    3288    UMCA 2014      2004  Alive      24.4 18.7  43.1 *ok*       
+SKILE01      4    3290    UMCA 2014      2004  Alive      21.7 41.2  62.9 *ok*
+
+The two rows that are ***bold italic*** are stems that I definitely want to double check the entries on the original data sheets.
+ 
