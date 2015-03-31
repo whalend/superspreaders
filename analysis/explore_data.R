@@ -387,6 +387,7 @@ stems %>% select(plot, cluster, tag, species, year, year_dbh1, status, delta_dbh
       group_by(plot, cluster, tag) %>% 
       filter(delta_dbh > 20, year == 2014, status == "Alive")
 # 8 stems, 
+
 stems %>% select(plot, tag, cluster, species, year, year_dbh1, status, dbh, delta_dbh, dbh1, dbh2, notes) %>% 
       group_by(plot, cluster, tag) %>% 
       filter(plot == "LAZY05", species == "QUKE", status == "Alive")
@@ -399,13 +400,6 @@ stems %>% select(plot, cluster, tag, species, delta_dbh, dbh1, dbh2, year, year_
       filter(between(delta_dbh, 10, 20), year == 2014, status == "Alive")
 # 39 stems
 
-stems %>% select(plot, cluster, tag, species, delta_dbh, year, year_dbh1, status) %>% group_by(plot, cluster, tag) %>% 
-      filter(between(delta_dbh, -10, -7), year == 2014, status == "Alive")
-# I changed values for 11 of 20 stems
-
-stems %>% select(plot, cluster, tag, species, delta_dbh, year, year_dbh1, status) %>% group_by(plot, cluster, tag) %>% 
-      filter(between(delta_dbh, -6.9, -5), year == 2014, status == "Alive")
-# I changed values for 6 of 18 stems
 
 
 
