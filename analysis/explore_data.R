@@ -350,7 +350,9 @@ library(ggplot2)
 qplot(dbh1, dbh2, data = dbh)
 qplot(delta_dbh, dbh2, data = dbh, color = year_dbh1)
 
-#Join dbh measure, remeasure, and change data to `stems` data frame
+# Join dbh measure, remeasure, and change data to `stems` data frame
+dbh <- read.csv("analysis/data/dbh_remeasures.csv")
+dbh <- select(dbh, -X)
 stems <- left_join(stems, dbh, by = c("tag","plot"))
 str(stems)
 summary(stems)
@@ -365,22 +367,25 @@ qplot(delta_dbh, dbh1, data = stems %>% select(plot, cluster, tag, species, delt
 # 1. "Have you tried looking at relative growth instead of the absolute increment growth?  Either DBH2/DBH1, or the instantaneous rate ln(DBH2/DBH1) / (time2-time1).  20 cm growth means a lot more to a 5 cm tree than a 50 cm tree… either way, it's still big.  I'd also consider this species by species, because I bet some grow much faster than others."
 stems$dbh2_dbh1 <- stems$dbh2/stems$dbh1
 stems$inst_grwth_rate <- log(stems$dbh2/stems$dbh1) / (stems$year_dbh2 - stems$year_dbh1)
-qplot(stems$dbh2_dbh1)
+stems$time_diff <- (stems$year_dbh2 - stems$year_dbh1)
+summary(stems)
+
+qplot(stems$dbh2_dbh1, main = "Relative Growth")
 
 qplot(dbh1, dbh2_dbh1, data = stems %>% select(plot, cluster, tag, species, dbh2_dbh1, dbh1, year, status) %>% 
             group_by(plot, cluster, tag) %>%
             filter(year == 2014, status == "Alive" | status == "Dead"), 
-      color = status)
+      color = status, main = "Change in DBH vs. original DBH")
 
 qplot(dbh1, inst_grwth_rate, data = stems %>% select(plot, cluster, tag, species, inst_grwth_rate, dbh1, year, status) %>% 
             group_by(plot, cluster, tag) %>%
             filter(year == 2014, status == "Alive" | status == "Dead"), 
-      color = status)
+      color = status, main = "Instantaneous Growth Rate vs. Original DBH")
 
 qplot(dbh1, inst_grwth_rate, data = stems %>% select(plot, cluster, tag, species, inst_grwth_rate, dbh1, year_dbh1, year, status) %>% 
             group_by(plot, cluster, tag) %>%
-            filter(species == "QUAG", year == 2014, status == "Dead"), 
-      color = status, main = "QUAG Instantaneous Growth Rate")
+            filter(species == "QUAG", year == 2014, status == "Dead" | status == "Alive"), 
+      color = status, main = "QUAG Instantaneous Growth Rate vs Original DBH")
 
 
 stems %>% select(plot, cluster, tag, species, year, year_dbh1, status, delta_dbh, dbh1, dbh2, notes) %>% 
@@ -399,6 +404,7 @@ stems %>% select(plot, tag, cluster, species, year, year_dbh1, status, dbh, delt
 stems %>% select(plot, cluster, tag, species, delta_dbh, dbh1, dbh2, year, year_dbh1, status) %>% group_by(plot, cluster, tag) %>% 
       filter(between(delta_dbh, 10, 20), year == 2014, status == "Alive")
 # 39 stems
+
 
 
 
