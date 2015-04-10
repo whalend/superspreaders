@@ -216,21 +216,20 @@ stems %>% select(plot, cluster, tag, species, delta_dbh, year, year_dbh1, status
 library(plyr)
 library(dplyr)
 
-plots <- stems %>%
+plots_umca <- stems %>%
       select(plot, Date, species, slc, year, status) %>%
       group_by(plot, year) %>%
       filter(species == "UMCA", status == "Alive") %>%
       summarise(uninfected_bay_ct = length(which(slc==0)), infected_bay_ct = length(which(slc > 0)), tot_bay = length(species)) 
 
-summary(plots)
+plots_umca$infected <- ifelse(plots_umca$infected_bay_ct==0, 0, 1)
+summary(plots_umca)
 
-plots$infected <- ifelse(plots$infected_bay_ct==0, 0, 1)
+length(which(plots_umca$ct_bay_NA > 0))
+filter(plots_umca, infected == 0)
+filter(plots_umca, infected_bay_ct == 0)
 
-length(which(plots$ct_bay_NA > 0))
-filter(plots, infected == 0)
-filter(plots, infected_bay_ct == 0)
-
-write.csv(plots, "analysis/data/plots_umca_infection.csv")
+write.csv(plots_umca, "analysis/data/plots_umca_infection.csv")
 # I sent this file to Francesco for informing the spread model
 
 #### Checking large positive DBH changes ####
