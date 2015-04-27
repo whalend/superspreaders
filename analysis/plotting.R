@@ -1,3 +1,5 @@
+## A lot of the plotting and code in this was written by Sarah Haas. I have made some additions and modifications while exploring ways to quantify what may constitute a superspreader individual.
+
 library(plyr)
 library(dplyr)
 library(tidyr)
@@ -9,11 +11,12 @@ head(umca_stem)
 summary(umca_stem %>% group_by(year, tag))
 summary(umca_stem %>% group_by(year))
 
-#Some observations repeated in this file, so subset to unique
-umca_stem <- unique( umca_stem[ , 1:8] )
+# Some observations repeated in this file, so subset to unique
+umca_stem <- unique(umca_stem[ , 1:8] )
 
 
-# Get specific quantile values for SLC for each year
+## Get specific quantile values for SLC for each year ####
+### If the same stems are consistently in the upper quantile then they may be superspreaders because they support more infections compared to the population. 
 
 # The `plyr` method with sample code from <http://stackoverflow.com/questions/5473537/how-to-calculate-95th-percentile-of-values-with-grouping-variable-in-r-or-excel>
 library(plyr)
@@ -68,8 +71,13 @@ p2 <- p2 + geom_point(aes(color = plot.id), position = "jitter") +
 p2 + geom_text(aes(label = tag, color = ))
 
 
-
-
+## "Seasonality" and symptoms ####
+### Note that this has to be done within a sample season, so it's a bad assessment of true seasonality of symptoms.
+library(dplyr)
+library(ggplot2)
+ggplot(data = stems %>% select(Date, slc, species, status, year) %>% filter(species == "UMCA" & status == "Alive") %>% group_by(Date)) + 
+      geom_point(aes(x=Date,y=slc)) +
+      facet_grid(year ~ .)
 
 
 annual.slc = tapply(slc, list(plot.id, year), sum, na.rm=TRUE) 
