@@ -67,7 +67,7 @@ View(filter(stems, status == ""))
 stems <- read.csv("analysis/data/stem_summary_qry2_04-14.csv")
 summary(stems)
 
-stems$Date <- as.character(stems$Date)
+stems$Date <- as.Date(stems$Date, format = "%m/%d/%Y")
 class(stems$Date)
 library(lubridate)
 stems$year <- year(as.Date(stems$Date, format = "%m/%d/%Y"))
@@ -76,7 +76,7 @@ stems$year[is.na(stems$year)] <- 2012
 stems[stems == -9999] <- NA
 summary(stems)
 
-library(plyr)
+
 library(dplyr)
 stems <- rename(stems, plot = PlotID)
 stems <- rename(stems, cluster = ClusterID, tag = TagNumber, 
@@ -213,7 +213,7 @@ stems %>% select(plot, cluster, tag, species, delta_dbh, year, year_dbh1, status
 
 
 #### Create a plot-level data frame of infection status ####
-library(plyr)
+stems <- read.csv("analysis/data/all_stems_corrected.csv")
 library(dplyr)
 
 plots_umca <- stems %>%
@@ -406,6 +406,19 @@ stems %>% select(plot, cluster, tag, species, delta_dbh, dbh1, dbh2, year, year_
 
 
 
+## Exploring Symptomatic Leafcount Data ####
+str(stems)
+summary(stems$status)
+bay_slc <- stems %>%
+      select(plot, Date, cluster, tag, species, status, dbh, year, slc) %>% 
+      filter(species == "UMCA" & status == "Alive")
+str(bay_slc)
+bay_slc$Date <- as.Date(bay_slc$Date, format = "%m/%d/%Y")
+summary(bay_slc)
+bay_slc <- droplevels(bay_slc)
+
+library(ggplot2)
+qplot(slc, tag, data = bay_slc, facet = year ~ .)
 
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### #
