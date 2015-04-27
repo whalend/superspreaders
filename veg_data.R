@@ -1,7 +1,7 @@
 ## Explore data from vegetation transects and untagged host tree DBH ####
 
 untagged_dbh <- read.csv("analysis/data/alt_species_dbh.csv")
-str(alt_dbh)
+str(untagged_dbh)
 summary(untagged_dbh)
 untagged_dbh$date <- as.Date(untagged_dbh$Date, format = "%m/%d/%Y")
 
