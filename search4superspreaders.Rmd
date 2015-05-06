@@ -1,0 +1,73 @@
+---
+output:
+  slidy_presentation:
+    font_adjustment: 1
+    footer: Center for Geospatial Analytics at NCSU
+    highlight: haddock
+    keep_md: yes
+  beamer_presentation:
+    highlight: haddock
+---
+
+## Searching for Superspreaders
+
+**Whalen Dillon**
+
+May 7, 2015
+
+<img src=http://cnr.ncsu.edu/geospatial/wp-content/uploads/sites/6/2014/07/cgaDynamicB2REV.png width="800px" />
+
+## Emerging Infectious Diseases
+
+New in a population, or new but rapidly increasing 
+
+![](presentations_images/ebola_lyme_whitenose.png)
+<img src=presentations_images/global_shipping.png width="500px" />
+
+## Disease Triangle
+
+![](presentations_images/disease_triangle.png)
+
+## Sudden Oak Death Triangle
+
+![](presentations_images/sod_triangle.png)
+
+## Sudden Oak Death Hosts & Environment
+
+46 wildland host species - 5 key host tree species
+
+<img src=presentations_images/sod_host_distribution.png />
+
+## Pathogen Spillover
+
+**“when disease epidemics are driven by transmission from an alternate reservoir host population” – Power & Mitchell (2004)**
+- characteristic of multihost disease systems
+
+![](presentations_images/sod_spillover.png)
+
+## Superspreaders
+
+Individual(s) that disproportionately contribute to disease transmission
+ - potential mechanism for pathogen spillover
+ 
+![](presentations_images/bay_superspreader.png)
+
+## Searching for superspreaders
+
+
+
+```{r}
+summary(cars)
+```
+
+## Slide with Plot
+
+```{r, echo=FALSE}
+plot(cars)
+```
+
+## Species and Locations as Superspreaders
+
+Disease hotspots as "superspreaders"
+
+![](presentations_images/superspreader_hotspots.png)
