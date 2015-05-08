@@ -1,45 +1,42 @@
+
 ## Repeated measures analysis ####
 
-stems <- read.csv("analysis/data/all_stems.csv")
+#### Read in data for all stems that has been processed in "explore_data.R"
+stems <- read.csv("analysis/data/stems_growth.csv")
 str(stems)
 summary(stems)
 
-### Change the assigned missing data value to NA across entire data frame
-stems[stems == -9999] <- NA
 
-library(plyr)
-library(dplyr)
-library(tidyr)
-library(ggplot2)
-
+library(plyr); library(dplyr); library(tidyr); library(ggplot2)
 names(stems)
 stems <- stems %>%
-      select(-X, -date, -year)
-class(stems$old_date)
-stems$old_date <- as.Date(stems$old_date, format = "%m/%d/%Y")
-stems$year <- as.factor(year(stems$old_date))
-class(stems$year)
+      select(-X)# Remove the row names variable
+stems$date <- as.Date(stems$date)
+stems$year <- as.factor(stems$year)
 
 ### Create bay laurel only data frame ####
 umca <- as.tbl(stems) %>%
-      select(plot, cluster, tag, species, status, slc, dbh, year) %>%
-      filter(species == "UMCA")
+      select(plot, cluster, tag, species, status, slc, dbh, delta_dbh, dbh2_1_ratio, year, date) %>%
+      filter(species == "UMCA", status == "Alive" | status == "Dead")
 summary(umca)
+umca <- droplevels(umca)
 
 # Develop plot level summaries data frame and join to stems data frame
 umca <- left_join(umca, plot_umca <- umca %>%
       select(plot, cluster, tag, status, slc, year) %>% 
       group_by(plot, year) %>%
-      filter(slc >= 0, status == "Alive") %>%
+      filter(slc != "NA" & status == "Alive") %>%
       summarise(avg_slc = mean(slc), tot_slc = sum(slc), 
                 live_dens = length(tag)), 
       by = c("plot", "year"))
-summary(umca)
-umca <- droplevels(umca)
+summary(umca)# One NA in the summarized leaf count variables
+filter(umca, is.na(avg_slc))
+filter(umca, plot == "YAHNG02")# Looks like leaf count probably not done/recorded
 
-###Linear Mixed Effects Method ####
+#### Plot Level Repeated Measures Analysis Using Multi-level Mixed-Effects Regression ####
+
+## Linear Mixed Effects Method ####
 #### A couple of lines from Sarah's code to work from
-
 # anova(lmer.null, lmer1)
 # Models:
 # lmer.null: log(cum.slc + 1) ~ 1 + (1 | year)
@@ -61,10 +58,14 @@ umca <- droplevels(umca)
 # lmer1  4 3861.9 3882.1 -1927.0   3853.9                         
 # lmer2  6 3865.2 3895.4 -1926.6   3853.2 0.7407      2     0.6905
 
-#### Plot Level Repeated Measures Analysis Using Multi-level Mixed-Effects Regression ####
 # Starting with plot level data b/c simpler w/fewer nested groups
+# Assumptions of linear mixed effects model:
+#     1. Gaussian (normal) distribution
+#     2. Errors ~ N(u, var)
 library(lme4)
+#### Simplest models, with only one random effect
 m0 <- lmer(tot_slc ~ 1 + (1 | year), data = plot_umca)
+m0a <- lmer(tot_slc ~ 1 + (1 | year) + (1 | plot), data = plot_umca)
 m1 <- lmer(tot_slc ~ live_dens + (1 | year), data = plot_umca)
 m2 <- lmer(tot_slc ~ live_dens + (live_dens | year), data = plot_umca)
 anova(m0, m1, m2)
