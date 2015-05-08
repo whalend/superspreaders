@@ -1,10 +1,16 @@
 ---
 output:
   slidy_presentation:
+    fig_width: 8
+    fig_height: 5.5
     font_adjustment: 1
     footer: Center for Geospatial Analytics at NCSU
     highlight: haddock
+    incremental: yes
     keep_md: yes
+  ioslides_presentation:
+    highlight: haddock
+    incremental: yes
   beamer_presentation:
     highlight: haddock
 ---
@@ -15,7 +21,7 @@ output:
 
 May 7, 2015
 
-<img src=http://cnr.ncsu.edu/geospatial/wp-content/uploads/sites/6/2014/07/cgaDynamicB2REV.png width="800px" />
+<img src=http://cnr.ncsu.edu/geospatial/wp-content/uploads/sites/6/2014/07/cgaDynamicB2REV.png width="800px" align="center" />
 
 ## Emerging Infectious Diseases
 
@@ -28,7 +34,7 @@ New in a population, or new but rapidly increasing
 
 ![](presentations_images/disease_triangle.png)
 
-## Sudden Oak Death Triangle
+## Sudden Oak Death Disease Triangle
 
 ![](presentations_images/sod_triangle.png)
 
@@ -40,27 +46,40 @@ New in a population, or new but rapidly increasing
 
 ## Pathogen Spillover
 
-**“when disease epidemics are driven by transmission from an alternate reservoir host population” – Power & Mitchell (2004)**
-
-- characteristic of multihost disease systems
+**“when disease epidemics are driven by transmission from an alternate reservoir host population”** 
+ 
+-- Power & Mitchell (2004) *Pathogen spillover in disease epidemics*
 
 ![](presentations_images/sod_spillover.png)
 
+A common characteristic of multihost disease systems
+ 
 ## Superspreaders
 
 Individual(s) that disproportionately contribute to disease transmission
  
-- potential mechanism for pathogen spillover
+ -- potential mechanism for pathogen spillover
  
 ![](presentations_images/bay_superspreader.png)
+
+```{r load data & libraries, echo=FALSE, message=FALSE}
+load("~/GitHub/superspreaders/stem_level_data.RData")
+library(plyr); library(dplyr); library(xtable)
+```
+```{r subset to stems w/slc, echo=FALSE}
+slc <- bay_laurel %>% select(plot, tag, slc, date, status, year) %>% 
+      filter(status == "Alive" & slc != "NA")
+#summary(slc)
+slc <- droplevels(slc)
+```
+
+Number of bay stems in the study alive during at least one sampling year: **`r length(unique(slc$tag))`**
 
 ## Searching for superspreaders
 
 The 90%, 95%, and 99% quantile threshold values for each year
-```{r Look at potential outliers, echo=FALSE, message=FALSE, results='asis'}
-load("~/GitHub/superspreaders/stem_level_data.RData")
-library(plyr); library(dplyr); library(xtable)
-tab <- xtable(bay_laurel %>% select(plot, tag, slc, status, year) %>% 
+```{r Look at potential outliers, echo=FALSE, message=FALSE, results='asis', out.extra=''}
+tab <- (bay_laurel %>% select(plot, tag, slc, date, status, year) %>% 
       filter(status == "Alive") %>%
       group_by(year) %>% 
       summarise(#slc80 = quantile(slc, 0.80, na.rm = T),
@@ -68,7 +87,18 @@ tab <- xtable(bay_laurel %>% select(plot, tag, slc, status, year) %>%
                 slc90 = quantile(slc, 0.90, na.rm = T), 
                 slc95 = quantile(slc, 0.95, na.rm = T),
                 slc99 = quantile(slc, 0.99, na.rm = T)))
+tab <- xtable(tab)
 print(tab, type = "html")
+```
+
+## Searching for superspreaders
+```{r Plot slc99 by year, message=FALSE, echo=FALSE}
+library(ggplot2)
+g <- ggplot(tab, aes(year, slc99))
+g + geom_bar(stat = "identity", color = "blue", fill = "skyblue") + 
+      theme_bw() + theme(legend.position = "none") +
+      ggtitle("99th Percentiles of Symptomatic Leaf Counts by Year") +
+      ylab("Symptomatic Leaf Count")
 ```
 
 ```{r Subset data to potential outliers each year, echo=FALSE}
@@ -78,31 +108,97 @@ slc90q <- bay_laurel %>% group_by(year) %>%
                    year == 2008 & slc >= 62 | year == 2009 & slc >= 65 | 
                    year == 2010 & slc >= 104 | year == 2011 & slc >= 166 |
                    year == 2012 & slc >= 126 | year == 2014 & slc >= 93)
-
 slc95q <- bay_laurel %>% group_by(year) %>% 
       filter(year == 2004 & slc >= 114 | year == 2005 & slc >= 88 | 
                    year == 2006 & slc >= 130 | year == 2007 & slc >= 86 | 
                    year == 2008 & slc >= 76 | year == 2009 & slc >= 83 | 
                    year == 2010 & slc >= 139 | year == 2011 & slc >= 190 |
                    year == 2012 & slc >= 155 | year == 2014 & slc >= 128)
-
 slc99q <- bay_laurel %>% group_by(year) %>%
       filter(year == 2004 & slc >= 178 | year == 2005 & slc >= 127 | 
                    year == 2006 & slc >= 174 | year == 2007 & slc >= 113 | 
                    year == 2008 & slc >= 110 | year == 2009 & slc >= 119 | 
                    year == 2010 & slc >= 191 | year == 2011 & slc >= 214 |
                    year == 2012 & slc >= 200 | year == 2014 & slc >= 181)
-      
 ```
 
-## Slide with Plot
+## Searching for Superspreaders - Stems in the 99th Percentile
+```{r subset 99th to 5 variables, echo=FALSE}
+slc99q <- slc99q %>% select(plot, tag, year, date, slc)
+```
+Number of observations in 99th percentiles: **`r length(slc99q$tag)`**
 
-```{r, echo=FALSE}
+```{r Plot slc99 data by year, echo=FALSE}
+qplot(date, slc, data = slc99q, geom = "jitter", color = tag) + 
+      geom_line(aes(color = tag)) +
+      theme_bw() + theme(legend.position = "none") +
+      ylab("Symptomatic Leaf Count") + 
+      ggtitle("Symptomatic Leaf Counts of Stems in 99th Percentile Each Year")
+slc99q <- ungroup(slc99q)
+```
 
+Number of unique stems in 99th percentiles: **`r length(unique(slc99q$tag))`**
+
+## Stems in the 99th Percentile 2+ Years
+```{r subset stems in 99th 2+ years,}
+d <- subset(slc99q, duplicated(slc99q$tag) | duplicated(slc99q$tag, fromLast = T))
+d <- arrange(d, tag, year)
+d
+```
+
+## Stems in the 99th Percentile 2+ Years
+```{r plot stems in 99th 2+ yrs, echo=FALSE}
+qplot(date, slc, data = d, color = tag, geom = "jitter") + 
+      geom_line(aes(color = tag)) +
+      #geom_text(aes(label = tag)) +
+      theme_bw() + theme(legend.position = "none") +
+      ylab("Symptomatic Leaf Count") +
+      ggtitle("Stems in the 99th Percentiles 2+ Years")
+```
+
+Number of unique stems in the 99th percentile 2+ years: **`r length(unique(d$tag))`**
+
+## Stems in the 99th Percentile 3+ Years
+```{r echo=FALSE}
+dt <- table(d$tag)
+d2 <- subset(d, tag %in% names(dt[dt > 2]))
+```
+
+Number of unique stems in the 99th percentile 3+ years: **`r length(unique(d2$tag))`**
+
+```{r echo=FALSE, eval=FALSE}
+#summary(d)
+#str(d)
+#d <- droplevels(d)
+#length(unique(d$plot))
+#length(unique(d$tag))
+
+dt <- table(d$tag)
+#dt > 2
+#dt[dt > 2]
+#names(dt[dt > 2])
+#d$tag %in% names(dt[dt > 2])
+d2 <- subset(d, tag %in% names(dt[dt > 2]))
+#d2
+length(unique(d2$tag))
+```
+```{r Plot stems 3+ yrs 99th, echo=FALSE}
+qplot(date, slc, data = d2, color = tag:plot, geom = "jitter") + 
+      geom_line(aes(color = tag:plot)) +
+      #geom_text(aes(label = plot)) +
+      theme_bw() +
+      ylab("Symptomatic Leaf Count") +
+      ggtitle("Stems in 99th Percentiles 3+ Years")
 ```
 
 ## Species and Locations as Superspreaders
 
-Disease hotspots as "superspreaders"
+More symptoms due to:
+ 
+ - individual characteristics
+ - environmental characteristics
+ - pathogen characteristics
 
 ![](presentations_images/superspreader_hotspots.png)
+
+Disease hotspots as "superspreaders"
