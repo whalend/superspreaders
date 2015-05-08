@@ -206,8 +206,6 @@ x4=  x4 + geom_boxplot() +
 ggsave(plot=x4, filename="D:\\SOCO\\SOCO_space_time\\Figures\\annual_log10slc_boxplot_95CI.png", height=4, width=5)
 
 
-
-
 #A ribbon might look nicer:
 #ggplot(mtcars, aes(x=gear, y=mpg, group=as.factor(cyl), 
 #colour=as.factor(cyl))) + 
@@ -215,14 +213,3 @@ ggsave(plot=x4, filename="D:\\SOCO\\SOCO_space_time\\Figures\\annual_log10slc_bo
 #"ribbon", alpha = 0.6)+ 
 # stat_summary(fun.y=mean, geom="point") + 
 # stat_summary(fun.y=mean, geom="line") 
-
-
-
-
-
-
-
-
-
-
-
