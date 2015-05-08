@@ -1,8 +1,0 @@
-Some notes from meeting with Krishna on December 17, 2014. Mostly will probably end up being meaningless.
-
-- State-space model explicitly modeling Markov process
-- Process model of conditional (in)dependence
-- Observational sub model
-- Time trend covariate
-
-Work up model and independence claims to share with Beth and Krishna. Provide example of at least one alternative structural model too.
