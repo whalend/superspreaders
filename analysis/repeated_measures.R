@@ -65,32 +65,41 @@ library(lme4)
 
 ## Simplest models, with only one random effect (random intercept)
 m0 <- lmer(tot_slc ~ 1 + (1 | year), data = plot_umca)
+m0a <- lmer(tot_slc ~ 1 + (1 | plot), data = plot_umca)
 ## Add a second random effect where plot is nested within year
-m0a <- lmer(tot_slc ~ 1 + (1 | year) + (1 | plot), data = plot_umca)
+m0b <- lmer(tot_slc ~ 1 + (1 | year) + (1 | plot), data = plot_umca)
+ 
 ## One predictor + random effect (intercept)
 m1 <- lmer(tot_slc ~ live_dens + (1 | year), data = plot_umca)
+m1a <- lmer(tot_slc ~ live_dens + (1 | plot), data = plot_umca)
 ## One predictor + 2 random effects
-m1a <- lmer(tot_slc ~ live_dens + (1 | year) + (1 | plot), data = plot_umca)
+m1b <- lmer(tot_slc ~ live_dens + (1 | year) + (1 | plot), data = plot_umca)
 
 # Random slope, random intercept model
 ## The random effects term in the random slope, random intercept model accounts for the interaction between the predictor variable(s) and group in addition to the systematic variation between groups.
 ##    - similar to linear regresstion with nominal & continuous variables, but requires a lot of parameters to be estimated if there are many groups (1 for each)
 m2 <- lmer(tot_slc ~ live_dens + (1 + live_dens | year), data = plot_umca)
+m2a <- lmer(tot_slc ~ live_dens + (1 | year) + (1 + live_dens | plot), data = plot_umca)
 ## add the second random effect
-m2a <- lmer(tot_slc ~ live_dens + (1 + live_dens | year) + (1 | plot), data = plot_umca)
+m2b <- lmer(tot_slc ~ live_dens + (1 + live_dens | year) + (1 | plot), data = plot_umca)
+m2c <- lmer(tot_slc ~ live_dens + (1 | year) + (1 + live_dens | plot), data = plot_umca)
 
 ## Compare all models using Chi-square test of ANOVA
 ## Refits model(s) with maximum likelihood instead of REML
-anova(m0, m1, m2, m0a, m1a, m2a)
-## The random slope, random intercept model with the additional random effect is the best, but the high values for the metrics may indicate some misspecification. Also, this doesn't give me much information about the relationship between leaf count & the environment.
+anova(m0, m1, m2, m0a, m0b, m1a, m1b, m2a, m2b, m2c)
+## The random slope, random intercept model with the density:year interaction and the additional random effect is the best (lowest AIC), but the high values for the metrics may indicate some misspecification.
 
 # Plot the fitted models
 plot(m0)
 plot(m0a)
+plot(m0b)
 plot(m1)
 plot(m1a)
+plot(m1b)
 plot(m2)
 plot(m2a)
+plot(m2b)
+plot(m2c)
 ## All of them show a lot of spread - expected because I know the distributions for leaf count and density aren't even close to normal
 par(mfrow=c(2,2))
 hist(plot_umca$tot_slc)
@@ -102,29 +111,46 @@ log_live_dens <- log(plot_umca$live_dens); hist(log_live_dens)
 
 # Refit models with transformed variables
 m0 <- lmer(log_tot_slc ~ 1 + (1 | year), data = plot_umca)
-m0a <- lmer(log_tot_slc ~ 1 + (1 | year) + (1 | plot), data = plot_umca)
+m0a <- lmer(log_tot_slc ~ 1 + (1 | plot), data = plot_umca)
+m0b <- lmer(log_tot_slc ~ 1 + (1 | year) + (1 | plot), data = plot_umca)
 m1 <- lmer(log_tot_slc ~ log_live_dens + (1 | year), data = plot_umca)
-m1a <- lmer(log_tot_slc ~ log_live_dens + (1 | year) + (1 | plot), data = plot_umca)
+m1a <- lmer(log_tot_slc ~ log_live_dens + (1 | plot), data = plot_umca)
+m1b <- lmer(log_tot_slc ~ log_live_dens + (1 | year) + (1 | plot), data = plot_umca)
 m2 <- lmer(log_tot_slc ~ log_live_dens + (1 + log_live_dens | year), data = plot_umca)
-m2a <- lmer(log_tot_slc ~ log_live_dens + (1 + log_live_dens | year) + (1 | plot), data = plot_umca)
+m2a <- lmer(log_tot_slc ~ log_live_dens + (1 + log_live_dens | plot), data = plot_umca)
+m2b <- lmer(log_tot_slc ~ log_live_dens + (1 + log_live_dens | year) + (1 | plot), data = plot_umca)
+m2c <- lmer(log_tot_slc ~ log_live_dens + (1 | year) + (1 + log_live_dens | plot), data = plot_umca)
 
-anova(m0, m1, m2, m0a, m1a, m2a)
-anova(m1a, m2a)
-## The random slope, random intercept model with the plot random effect is the best, but only slightly better than the random intercept model with the year & plot random effects
+#models <- ls(pattern = "^m") # make vector of model object names; commented out b/c noticed that the row names are the model names of the anova
+m_anova <- anova(m0, m1, m2, m0a, m0b, m1a, m1b, m2a, m2b, m2c)
+m_anova$models <- row.names(m_anova)
+#cbind(m_anova, models)
+m_anova <- arrange(m_anova, AIC) # arrange by increasing AIC, so best model first
+m_anova
+anova(m2b, m1b, m2c) # Top 3 models
+## The random slope, random intercept model with the density:year interaction random effect and the plot random effect is the best, but only slightly better than the random intercept model with the year & plot intercept random effects, and significantly more better (based on change in AIC > 5) than the random slope, random intercept model with the density:plot interaction and year random effect.
+anova(m1b, m2b) # Top 2 models, marginally significant difference
+plot(m2b, main = "Model m2b")
+plot(m1b, main = "Model m1b")
+plot(m2c, main = "Model m2c")
 
 
+## Look at details of the 3 best models ####
+m2b
+m1b
+m2c
 #### Print Model Coefficients
-coef(m0) # intercept only (null) model
-coef(m1) # varying intercept
-coef(m2) # vayring intercept, varying slope
+coef(m2b)
+coef(m1b)
+coef(m2c)
 #### Plot model residuals
-plot(residuals(m0))
-plot(residuals(m1))
-plot(residuals(m2))
+plot(residuals(m2b))
+plot(residuals(m1b))
+plot(residuals(m2c))
 #### Compute confidence intervals
-confint(m0)
-confint(m1)
-confint(m2)
+confint(m2b)
+confint(m1b)
+confint(m2c)
 #### Extract Residual Error
 sigma(m0)
 sigma(m1)
@@ -132,26 +158,23 @@ sigma(m2)
 
 #### Plot model profiles using `lattice` package
 library(lattice)
-xyplot(profile(m1), conf = c(50, 90, 95, 99)/100)
-densityplot(profile(m1))
-splom(profile(m1), conf = c(50, 90, 95, 99)/100)
+xyplot(profile(m2b), conf = c(50, 90, 95, 99)/100)
+densityplot(profile(m2b))
+splom(profile(m2b), conf = c(50, 90, 95, 99)/100)
 
-#### Compare m1 to m2 based on predicted values
+#### Compare m2b to m1b based on predicted values
 par(mfrow=c(1,3))
-plot(predict(m1), predict(m2))
-abline(lm(predict(m1) ~ predict(m2)), col = "red")
+plot(predict(m1b), predict(m2b))
+abline(lm(predict(m2b) ~ predict(m1b)), col = "red")
 
-plot(predict(m0), predict(m1))
-abline(lm(predict(m0) ~ predict(m1)), col - "red")
+plot(predict(m2c), predict(m1b))
+abline(lm(predict(m1b) ~ predict(m2c)), col = "red")
 
-plot(predict(m0), predict(m2))
-abline(lm(predict(m0) ~ predict(m2)), col - "red")
+plot(predict(m2c), predict(m2b))
+abline(lm(predict(m2b) ~ predict(m2c)), col = "red")
 
-summary(lm(predict(m1) ~ predict(m2)))
-summary(lm(predict(m0) ~ predict(m1)))
-summary(lm(predict(m0) ~ predict(m2)))
-
-
-
+summary(lm(predict(m2b) ~ predict(m1b)))
+summary(lm(predict(m1b) ~ predict(m2c)))
+summary(lm(predict(m2b) ~ predict(m2c)))
 
 
