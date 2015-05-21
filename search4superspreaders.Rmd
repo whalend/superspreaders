@@ -159,14 +159,14 @@ qplot(date, slc, data = d, color = tag, geom = "jitter") +
 Number of unique stems in the 99th percentile 2+ years: **`r length(unique(d$tag))`**
 
 ## Stems in the 99th Percentile 3+ Years
-```{r echo=FALSE}
+```{r Stems repeated 3+ years, echo=FALSE}
 dt <- table(d$tag)
 d2 <- subset(d, tag %in% names(dt[dt > 2]))
 ```
 
 Number of unique stems in the 99th percentile 3+ years: **`r length(unique(d2$tag))`**
 
-```{r echo=FALSE, eval=FALSE}
+```{r Conditional subsetting data, echo=FALSE, eval=FALSE}
 #summary(d)
 #str(d)
 #d <- droplevels(d)
