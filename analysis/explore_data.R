@@ -260,20 +260,21 @@ tmp <- plot_qusp %>%
       dcast(year + plot ~ species, value.var = "infected_oak_ct")
 
 #### Checking large positive DBH changes ####
-## So at this point I think I have corrected all the negative dbh change values that I legitimately could in the database. I have gone back and exported the query again and use this file below, recycling code from the beginning of this document.
+## So at this point I think I have corrected all the negative dbh change values that I legitimately could in the database. I have gone back and exported the query again and use this file below, and then recycling code from the beginning of this document.
 stems <- read.csv("analysis/data/Stem_Summary_negDBH_corrected_201402.csv")
 summary(stems)
+str(stems)
 
 stems$Date <- as.character(stems$Date)
 class(stems$Date)
-library(lubridate)
-stems$year <- year(as.Date(stems$Date, format = "%m/%d/%Y"))
 stems$date <- as.Date(stems$Date, format = "%m/%d/%Y")
+library(lubridate)
+stems$year <- year(stems$date)
 summary(stems)
 library(plyr)
 library(dplyr)
 filter(stems, is.na(year))
-filter(stems, PlotID == "SECRET02", SpeciesID == "QUAG", year == 2012)
+filter(stems, PlotID == "SECRET02", SpeciesID == "QUAG")
 
 stems$year[is.na(stems$year)] <- 2012
 filter(stems, is.na(date))
@@ -283,7 +284,7 @@ stems[stems == -9999] <- NA
 summary(stems)
 
 stems <- rename(stems, plot = PlotID)
-stems <- rename(stems, cluster = ClusterID, tag = TagNumber, 
+stems <- rename(stems, cluster = HostID, tag = TagNumber, 
                 species = SpeciesID, status = StemStatus, 
                 alive_class = AliveClass, dead_class= DeadClass,
                 slc = SympLeafCount, canker = CankerPresent, dbh = DBH,
@@ -298,6 +299,9 @@ class(stems)
 stems <- as.tbl(stems)
 
 #### Subset DBH data to create a data frame of remeasured stems: Round 2 ####
+
+detach("package:lubridate", unload=TRUE)# b/c it has `union` function masking the one from `dplyr` that apparently behaves a little differently, creating a list instead of a data frame
+
 dbh2014 <- stems %>% filter(dbh>0, year == 2014)
 length(unique(dbh2014$tag))
 # 4158, indicating there are 294 stems with no dbh measured in 2014
@@ -310,7 +314,6 @@ dbh2004 <- stems %>% select(plot, tag, dbh, year, date) %>%
       filter(dbh>0, year == 2004)
 # 3109 observations
 anti_join(dbh2003, dbh2004, by = "tag")
-detach("package:lubridate", unload=TRUE)# b/c it has `union` function masking the one from `dplyr` that apparently behaves a little differently, creating a list instead of a data frame
 dbh_a <- union(dbh2004, dbh2003)
 
 dbh2005 <- stems %>% select(plot, tag, dbh, year, date) %>%
@@ -359,7 +362,7 @@ dbh2014 <- stems %>% select(plot, tag, dbh, year, date) %>%
 anti_join(dbh2014, dbh_a, by = "tag") # this inidcates that there are 113 stems that were measured for the first time in 2014
 anti_join(dbh_a, dbh2014, by = "tag")# this indicates that there were 284 stems previously measured that were not part of the remeasurement in 2014. This looks in part to be due to plot abandonments/decomissions, but may also be due to other reasons.
 
-
+## Some plots of DBH measurements ####
 library(ggplot2)
 # Scatterplot of first dbh measurement (y-axis) against year
 qplot(tag, dbh, data = dbh_a, geom="jitter", facets = year ~.)
@@ -380,7 +383,7 @@ sum(dbh$delta_dbh, na.rm=T)
 # filter(dbh, delta_dbh < -20)
 
 
-#### Check the positive DBH change outliers ####
+#### Check the positive DBH change outliers of stems remeasured in 2014 ####
 dbh <- read.csv("analysis/data/dbh_2014_remeasures.csv")
 summary(dbh)
 library(ggplot2)
