@@ -258,6 +258,7 @@ gather(plot_qusp, inf_status, count, ends_with("ct")) %>%
 library(reshape2)
 tmp <- plot_qusp %>%
       dcast(year + plot ~ species, value.var = "infected_oak_ct")
+head(tmp)
 
 #### Checking large positive DBH changes ####
 ## So at this point I think I have corrected all the negative dbh change values that I legitimately could in the database. I have gone back and exported the query again and use this file below, and then recycling code from the beginning of this document.
