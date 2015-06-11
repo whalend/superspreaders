@@ -1,4 +1,4 @@
-## A lot of the plotting and code in this was written by Sarah Haas. I have made some additions and modifications while exploring ways to quantify what may constitute a superspreader individual.
+#' A lot of the plotting and code in this was written by Sarah Haas. I have made some additions and modifications while exploring ways to quantify what may constitute a superspreader individual.
 
 library(plyr)
 library(dplyr)
@@ -11,14 +11,12 @@ head(umca_stem)
 summary(umca_stem %>% group_by(year, tag))
 summary(umca_stem %>% group_by(year))
 
-# Some observations repeated in this file, so subset to unique
+#' Some observations repeated in this file, so subset to unique
 umca_stem <- unique(umca_stem[ , 1:8] )
 
-
-## Get specific quantile values for SLC for each year ####
-### If the same stems are consistently in the upper quantile then they may be superspreaders because they support more infections compared to the population. 
-
-# The `plyr` method with sample code from <http://stackoverflow.com/questions/5473537/how-to-calculate-95th-percentile-of-values-with-grouping-variable-in-r-or-excel>
+#' Get specific quantile values for SLC for each year ####
+#' If the same stems are consistently in the upper quantile then they may be superspreaders because they support more infections compared to the population. 
+#' The `plyr` method with sample code from <http://stackoverflow.com/questions/5473537/how-to-calculate-95th-percentile-of-values-with-grouping-variable-in-r-or-excel>
 library(plyr)
 #Random seed
 set.seed(42)
@@ -71,8 +69,8 @@ p2 <- p2 + geom_point(aes(color = plot.id), position = "jitter") +
 p2 + geom_text(aes(label = tag, color = ))
 
 
-## "Seasonality" and symptoms ####
-### Note that this has to be done within a sample season, so it's a bad assessment of true seasonality of symptoms.
+#' "Seasonality" and symptoms ####
+#' Note that this has to be done within a sample season, so it's a bad assessment of true seasonality of symptoms. Jennifer Davidson's work addressed this pretty well, so it would be a proper reference.
 library(dplyr)
 library(ggplot2)
 ggplot(data = stems %>% select(Date, slc, species, status, year) %>% filter(species == "UMCA" & status == "Alive") %>% group_by(Date)) + 
@@ -80,12 +78,13 @@ ggplot(data = stems %>% select(Date, slc, species, status, year) %>% filter(spec
       facet_grid(year ~ .)
 
 
+#' Sarah's code below ####
 annual.slc = tapply(slc, list(plot.id, year), sum, na.rm=TRUE) 
 #is.matrix(annual.slc), #[1] TRUE
 #annual.slc.export = write.csv(annual.slc, file="D:\\SOCO\\Plot_descriptors\\annual.slc.export.csv")
 annual.slc.df = as.data.frame(annual.slc)
 
-# Matrix algegra to get average slc/year (for line graph):
+#' Matrix algebra to get average slc/year (for line graph):
 annual.slc.avg = as.integer(colMeans(annual.slc, na.rm=TRUE))
 #annual.slc.avg
 #     2004  2005  2006  2007  2008  2009  2010  2011 
@@ -273,8 +272,6 @@ x4=  x4 + geom_boxplot() +
 ggsave(plot=x4, filename="D:\\SOCO\\SOCO_space_time\\Figures\\annual_log10slc_boxplot_95CI.png", height=4, width=5)
 
 
-
-
 #A ribbon might look nicer:
 #ggplot(mtcars, aes(x=gear, y=mpg, group=as.factor(cyl), 
 #colour=as.factor(cyl))) + 
@@ -282,14 +279,3 @@ ggsave(plot=x4, filename="D:\\SOCO\\SOCO_space_time\\Figures\\annual_log10slc_bo
 #"ribbon", alpha = 0.6)+ 
 # stat_summary(fun.y=mean, geom="point") + 
 # stat_summary(fun.y=mean, geom="line") 
-
-
-
-
-
-
-
-
-
-
-
