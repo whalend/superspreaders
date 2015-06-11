@@ -1,0 +1,54 @@
+---
+title: "Predicting Oak Infection"
+author: "Whalen Dillon"
+date: "June 11, 2015"
+output: html_document
+---
+
+I'm trying to define an empirical relationship between oak infection and bay laurel density, though I think this is something we can get from Sarah's survival analysis.
+
+```{r load data}
+load("stems_plots.RData")
+summary(stems)
+summary(plot_qusp)
+summary(plots_umca)
+```
+
+```{r load packages, message=FALSE}
+library(plyr); library(dplyr); library(lme4); library(ggplot2)
+```
+
+```{r manipulate data}
+names(stems)
+plot_aggregates <- stems %>%
+      select(plot, species, status, slc, canker, sod_dead, dbh, year) %>%
+      group_by(year, plot) %>% 
+      summarise(slc_total = sum(slc, na.rm=T), slc_avg = mean(slc, na.rm=T), oak_inf = sum(canker, na.rm=T), oak_dead = sum(sod_dead, na.rm=T), dbh_total = sum(dbh, na.rm=T), dbh_avg = mean(dbh, na.rm=T))
+
+summary(plot_aggregates)
+
+summary(plot_qusp)
+plot_aggregates <- left_join(plot_aggregates, select(plot_qusp, year, plot, uninfected_oak_ct, infected_oak_ct, tot_oak), by = c("year", "plot"))
+summary(plots_umca)
+plot_aggregates <- left_join(plot_aggregates, select(plots_umca, year, plot, uninfected_bay_ct, infected_bay_ct, tot_bay))
+```
+
+```{r model oak infection}
+library(lme4)
+oak2012 <- filter(plot_aggregates, year == 2012, infected_oak_ct > 0)
+summary(oak2012)
+plot(oak2012$tot_bay, oak2012$infected_oak_ct)
+
+summary(filter(plot_aggregates, infected_oak_ct == 1))
+
+ggplot(plot_aggregates, aes(tot_bay, infected_oak_ct)) +
+      geom_point() +
+      facet_grid(year ~ .)
+
+oak.m1 <- glmer(cbind(infected_oak_ct, uninfected_oak_ct) ~ I(tot_bay/225) + (1 | plot), data = plot_aggregates, family = "binomial")
+summary(oak.m1)
+
+oak.m2 <- glmer(cbind(infected_oak_ct, uninfected_oak_ct) ~ log1p(tot_bay) + (1 | plot), data = plot_aggregates, family = "binomial")
+summary(oak.m2)
+```
+
