@@ -1,0 +1,79 @@
+---
+title: "IALE 2015 Analysis"
+author: "Whalen Dillon"
+date: "June 15, 2015"
+output: html_document
+---
+
+
+```{r load data}
+# Ecological data: leaf counts, infection
+load("~/GitHub/superspreaders/stems_plots.RData")
+
+# Physical environment: topography
+library(rgdal)
+plots_env <- readOGR("analysis/data/plot_gis/", "soco_plots_metric")
+str(plots_env)
+plot(plots_env, axes=T)
+plots_env <- plots_env@data
+
+# Temperature: rainy season hour summaries
+plots_temps <- read.csv("analysis/data/rainy_season_temps.csv")
+summary(plots_temps)
+plots_temps <- select(plots_temps, -X)
+```
+
+Join the plot level environmental data (geographic/topographic & temperatures)
+```{r join plot data, message=FALSE}
+library(dplyr)
+plots_env <- left_join(plots_env, plots_temps, by = c("PLOT_ID"="plotid"))
+summary(plots_env)
+str(plots_env)
+plots_env <- plots_env %>% select(-cat) %>% rename(easting = X, northing = Y, plotid = PLOT_ID)
+```
+
+Investigating `NAs` in the data set
+```{r investigate NAs}
+summary(plots_env)
+filter(plots_env, is.na(sample_year))
+
+# BUSH01 plot included. I think we have limited ecological data for this plot, and no microclimate data. So, I am going to exclude it from all the data sets
+plots_env <- filter(plots_env, plotid != "BUSH01")
+stems <- rename(stems, plotid = plot) %>% filter(plotid != "BUSH01")
+
+summary(plots_env) # A number of observations for above 25 threshold have NAs
+# I believe that these are in fact truly zero observations. NAs occurred for the 2010, 2011, and 2014 seasons, and the only NAs in the data set are associated with the above 25 threshold. 
+plots_env %>% filter(is.na(hrs_abv25))
+# I am replacing the NAs with `0`, assuming true observations.
+plots_env[is.na(plots_env)] <- 0
+```
+
+Make a pairs plot of the continuous variables, i.e. everything except `plotid`.
+```{r pairs plot}
+# Helper functions for `pairs`
+panel.hist <- function(x, ...)
+{
+      usr <- par("usr"); on.exit(par(usr))
+      par(usr = c(usr[1:2], 0, 1.5) )
+      h <- hist(x, plot = FALSE)
+      breaks <- h$breaks; nB <- length(breaks)
+      y <- h$counts; y <- y/max(y)
+      rect(breaks[-nB], 0, breaks[-1], y, col = "cyan", ...)
+}
+panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)
+{
+      usr <- par("usr"); on.exit(par(usr))
+      par(usr = c(0, 1, 0, 1))
+      r <- abs(cor(x, y, use = "na.or.complete"))
+      txt <- format(c(r, 0.123456789), digits = digits)[1]
+      txt <- paste0(prefix, txt)
+      if(missing(cex.cor)) cex.cor <- 0.8/strwidth(txt)
+      text(0.5, 0.5, txt, cex = cex.cor * r)
+}
+
+pairs(select(plots_env, -plotid, -sample_year), lower.panel = panel.cor, diag.panel = panel.hist)
+
+plots_env$avg_psi <- rowMeans(cbind(plots_env$psiSpr, plots_env$psiSum, plots_env$psiWin))
+pairs(select(plots_env, -plotid, -sample_year, -starts_with("psi")), lower.panel = panel.cor, diag.panel = panel.hist)
+```
+
