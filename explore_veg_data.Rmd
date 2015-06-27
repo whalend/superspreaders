@@ -1,0 +1,51 @@
+---
+title: "Explore Vegetation Data"
+author: "Whalen Dillon"
+date: "June 26, 2015"
+output: html_document
+---
+
+In this document I am exploring vegetation data from the Sonoma County plot network. These data were collected usin vegetation transects across each of the plots circa plot establishment (2003/2004) and in 2011. The DBH of alternate and non-host species were also recorded in 2006, 2012, and 2014.
+
+Read in general vegetation data related to each plot
+```{r read in data}
+canopy_cover <- read.csv("analysis/data/canopy_cover_qry.csv")
+veg_transects <- rbind(read.csv("analysis/data/veg_transects_subset_qry_pre2011.csv"), read.csv("analysis/data/veg_transects_2011.csv"))
+alt_sp_dbh <- read.csv("analysis/data/alt_species_dbh.csv")
+```
+
+What am I looking at here?
+```{r examine canopy cover data}
+library(dplyr)
+str(canopy_cover)
+head(canopy_cover)
+# I am interested in the date and total estimated cover fore each plot
+canopy_cover <- canopy_cover %>% select(PlotID, Date, PctTotalCover)
+canopy_cover$Date <- as.Date(as.character(canopy_cover$Date), format = "%m/%d/%Y")
+canopy_cover <- rename(canopy_cover, plotid = PlotID, date = Date, pct_cvr = PctTotalCover)
+summary(canopy_cover)
+filter(canopy_cover, is.na(date))
+filter(canopy_cover, plotid == "APGAR01") # appears to be a duplicate entry...
+canopy_cover <- filter(canopy_cover, is.na(date) == "FALSE")
+
+library(lubridate)
+canopy_cover$year <- year(canopy_cover$date)
+```
+
+The subset veg transect data `veg2` is approximately half of the original data points, selecting every other sample point along the transect. About twice as many points were sampled during plot establishment compared to the 2011 sampling
+```{r examine veg transect data}
+str(veg_transects)
+veg_transects$Date <- as.Date(as.character(veg_transects$Date), format = "%m/%d/%Y")
+veg_transects$year <- year(veg_transects$Date)
+summary(veg_transects)
+head(veg_transects, 20)
+unique(veg_transects$year)
+
+dim(filter(veg_transects, year != 2011))
+
+unique(filter(veg_transects, year == 2005 | year == 2004 | year == 2003)$PlotID) # 205 plot IDs
+unique(filter(veg_transects, year == 2011)$PlotID) # 199 plot IDs
+
+
+```
+
