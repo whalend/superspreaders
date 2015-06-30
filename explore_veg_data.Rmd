@@ -14,9 +14,10 @@ veg_transects <- rbind(read.csv("analysis/data/veg_transects_subset_qry_pre2011.
 alt_sp_dbh <- read.csv("analysis/data/alt_species_dbh.csv")
 ```
 
-What am I looking at here?
+## Canopy Cover - Densiometers
+
 ```{r examine canopy cover data}
-library(dplyr)
+library(plyr); library(dplyr)
 str(canopy_cover)
 head(canopy_cover)
 # I am interested in the date and total estimated cover fore each plot
@@ -42,10 +43,201 @@ head(veg_transects, 20)
 unique(veg_transects$year)
 
 dim(filter(veg_transects, year != 2011))
-
 unique(filter(veg_transects, year == 2005 | year == 2004 | year == 2003)$PlotID) # 205 plot IDs
 unique(filter(veg_transects, year == 2011)$PlotID) # 199 plot IDs
+veg_transects$PlotID <- tolower(veg_transects$PlotID)
 
+detach("package:lubridate", unload = T)
+```
 
+## Overstory Vegetation
+
+```{r overstory veg}
+veg_os <- select(veg_transects, -UnderstorySp)
+summary(veg_os)
+
+# veg_us <- veg_us %>% (UnderstorySp != "")
+# summary(veg_us)
+
+# veg_os <- veg_os %>% filter(OverstorySp != "")
+veg_os[veg_os == -9999.00] <- NA
+filter(veg_os, is.na(OverstorySp))
+#veg_os <- na.omit(veg_os)
+summary(veg_os) # Percent coverage max is greater than 100
+filter(veg_os, PercentCoverage > 100)
+veg_os$PercentCoverage[veg_os$PercentCoverage > 100] <- 80
+summary(veg_os)
+
+veg_os <- as.tbl(veg_os)
+(veg_os)
+veg_os$OverstorySp <- tolower(veg_os$OverstorySp)
+unique(veg_os$OverstorySp)
+veg_os$OverstorySp[veg_os$OverstorySp == "arcto sp."] <- "arcto"
+veg_os$OverstorySp[veg_os$OverstorySp == "quke x quag"] <- "quag x quke"
+veg_os$OverstorySp[veg_os$OverstorySp == "none"] <- "open"
+veg_os$OverstorySp[veg_os$OverstorySp == "visp"] <- "vinca sp."
+veg_os$OverstorySp[veg_os$OverstorySp == ""] <- NA
+filter(veg_os, OverstorySp == "uq1")
+unique((filter(veg_os, PlotID == "sugar04", year == 2004))$OverstorySp)
+unique((filter(veg_os, PlotID == "sugar04", year == 2011))$OverstorySp)
+# This hints at the "uq1" from 2004 being the hybrid recorded in 2011. Note that the "open" value will be dropped later, but right now is being used as a place holder.
+veg_os$OverstorySp[veg_os$OverstorySp == "uq1"] <- "quke x quwi"
+# I'm also making the assumption of the "quwi" recorded in 2004 also actually being a hybrid because we didn't record a "quwi" in 2011
+veg_os$OverstorySp[veg_os$PlotID == "sugar04" & veg_os$year == 2004 & veg_os$OverstorySp == "quwi"] <- "quke x quwi"
+unique(veg_os$OverstorySp)
+# What's the deal with "unknown sp." & "unknown sp. 1"?
+filter(veg_os, OverstorySp == "unknown sp.")
+filter(veg_os, OverstorySp == "unknown sp. 1")
+# I think I can assume that the "unknowns" are the same within a plot, but probably different across the plot network. So, I can use them for calculating richness or diversity within a plot, but should probably exclude them from any other metric.
+
+# I want to get this arranged so that I have the number of observations for each species in each plot
+
+veg_os_summ <- left_join(veg_os %>% filter(OverstorySp != "OPEN") %>% 
+      group_by(PlotID, year, OverstorySp) %>% 
+      summarise(ptct = length(OverstorySp)),
+      veg_os %>% group_by(PlotID, year) %>% summarise(totpts = length(unique(PtNum)) * length(unique(Transect))),
+      by = c("PlotID", "year"))
+summary(veg_os_summ)
+```
+
+Why is the minimum for `totpts` 45 and the maximum 80? All *should* be 60, though I would allow for a little wiggle room. If I can't figure anything out then I'm going to call it good enough
+```{r overstory outliers}
+filter(veg_os_summ, totpts == 45)
+filter(veg_os_summ, PlotID == "ann25")
+(unique(filter(veg_os, PlotID == "ann25", year == 2004)$Transect))
+(unique(filter(veg_os, PlotID == "ann25", year == 2004)$PtNum))
+(unique(filter(veg_transects, PlotID == "ann25", year == 2004)$PtNum))
+
+filter(veg_os_summ, PlotID == "mutte02")
+unique(filter(veg_os, PlotID == "mutte02", year == 2004)$Transect)
+unique(filter(veg_os, PlotID == "mutte02", year == 2011)$Transect)
+(unique(filter(veg_os, PlotID == "mutte02", year == 2004)$PtNum))
+(unique(filter(veg_transects, PlotID == "mutte02", year == 2004)$PtNum))
+(unique(filter(veg_os, PlotID == "mutte02", year == 2011)$PtNum))
+(unique(filter(veg_transects, PlotID == "mutte02", year == 2011)$PtNum))
+
+filter(veg_os_summ, PlotID == "sugar32")
+unique(filter(veg_os, PlotID == "sugar32", year == 2004)$Transect)
+unique(filter(veg_os, PlotID == "sugar32", year == 2004)$PtNum)
+# I don't see much I can do about these.
+
+filter(veg_os_summ, totpts == 80)
+filter(veg_os_summ, PlotID == "jlsp05")
+# The ratios from this sampling are nearly the same (within < 1%), so that should be fine.
+```
+
+Here I am adding a column that calculates the proportional coverage for each species based on the number of points they were observed in throughout the plot and the total number of points sampled in the plot.
+```{r calculate overstory proportianal coverage}
+mutate(veg_os_summ, pcov = ptct/totpts)
+```
+
+## Understory Vegetation
+
+Now on to working through the understory veg data. I think this will actually be the more important because I will have DBH measurements for most of the species that would be observed in the overstory. Though there will as always be a few exceptions, e.g. TODI.
+```{r understory veg}
+veg_us <- select(veg_transects, -OverstorySp, -PercentCoverage)
+summary(veg_us)
+
+veg_us <- as.tbl(veg_us)
+veg_us
+veg_us$UnderstorySp <- tolower(veg_us$UnderstorySp)
+summary(veg_us)
+unique(veg_us$UnderstorySp)
+# summary(filter(veg_us, UnderstorySp == "None"))
+# summary(filter(veg_us, UnderstorySp == "OPEN"))
+veg_us[veg_us == -9999] <- NA
+veg_us$UnderstorySp[veg_us$UnderstorySp == "none"] <- "open"
+veg_us$UnderstorySp[veg_us$UnderstorySp == "arcto sp."] <- "arcto"
+filter(veg_us, UnderstorySp == "vasp")
+
+unique(filter(veg_us, PlotID == "ann33", year == 2005)$UnderstorySp)
+unique(filter(veg_us, PlotID == "ann33", year == 2011)$UnderstorySp)
+veg_us$UnderstorySp[veg_us$PlotID == "ann33" & veg_us$year == 2011 & veg_us$UnderstorySp == "losp"] <- "lohi"
+veg_us$UnderstorySp[veg_us$PlotID == "ann33" & veg_us$year == 2011 & veg_us$UnderstorySp == "syal"] <- "symo"
+veg_us$UnderstorySp[veg_us$PlotID == "ann33" & veg_us$year == 2011 & veg_us$UnderstorySp == "roca"] <- "rogy"
+
+(unique(veg_us$UnderstorySp))
+
+filter(veg_us, UnderstorySp == "bacspp") # Assuming this is a Baccharis species
+veg_us$UnderstorySp[veg_us$UnderstorySp == "bacspp"] <- "bapi"
+
+filter(veg_us, UnderstorySp == " to") # Maybe it's supposed to say "arcto" or "todi"?
+veg_us$UnderstorySp[veg_us$UnderstorySp == " to"] <- "todi"
+filter(veg_us, UnderstorySp == "4") # this is probably a typo; it should be "umca"
+veg_us$UnderstorySp[veg_us$UnderstorySp == "4"] <- "umca"
+
+veg_us$UnderstorySp[veg_us$UnderstorySp == "quke x quag"] <- "quag x quke"
+
+filter(veg_us, UnderstorySp == "losp")
+summary(filter(veg_us, UnderstorySp == "losp"))
+unique(filter(veg_us, UnderstorySp == "losp")$PlotID)
+unique(filter(veg_us, PlotID == "ann14", year == 2011)$UnderstorySp)
+unique(filter(veg_us, PlotID == "ann14", year == 2003)$UnderstorySp)
+# I wonder if all the "losp" we did in 2011 are reallly just "lohi"
+unique(filter(veg_us, year < 2011)$UnderstorySp)
+unique(filter(veg_us, year >= 2011)$UnderstorySp)
+filter(veg_us, year < 2011, UnderstorySp == "losp")
+filter(veg_us, year < 2011, UnderstorySp == "lonicera sp.")
+# Changing all to lohi
+veg_us$UnderstorySp[veg_us$UnderstorySp == "losp"] <- "lohi"
+
+filter(veg_us, UnderstorySp == "quag x")
+unique(filter(veg_us, PlotID == "mcneil01", year == 2005)$UnderstorySp)
+unique(filter(veg_us, PlotID == "mcneil01", year == 2011)$UnderstorySp)
+# McNeil01 was decommissioned prior to 2011, so not sure what the "quag x" was. But if this is in fact a quag-hybrid, then it there should probably be an adult tagged stem. Going to check the database...this plot only had adult UMCA tagged. So, I'm going to assume this was just a (perhaps funny looking) quag seedling/sapling.
+veg_us$UnderstorySp[veg_us$UnderstorySp == "quag x"] <- "quag"
+
+unique((veg_us$UnderstorySp))
+filter(veg_us, UnderstorySp == "todye") # assume that this should be "todi"
+veg_us$UnderstorySp[veg_us$UnderstorySp == "todye"] <- "todi"
+
+filter(veg_us, UnderstorySp == "arsp?") # assume "arcto" b/c ARME would be pretty obvious for ID
+veg_us$UnderstorySp[veg_us$UnderstorySp == "arsp?"] <- "arcto"
+
+filter(veg_us, UnderstorySp == "unk1")
+filter(veg_us, UnderstorySp == "unknown sp. 1")
+veg_us$UnderstorySp[veg_us$UnderstorySp == "unk1"] <- "unknown sp. 1"
+veg_us$UnderstorySp[veg_us$UnderstorySp == "unk2"] <- "unknown sp. 2"
+
+filter(veg_us, UnderstorySp == "uq1")
+filter(veg_us, UnderstorySp == "us#1")
+veg_us$UnderstorySp[veg_us$UnderstorySp == "uq1" | veg_us$UnderstorySp == "us#1" | veg_us$UnderstorySp == "unknown sp."] <- "unknown sp. 1"
+
+veg_us$UnderstorySp[veg_us$UnderstorySp == "vinca sp"] <- "vinca sp."
+veg_us$UnderstorySp[veg_us$UnderstorySp == "lusp" | veg_us$UnderstorySp == "lupinus sp"] <- "lupine sp."
+veg_us$UnderstorySp[veg_us$UnderstorySp == "vasp"] <- "vaccinium sp."
+veg_us$UnderstorySp[veg_us$UnderstorySp == "gasp"] <- "garrya sp."
+veg_us$UnderstorySp[veg_us$UnderstorySp == "qusp"] <- "quercus sp."
+veg_us$UnderstorySp[veg_us$UnderstorySp == "risp" | veg_us$UnderstorySp == "ribes sp"] <- "ribes sp."
+veg_us$UnderstorySp[veg_us$UnderstorySp == "prunus sp"] <- "prunus sp."
+veg_us$UnderstorySp[veg_us$UnderstorySp == "rosa" | veg_us$UnderstorySp == "rosp"] <- "rose sp."
+veg_us$UnderstorySp[veg_us$UnderstorySp == "rubu sp."] <- "rusp"
+veg_us$UnderstorySp[veg_us$UnderstorySp == "rhsp"] <- "rhamnus sp."
+veg_us$UnderstorySp[veg_us$UnderstorySp == "garry sp."] <- "garrya sp."
+
+filter(veg_us, UnderstorySp == "asca") # I suspect this was supposed to be "aeca", even thou "asca" is written on the data sheet
+filter(veg_us, PlotID == "bouv03", PtNum == 6)
+unique(filter(veg_us, PlotID == "bouv03", year == 2005)$UnderstorySp)
+unique(filter(veg_us, PlotID == "bouv03", year == 2011)$UnderstorySp)
+veg_us$UnderstorySp[veg_us$UnderstorySp == "asca"] <- "aeca"
+```
+
+Okay, I think I have solved all (most?) of the duplicate species issues. Now to summarise the understory vegetation data similar to the overstory data.
+```{r summarise veg understory data}
+veg_us_summ <- left_join(veg_us %>% filter(UnderstorySp != "", UnderstorySp != "open") %>% 
+      group_by(PlotID, year, UnderstorySp) %>% 
+      summarise(ptct = length(UnderstorySp)),
+      veg_us %>% group_by(PlotID, year) %>% 
+            summarise(totpts = length(unique(PtNum)) * length(unique(Transect))),
+      by = c("PlotID", "year"))
+# filter(veg_us, PlotID == "ANN05", year == 2011)
+
+veg_us_summ <- mutate(veg_us_summ, pcov = ptct/totpts)
+veg_us_summ
+summary(veg_us_summ)
+unique(veg_us_summ$UnderstorySp)
+
+veg_us_2011 <- filter(veg_us_summ, year == 2011)
+veg_us_2005 <- filter(veg_us_summ, year < 2011)
 ```
 
