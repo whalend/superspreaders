@@ -104,11 +104,33 @@ veg_us_2011
 veg_us_2005
 
 veg <- rbind(veg_us_2005, veg_us_2011)
-veg
+
 unique(veg$year)
 veg$year[veg$year < 2011] <- 2005 # Creates the two most complete veg sampling
+unique(veg$us_species)
 veg <- veg %>% rename(us_species = UnderstorySp, plotid = PlotID)
-richness <- veg %>% group_by(plotid, year) %>% summarise(us_rich = length(unique(us_species)))
+
+# I want to match the species to those used by Sarah in her second chapter
+local_woody <- read.csv("analysis/data/presence_local_woody_n197.csv")
+summary(local_woody)
+unique(local_woody$spp.local)
+woody_spp <- as.character(local_woody$spp.local)
+woody_spp[woody_spp == "prunus"] <- "prunus sp."
+sort(woody_spp)
+sort(unique(veg$us_species))
+# It looks like I will want to add a few more to her list
+
+filter(veg, us_species == "ribes sp.")
+filter(veg, us_species == "ribes")
+veg$us_species[veg$us_species == "ribes"] <- "ribes sp."
+
+woody_spp <- c(woody_spp, "ceanothus sp.", "cebe", "cecu", "frla", "garrya sp.", "gemo", "juca", "mafu", "mane", "mimulus sp", "pisa", "quag x quke", "qube", "quercus sp.", "quwi", "rhamnus sp.", "rhcr", "ribes sp.", "rica", "risa", "roca", "rosa sp.", "rubus sp.", "rudi", "salix sp.", "syal", "vaccinium sp.")
+
+veg_sub <- filter(veg, veg$us_species %in% woody_spp)
+
+richness <- veg_sub %>%
+      group_by(plotid, year) %>% 
+      summarise(us_rich = length(unique(us_species)))
 richness
 ```
 
@@ -127,6 +149,7 @@ untagged_dbh %>% group_by(plotid, year) %>% summarise(untagged_rich = length(uni
 stems <- as.tbl(stems)
 summary(stems)
 unique(stems$status)
+
 stems <- stems %>% select(-X) %>% filter(status == "Alive" | status == "Dead")
 unique(stems$species)
 stems$species <- tolower(stems$species)
@@ -139,10 +162,118 @@ os_richness <- left_join(
       untagged_dbh %>% group_by(plotid, year) %>% summarise(untagged_rich = length(unique(species))), by = c("plotid", "year")
 ) %>% mutate(os_rich = tagged_rich + untagged_rich)
 os_richness
+
 richness <- left_join(os_richness, richness, by = c("plotid","year"))
 richness
 summary(richness)
 ```
+
+Now I want to join the richness data set to the `plots_umca` data frame that currently has the environmental and leaf count/infection variables. 
+
+```{r join richness data}
+plots_umca
+richness
+plots_umca <- rename(plots_umca, plotid = plot)
+plots_umca$plotid <- tolower(plots_umca$plotid)
+
+plots_umca <- left_join(plots_umca, richness, by = c("plotid", "year"))
+```
+
+Make a pairs plot of the continuous variables for UMCA plots.
+```{r pairs plot}
+# Helper functions for `pairs`
+panel.hist <- function(x, ...)
+{
+      usr <- par("usr"); on.exit(par(usr))
+      par(usr = c(usr[1:2], 0, 1.5) )
+      h <- hist(x, plot = FALSE)
+      breaks <- h$breaks; nB <- length(breaks)
+      y <- h$counts; y <- y/max(y)
+      rect(breaks[-nB], 0, breaks[-1], y, col = "cyan", ...)
+}
+panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)
+{
+      usr <- par("usr"); on.exit(par(usr))
+      par(usr = c(0, 1, 0, 1))
+      r <- abs(cor(x, y, use = "na.or.complete"))
+      txt <- format(c(r, 0.123456789), digits = digits)[1]
+      txt <- paste0(prefix, txt)
+      if(missing(cex.cor)) cex.cor <- 0.8/strwidth(txt)
+      text(0.5, 0.5, txt, cex = cex.cor * r)
+}
+
+plots_umca <- ungroup(plots_umca)
+
+pairs(select(plots_umca, -plotid, -year, -starts_with("psi"), -tagged_rich, -untagged_rich), lower.panel = panel.cor, diag.panel = panel.hist)
+```
+
+Now that I have summarized some vegetation (not species specific), environmental, and bay laurel disease data to the plot-level I want to join this to the plot-level oak infection data.
+
+```{r join umca and qusp data}
+plots_umca
+plot_qusp # right now this is broken down by oak species
+summary(plot_qusp)
+oak_sod <- plot_qusp %>% group_by(plot, year) %>%
+      summarise(uninf_oak_ct = sum(uninfected_oak_ct), inf_oak_ct = sum(infected_oak_ct), tot_oak_ct = sum(c(uninfected_oak_ct, infected_oak_ct)))
+oak_sod
+oak_sod <- rename(oak_sod, plotid = plot)
+oak_sod$plotid <- tolower(oak_sod$plotid)
+
+oak_sod <- left_join(oak_sod, plots_umca[1:7], 
+                     by = c("plotid", "year"))
+summary(oak_sod) # the NA's for the bay laurel count variables are legitimately zeroes b/c there are no bay in some of these plots
+oak_sod$uninfected_bay_ct[is.na(oak_sod$uninfected_bay_ct)] <- 0
+oak_sod$infected_bay_ct[is.na(oak_sod$infected_bay_ct)] <- 0
+oak_sod$tot_bay[is.na(oak_sod$tot_bay)] <- 0
+
+head(plots_env)
+plots_env$plotid <- tolower(plots_env$plotid)
+oak_sod <- left_join(oak_sod, plots_env, by = c("plotid", "year" = "sample_year"))
+oak_sod
+
+richness
+oak_sod <- left_join(oak_sod, richness, by = c("plotid", "year"))
+summary(oak_sod)
+summary(filter(oak_sod, is.na(avg_tmax)))
+filter(oak_sod, is.na(avg_tmax), year == 2005) # BUSH01 plot; I'm dropping that from the data set
+oak_sod <- filter(oak_sod, plotid != "bush01")
+summary(filter(oak_sod, is.na(avg_tmax)))
+filter(oak_sod, is.na(avg_tmax), year == 2004) # PONTI01 and SWEET01 were other early abandoned plots
+oak_sod <- filter(oak_sod, plotid != "ponti01", plotid != "sweet01")
+summary(filter(oak_sod, is.na(avg_tmax))) # Now the NAs in the environmental variables are just for year 2003 when we had severely incomplete temperature data
+summary(oak_sod)
+
+filter(oak_sod, plotid == "ann05") # There is no 2007 record for ann05 in the UMCA form, but there is a plot visit. I will need to come back and investigate this further for correcting the database.
+oak_sod$infected_bay_ct[oak_sod$plotid == "ann05" & oak_sod$year == 2007] <- 15
+oak_sod$tot_bay[oak_sod$plotid == "ann05" & oak_sod$year == 2007] <- 15
+# I filled in the counts based on the values in the immediately preceding and following years, which I think is pretty solid reasoning. However, there is nothing I can do about the leaf counts right now.
+summary(oak_sod)
+
+filter(oak_sod, year == 2003) # 87 records
+filter(oak_sod, year == 2004) # 90 records
+# 2005 appears to be the first full year of observing all the plots
+filter(oak_sod, year == 2005) # 171 records
+filter(oak_sod, year == 2006) # 172 records
+filter(oak_sod, year == 2007) # 171 records
+filter(oak_sod, year == 2008) # 171 records
+filter(oak_sod, year == 2009) # 170 records
+filter(oak_sod, year == 2010) # 170 records
+filter(oak_sod, year == 2011) # 170 records; final year of Sarah's 2nd chapter
+filter(oak_sod, year == 2012) # 169 records
+filter(oak_sod, year == 2014) # 168 records
+# In Sarah's analysis we end up using only 163 plots
+```
+
+Now to do a pairs plot of the `oak_sod` data frame
+
+```{r oak_sod pairs plot}
+class(oak_sod)
+oak_sod <- ungroup(oak_sod)
+
+pairs(select(oak_sod, -plotid, -year, -starts_with("psi"), -tagged_rich, -untagged_rich), lower.panel = panel.cor, diag.panel = panel.hist)
+```
+
+
 
 I also want to calculate some variables related to DBH, and in particular the "importance value" for each species. Importance value is calculated in the literature as:
 
@@ -181,33 +312,5 @@ filter(stems_dbh, all_live_dbh > 800)
 
 stems_dbh <- stems_dbh %>% mutate(rel_dens = live_count / all_live_count, rel_dom = live_tot_dbh / all_live_dbh, imp_value = 0.5*(rel_dens + rel_dom))
 summary(stems_dbh)
+write.csv(stems_dbh, "analysis/data/species_dbh_impval_plot.csv")
 ```
-
-Make a pairs plot of the continuous variables for UMCA plots.
-```{r pairs plot}
-# Helper functions for `pairs`
-panel.hist <- function(x, ...)
-{
-      usr <- par("usr"); on.exit(par(usr))
-      par(usr = c(usr[1:2], 0, 1.5) )
-      h <- hist(x, plot = FALSE)
-      breaks <- h$breaks; nB <- length(breaks)
-      y <- h$counts; y <- y/max(y)
-      rect(breaks[-nB], 0, breaks[-1], y, col = "cyan", ...)
-}
-panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)
-{
-      usr <- par("usr"); on.exit(par(usr))
-      par(usr = c(0, 1, 0, 1))
-      r <- abs(cor(x, y, use = "na.or.complete"))
-      txt <- format(c(r, 0.123456789), digits = digits)[1]
-      txt <- paste0(prefix, txt)
-      if(missing(cex.cor)) cex.cor <- 0.8/strwidth(txt)
-      text(0.5, 0.5, txt, cex = cex.cor * r)
-}
-
-plots_umca <- ungroup(plots_umca) %>% select(-starts_with("psi"), -plot, -year)
-
-pairs(select(plots_umca, -plot, -year, -starts_with("psi")), lower.panel = panel.cor, diag.panel = panel.hist)
-```
-
