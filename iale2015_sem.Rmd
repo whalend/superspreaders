@@ -14,6 +14,7 @@ veg_us_2005 <- read.csv("analysis/data/understory_veg_2005.csv")
 veg_us_2011 <- read.csv("analysis/data/understory_veg_2011.csv")
 # Untagged dbh data
 untagged_dbh <- read.csv("analysis/data/untagged_dbh_summary.csv")
+canopy_cover <- read.csv("analysis/data/plot_canopy_cover_dens.csv")
 
 # Physical environment: topography
 library(rgdal)
@@ -168,7 +169,7 @@ richness
 summary(richness)
 ```
 
-Now I want to join the richness data set to the `plots_umca` data frame that currently has the environmental and leaf count/infection variables. 
+Now I want to join the richness data set and the canopy cover estimates to the `plots_umca` data frame that currently has the environmental and leaf count/infection variables. 
 
 ```{r join richness data}
 plots_umca
@@ -177,6 +178,9 @@ plots_umca <- rename(plots_umca, plotid = plot)
 plots_umca$plotid <- tolower(plots_umca$plotid)
 
 plots_umca <- left_join(plots_umca, richness, by = c("plotid", "year"))
+head(canopy_cover)
+canopy_cover <- select(canopy_cover, plotid, year, pct_cvr)
+plots_umca <- left_join(plots_umca, canopy_cover, by = c("plotid", "year"))
 ```
 
 Make a pairs plot of the continuous variables for UMCA plots.
@@ -207,7 +211,7 @@ plots_umca <- ungroup(plots_umca)
 pairs(select(plots_umca, -plotid, -year, -starts_with("psi"), -tagged_rich, -untagged_rich), lower.panel = panel.cor, diag.panel = panel.hist, main = "UMCA SOD Data")
 ```
 
-Now that I have summarized some vegetation (not species specific), environmental, and bay laurel disease data to the plot-level I want to join this to the plot-level oak infection data.
+Now that I have summarized some vegetation (not species specific), environmental, and bay laurel disease data to the plot-level I want to join this and the canopy cover data to the plot-level oak infection data.
 
 ```{r join umca and qusp data}
 plots_umca
@@ -249,10 +253,12 @@ oak_sod$tot_bay[oak_sod$plotid == "ann05" & oak_sod$year == 2007] <- 15
 # I filled in the counts based on the values in the immediately preceding and following years, which I think is pretty solid reasoning. However, there is nothing I can do about the leaf counts right now.
 summary(oak_sod)
 
-filter(oak_sod, year == 2003) # 87 records
-filter(oak_sod, year == 2004) # 90 records
+oak_sod <- left_join(oak_sod, canopy_cover, by = c("plotid", "year"))
+
+filter(oak_sod, year == 2003) # 86 records
+filter(oak_sod, year == 2004) # 88 records
 # 2005 appears to be the first full year of observing all the plots
-filter(oak_sod, year == 2005) # 171 records
+filter(oak_sod, year == 2005) # 170 records
 filter(oak_sod, year == 2006) # 172 records
 filter(oak_sod, year == 2007) # 171 records
 filter(oak_sod, year == 2008) # 171 records
@@ -271,7 +277,6 @@ class(oak_sod)
 oak_sod <- ungroup(oak_sod)
 pairs(select(oak_sod, -plotid, -year, -starts_with("psi"), -tagged_rich, -untagged_rich), lower.panel = panel.cor, diag.panel = panel.hist, main = "Oak_SOD Data")
 ```
-
 
 
 I also want to calculate some variables related to DBH, and in particular the "importance value" for each species. Importance value is calculated in the literature as:
