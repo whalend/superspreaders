@@ -180,7 +180,7 @@ plots_umca <- left_join(plots_umca, richness, by = c("plotid", "year"))
 ```
 
 Make a pairs plot of the continuous variables for UMCA plots.
-```{r pairs plot}
+```{r umca sod pairs plot}
 # Helper functions for `pairs`
 panel.hist <- function(x, ...)
 {
@@ -204,7 +204,7 @@ panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)
 
 plots_umca <- ungroup(plots_umca)
 
-pairs(select(plots_umca, -plotid, -year, -starts_with("psi"), -tagged_rich, -untagged_rich), lower.panel = panel.cor, diag.panel = panel.hist)
+pairs(select(plots_umca, -plotid, -year, -starts_with("psi"), -tagged_rich, -untagged_rich), lower.panel = panel.cor, diag.panel = panel.hist, main = "UMCA SOD Data")
 ```
 
 Now that I have summarized some vegetation (not species specific), environmental, and bay laurel disease data to the plot-level I want to join this to the plot-level oak infection data.
@@ -269,8 +269,7 @@ Now to do a pairs plot of the `oak_sod` data frame
 ```{r oak_sod pairs plot}
 class(oak_sod)
 oak_sod <- ungroup(oak_sod)
-
-pairs(select(oak_sod, -plotid, -year, -starts_with("psi"), -tagged_rich, -untagged_rich), lower.panel = panel.cor, diag.panel = panel.hist)
+pairs(select(oak_sod, -plotid, -year, -starts_with("psi"), -tagged_rich, -untagged_rich), lower.panel = panel.cor, diag.panel = panel.hist, main = "Oak_SOD Data")
 ```
 
 
