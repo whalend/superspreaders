@@ -31,6 +31,9 @@ canopy_cover <- filter(canopy_cover, is.na(date) == "FALSE")
 
 library(lubridate)
 canopy_cover$year <- year(canopy_cover$date)
+canopy_cover <- select(canopy_cover, -date)
+canopy_cover$plotid <- tolower(canopy_cover$plotid)
+write.csv(canopy_cover, "analysis/data/plot_canopy_cover_dens.csv")
 ```
 
 The subset veg transect data `veg2` is approximately half of the original data points, selecting every other sample point along the transect. About twice as many points were sampled during plot establishment compared to the 2011 sampling
