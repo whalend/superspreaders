@@ -9,15 +9,21 @@ output: html_document
 ```{r load data}
 # Ecological data: leaf counts, infection
 load("~/GitHub/superspreaders/stems_plots.RData")
+# Vegetation data
+veg_us_2005 <- read.csv("analysis/data/understory_veg_2005.csv")
+veg_us_2011 <- read.csv("analysis/data/understory_veg_2011.csv")
+# Untagged dbh data
+untagged_dbh <- read.csv("analysis/data/untagged_dbh_summary.csv")
 
 # Physical environment: topography
 library(rgdal)
-plots_env <- readOGR("analysis/data/plot_gis/", "soco_plots_metric")
-str(plots_env)
-plot(plots_env, axes=T)
-plots_env <- plots_env@data
+plots_shp <- readOGR("analysis/data/plot_gis/", "soco_plots_metric")
+summary(plots_shp)
+plot(plots_shp, axes=T)
+plots_env <- plots_shp@data
 
 # Temperature: rainy season hour summaries
+library(plyr); library(dplyr)
 plots_temps <- read.csv("analysis/data/rainy_season_temps.csv")
 summary(plots_temps)
 plots_temps <- select(plots_temps, -X)
@@ -25,14 +31,13 @@ plots_temps <- select(plots_temps, -X)
 
 Join the plot level environmental data (geographic/topographic & temperatures)
 ```{r join plot data, message=FALSE}
-library(dplyr)
 plots_env <- left_join(plots_env, plots_temps, by = c("PLOT_ID"="plotid"))
 summary(plots_env)
 str(plots_env)
 plots_env <- plots_env %>% select(-cat) %>% rename(easting = X, northing = Y, plotid = PLOT_ID)
 ```
 
-Investigating `NAs` in the data set
+Investigating `NAs` in the `plots_env` data set
 ```{r investigate NAs}
 summary(plots_env)
 filter(plots_env, is.na(sample_year))
@@ -48,7 +53,137 @@ plots_env %>% filter(is.na(hrs_abv25))
 plots_env[is.na(plots_env)] <- 0
 ```
 
-Make a pairs plot of the continuous variables, i.e. everything except `plotid`.
+Examine the bay laurel data at individual and plot levels
+```{r examine umca data}
+summary(plots_umca)
+# This only has number of infected, uninfected, and total, which must apply to living stems only. I want to analyze leaf counts.
+summary(bay_laurel)
+# This has stem-level data on bay laurel.
+```
+
+I can use this to calculate plot level leaf count variables (sum, average) for each plot and year
+```{r calculate plot level leaf counts}
+plots_umca <- left_join(plots_umca, bay_laurel %>% filter(status == "Alive") %>% 
+      group_by(plot, year) %>% 
+      summarise(
+            avg_lfct = mean(slc, na.rm = T),
+            tot_lfct = sum(slc, na.rm = T)),
+      by = c("plot", "year"))
+summary(plots_umca)
+```
+
+```{r examine lfct NAs}
+filter(plots_umca, is.na(avg_lfct))
+# I'm not sure why this wasn't excluded from the calculations with the na.rm = T option
+filter(bay_laurel, plot == "YAHNG02", status == "Alive")
+# I'm removing it manually from the `plots_umca` data frame
+plots_umca <- plots_umca %>% filter(avg_lfct != "NaN")
+summary(plots_umca)
+```
+
+So now I have a plot-level of UMCA infection levels for each year. I want to join this with some of the environmental data.
+
+```{r join env and umca data}
+summary(plots_env)
+plots_env$avg_psi <- rowMeans(cbind(plots_env$psiSpr, plots_env$psiSum, plots_env$psiWin))
+summary(plots_umca)
+# plot == plotid, year == sample_year
+plots_umca <- left_join(select(plots_umca, -species), plots_env, by = c("plot" = "plotid", "year" = "sample_year"))
+summary(plots_umca)
+filter(plots_umca, is.na(easting))
+# NAs are due to no microclimate data for year 2003, and abandoned plots BUSH01 & SUGAR02
+```
+
+Now I also want to calculate some plot-level community variables from the vegetation data. First, understory richness from the vegetation transects.
+```{r calculate understory richness}
+summary(veg_us_2005)
+veg_us_2005 <- as.tbl(select(veg_us_2005, -X))
+summary(veg_us_2011)
+veg_us_2011 <- as.tbl(select(veg_us_2011, -X))
+veg_us_2011
+veg_us_2005
+
+veg <- rbind(veg_us_2005, veg_us_2011)
+veg
+unique(veg$year)
+veg$year[veg$year < 2011] <- 2005 # Creates the two most complete veg sampling
+veg <- veg %>% rename(us_species = UnderstorySp, plotid = PlotID)
+richness <- veg %>% group_by(plotid, year) %>% summarise(us_rich = length(unique(us_species)))
+richness
+```
+
+Next, overstory richness from the DBH data for tagged & untagged stems.
+
+```{r calculate overstory richness}
+summary(untagged_dbh)
+untagged_dbh <- as.tbl(untagged_dbh %>% select(-X) %>% rename(plotid = PlotID, species = Species))
+untagged_dbh
+unique(untagged_dbh$year)
+untagged_dbh$year[untagged_dbh$year < 2014] <- 2005 # Create two most complete groups
+untagged_dbh$plotid <- tolower(untagged_dbh$plotid)
+
+untagged_dbh %>% group_by(plotid, year) %>% summarise(untagged_rich = length(unique(species)))
+
+stems <- as.tbl(stems)
+summary(stems)
+unique(stems$status)
+stems <- stems %>% select(-X) %>% filter(status == "Alive" | status == "Dead")
+unique(stems$species)
+stems$species <- tolower(stems$species)
+stems$species[stems$species == "quke x quag"] <- "quag x quke"
+stems$plotid <- tolower(stems$plotid)
+stems %>% group_by(plotid, year) %>% summarise(tagged_rich = length(unique(species)))
+
+os_richness <- left_join(
+      stems %>% group_by(plotid, year) %>% summarise(tagged_rich = length(unique(species))),
+      untagged_dbh %>% group_by(plotid, year) %>% summarise(untagged_rich = length(unique(species))), by = c("plotid", "year")
+) %>% mutate(os_rich = tagged_rich + untagged_rich)
+os_richness
+richness <- left_join(os_richness, richness, by = c("plotid","year"))
+richness
+summary(richness)
+```
+
+I also want to calculate some variables related to DBH, and in particular the "importance value" for each species. Importance value is calculated in the literature as:
+
+`IV = 0.5 * (relative density / relative dominance)` where 
+`Relative Density = # stems of species / total # of stems` and
+`Relative Dominance = basal area of species / total basal area`
+
+```{r calculate importance value}
+unique(untagged_dbh$species)
+untagged_dbh
+unique(stems$species)
+
+tagged_dbh <- left_join(stems %>% 
+      filter(status == "Alive", location == "In") %>%
+      select(plotid, year, species, dbh) %>% 
+      group_by(plotid, species, year) %>% 
+      summarise(live_count = length(species), live_avg_dbh = mean(dbh), live_tot_dbh = sum(dbh)),
+      stems %>% 
+      filter(status == "Dead", location == "In") %>%
+      select(plotid, year, species, dbh) %>% 
+      group_by(plotid, species, year) %>% 
+      summarise(dead_count = length(species), dead_avg_dbh = mean(dbh), dead_tot_dbh = sum(dbh)),
+      by = c("plotid", "species", "year")
+)
+tagged_dbh <- as.tbl(tagged_dbh)
+summary(tagged_dbh)
+
+tagged_dbh
+untagged_dbh
+
+stems_dbh <- rbind(tagged_dbh, untagged_dbh)
+
+stems_dbh <- stems_dbh %>% group_by(plotid, year) %>% mutate(all_live_count = sum(live_count), all_live_dbh = sum(live_tot_dbh, na.rm = T))
+summary(stems_dbh)
+filter(stems_dbh, all_live_dbh > 800)
+
+stems_dbh <- stems_dbh %>% mutate(rel_dens = live_count / all_live_count, rel_dom = live_tot_dbh / all_live_dbh, imp_value = 0.5*(rel_dens + rel_dom))
+summary(stems_dbh)
+```
+
+Make a pairs plot of the continuous variables for UMCA plots.
 ```{r pairs plot}
 # Helper functions for `pairs`
 panel.hist <- function(x, ...)
@@ -71,9 +206,8 @@ panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)
       text(0.5, 0.5, txt, cex = cex.cor * r)
 }
 
-pairs(select(plots_env, -plotid, -sample_year), lower.panel = panel.cor, diag.panel = panel.hist)
+plots_umca <- ungroup(plots_umca) %>% select(-starts_with("psi"), -plot, -year)
 
-plots_env$avg_psi <- rowMeans(cbind(plots_env$psiSpr, plots_env$psiSum, plots_env$psiWin))
-pairs(select(plots_env, -plotid, -sample_year, -starts_with("psi")), lower.panel = panel.cor, diag.panel = panel.hist)
+pairs(select(plots_umca, -plot, -year, -starts_with("psi")), lower.panel = panel.cor, diag.panel = panel.hist)
 ```
 
