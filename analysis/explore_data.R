@@ -159,7 +159,7 @@ dbh2014 <- stems %>% select(plot, tag, dbh, year) %>%
       filter(dbh>0, year == 2014)
 anti_join(dbh2014, dbh_a, by = "tag") # this inidcates that there are 113 stems that were measured for the first time in 2014
 
-#### Explore DBH data: change in DBH ####
+#### Explore DBH data: negative change in DBH ####
 library(ggplot2)
 # Scatterplot of first dbh measurement (y-axis) against year
 qplot(year, dbh, data = dbh_a, geom="jitter")
@@ -410,8 +410,11 @@ qplot(delta_dbh, dbh1, data = stems %>% select(plot, cluster, tag, species, delt
 # A visual check shows that there are a handful of stems with growth > 20cm
 
 #### Suggestions from Margaret about exploring DBH changes ####
-# I emailed Richard and Margaret about thresholds for where I should really look more closely at the measurements. Richard noted that there isn't much out there on growth rates for these species. Margaret suggested a few things, including other ways of looking at the data:
+# I emailed Richard and Margaret about thresholds for where I should really look more closely at the measurements. Richard noted that there isn't much out there on growth rates for these species. I did find something done for tree species of the Northeastern U.S. <http://www.fs.fed.us/ne/newtown_square/publications/research_papers/pdfs/scanned/OCR/ne_rp649.pdf>
+
+# Margaret suggested a few things, including other ways of looking at the data:
 # 1. "Have you tried looking at relative growth instead of the absolute increment growth?  Either DBH2/DBH1, or the instantaneous rate ln(DBH2/DBH1) / (time2-time1).  20 cm growth means a lot more to a 5 cm tree than a 50 cm tree… either way, it's still big.  I'd also consider this species by species, because I bet some grow much faster than others."
+
 stems$dbh2_1_ratio <- stems$dbh2/stems$dbh1# absolute increment growth
 stems$inst_grwth_rate <- log(stems$dbh2/stems$dbh1) / (stems$year_dbh2 - stems$year_dbh1)
 #stems$time_diff <- (stems$year_dbh2 - stems$year_dbh1)
