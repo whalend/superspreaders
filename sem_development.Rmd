@@ -37,7 +37,7 @@ veg_us_2011 <- read.csv("analysis/data/understory_veg_2011.csv")
 untagged_dbh <- read.csv("analysis/data/untagged_dbh_summary.csv")
 canopy_cover <- read.csv("analysis/data/plot_canopy_cover_dens.csv")
 ```
-```{r load physical data, echo=FALSE}
+```{r load physical data, echo=FALSE, message=F}
 # Physical environment: topography
 library(rgdal); library(plyr); library(dplyr)
 plots_shp <- readOGR("analysis/data/plot_gis/", "soco_plots_metric")
@@ -67,7 +67,8 @@ summary(ppt_total)
 # pairs(select(plots_rain, -PLOT_ID), 
 #       lower.panel = panel.cor, 
 #       diag.panel = panel.hist)
-plots_rain <- rename(plots_rain, plotid = PLOT_ID)
+ppt_days@data <- rename(ppt_days@data, plotid = PLOT_ID)
+ppt_total@data <- rename(ppt_total@data, plotid = PLOT_ID)
 ```
 
 #### Join remotely sensed and derived physical data
@@ -84,24 +85,66 @@ rm(plots_vegtopo)
 #### Convert rain data from wide to long
 ```{r rain wide to long}
 library(tidyr)
-rain2d <- plots_rain %>% select(plotid, ends_with("2d"))
-names(rain2d) <- c("plotid",paste(c(2004:2012,2014), sep = ","))
-rain2d <- rain2d %>% gather(year, rain_tot_2d, -plotid)
+rain2d_total <- ppt_total@data %>% select(plotid, ends_with("2d"))
+names(rain2d_total) <- c("plotid",paste(c(2004:2012,2014), sep = ","))
+rain2d_total <- rain2d_total %>% gather(year, rain_tot_2d, -plotid)
 
-rain3d <- plots_rain %>% select(plotid, ends_with("3d"))
-names(rain3d) <- c("plotid",paste(c(2004:2012,2014), sep = ","))
-rain3d <- rain3d %>% gather(year, rain_tot_3d, -plotid)
+rain3d_total <- ppt_total@data %>% select(plotid, ends_with("3d"))
+names(rain3d_total) <- c("plotid",paste(c(2004:2012,2014), sep = ","))
+rain3d_total <- rain3d_total %>% gather(year, rain_tot_3d, -plotid)
 
-rain_v <- plots_rain %>% select(plotid, ends_with("v"))
-names(rain_v) <- c("plotid",paste(c(2004:2012,2014), sep = ","))
-rain_v <- rain_v %>% gather(year, rain_tot_v, -plotid)
+rain_v_total <- ppt_total@data %>% select(plotid, ends_with("v"))
+names(rain_v_total) <- c("plotid",paste(c(2004:2012,2014), sep = ","))
+rain_v_total <- rain_v_total %>% gather(year, rain_tot_v, -plotid)
 
-rain_data <-  left_join(rain2d, 
-                        left_join(rain3d, rain_v, by = c("plotid","year")),
+rain_r_total <- ppt_total@data %>% select(plotid, ends_with("r"))
+names(rain_r_total) <- c("plotid",paste(c(2004:2012,2014), sep = ","))
+rain_r_total <- rain_r_total %>% gather(year, rain_tot_r, -plotid)
+
+rain_psm_total <- ppt_total@data %>% select(plotid, contains("sum"))
+names(rain_psm_total) <- c("plotid", paste(c(2004:2010), sep = ","))
+rain_psm_total <- rain_psm_total %>% gather(year, rain_tot_psm, -plotid)
+
+
+rain2d_days <- ppt_days@data %>% select(plotid, ends_with("2d"))
+names(rain2d_days) <- c("plotid",paste(c(2004:2012,2014), sep = ","))
+rain2d_days <- rain2d_days %>% gather(year, rain_days_2d, -plotid)
+
+rain3d_days <- ppt_days@data %>% select(plotid, ends_with("3d"))
+names(rain3d_days) <- c("plotid",paste(c(2004:2012,2014), sep = ","))
+rain3d_days <- rain3d_days %>% gather(year, rain_days_3d, -plotid)
+
+rain_v_days <- ppt_days@data %>% select(plotid, ends_with("v"))
+names(rain_v_days) <- c("plotid",paste(c(2004:2012,2014), sep = ","))
+rain_v_days <- rain_v_days %>% gather(year, rain_days_v, -plotid)
+
+rain_r_days <- ppt_days@data %>% select(plotid, ends_with("r"))
+names(rain_r_days) <- c("plotid",paste(c(2004:2012,2014), sep = ","))
+rain_r_days <- rain_r_days %>% gather(year, rain_days_r, -plotid)
+
+
+rain_total <- left_join(rain2d_total, 
+                        left_join(rain3d_total, rain_v_total, 
+                                  by = c("plotid","year")),
                         by = c("plotid","year"))
-summary(rain_data)
-rm(rain_v); rm(rain2d); rm(rain3d)
-write.csv(rain_data, "analysis/data/rain_data_long.csv", row.names = F)
+rain_total <- left_join(rain_total, rain_r_total, by = c("plotid", "year"))
+rain_total <- left_join(rain_total, rain_psm_total, by = c("plotid", "year"))
+
+rain_days <- left_join(rain2d_days,
+                       left_join(rain3d_days, rain_v_days, 
+                                 by = c("plotid", "year")),
+                       by = c("plotid", "year"))
+rain_days <- left_join(rain_days, rain_r_days, by = c("plotid", "year"))
+
+
+rm(list = ls(pattern = "^rain_v"))
+rm(list = ls(pattern = "^rain2d"))
+rm(list = ls(pattern = "^rain3d"))
+rm(list = ls(pattern = "^rain_r"))
+rm(rain_psm_total)
+
+write.csv(rain_total, "analysis/data/rain_total_long.csv", row.names = F)
+write.csv(rain_days, "analysis/data/rain_days_long.csv", row.names = F)
 ```
 
 #### Explore data for completeness and matching
