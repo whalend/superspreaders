@@ -49,7 +49,7 @@ plots_env <- select(plots_env, -cat)
 plots_topo.shp <- readOGR("analysis/data/plot_gis/", "plots202_vegtopo")
 plots_vegtopo <- plots_topo.shp@data
 summary(plots_vegtopo)
-plots_vegtopo <- select(plots_vegtopo, -X, -Y)
+plots_vegtopo <- select(plots_vegtopo, -cat) %>% rename(lon_utm = X, lat_utm = Y)
 ```
 ```{r load weather data, echo=FALSE}
 # Temperature: rainy season hour summaries (long format for each year)
@@ -57,10 +57,13 @@ plots_temps <- read.csv("analysis/data/rainy_season_temps.csv")
 summary(plots_temps)
 plots_temps <- select(plots_temps, -X)
 
-# Rainfall: interpolated rainfall for each season
-plots_rain <- read.csv("analysis/data/plot202rain.csv")
-summary(plots_rain)
-plots_rain <- select(plots_rain, -cat)
+# Rainfall: interpolated/estimated rainfall for each season
+load("~/Documents/soco_ppt/plot_ppt_estimates.RData")
+summary(ppt_days)
+summary(ppt_total)
+# plots_rain <- read.csv("analysis/data/plot202rain.csv")
+# summary(plots_rain)
+# plots_rain <- select(plots_rain, -cat)
 # pairs(select(plots_rain, -PLOT_ID), 
 #       lower.panel = panel.cor, 
 #       diag.panel = panel.hist)
@@ -162,14 +165,14 @@ stems <- read.csv("analysis/data/stems_noBUSH01.csv")
 This is a suggestion from Ryan to plot the contributing area vs. the slope for each of the plots in order to tease out how either influences infection and hosts. Decomposing TWI to determine which factor has a greater influence on disease dynamics. 
 ```{r decomposing TWI influence}
 library(ggplot2)
-summary(plots_vegtopo)
-par(mfrow = c(3,1))
+# summary(plots_vegtopo)
+# par(mfrow = c(3,1))
 qplot(slope15m, flowacc15m, data = plots_env) +
       geom_text(aes(label = plotid))
 qplot(slope15m, flowacc15m, data = filter(plots_env, flowacc15m < 20), 
-      main = "Flow Accumulation < 5") +
+      main = "Flow Accumulation < 20") +
       geom_text(aes(label = plotid))
-qplot(slope15m, flowacc15m, data = filter(plots_env, flowacc15m > 20 & flowacc15m < 1000), main = "Flow Accumulation 5 - 1000") +
+qplot(slope15m, flowacc15m, data = filter(plots_env, flowacc15m > 20 & flowacc15m < 1000), main = "Flow Accumulation 20 - 1000") +
       geom_text(aes(label = plotid))
 qplot(slope15m, flowacc15m, data = filter(plots_env, flowacc15m > 1000), 
       main = "Flow Accumulation > 1000") +
@@ -246,28 +249,32 @@ f <- dataplot(plots_env)
 ```{r examine umca data}
 summary(plots_umca)
 # This only has number of infected, uninfected, and total, which must apply to living stems only. I want to analyze leaf counts.
+unique(plots_umca$plot)
+umca_plots <- filter(plots_umca, plot != "BUSH01")
+rm(plots_umca)
 summary(bay_laurel) # This has stem-level data on bay laurel.
+unique(bay_laurel$plot)
+bay_laurel <- filter(bay_laurel, plot != "BUSH01")
 ```
 
 I can use this to calculate plot level leaf count variables (sum, average) for each plot and year
 ```{r calculate plot level leaf counts}
-plots_umca <- left_join(plots_umca, bay_laurel %>% filter(status == "Alive") %>% 
-      group_by(plot, year) %>% 
-      summarise(
+umca_plots <- left_join(umca_plots, bay_laurel %>% filter(status == "Alive") %>% group_by(plot, year) %>%  summarise(
             avg_lfct = mean(slc, na.rm = T),
             tot_lfct = sum(slc, na.rm = T)),
       by = c("plot", "year"))
-summary(plots_umca)
+summary(umca_plots)
 ```
 
 ```{r examine lfct NAs}
-filter(plots_umca, is.na(avg_lfct))
+filter(umca_plots, is.na(avg_lfct))
 # I'm not sure why this wasn't excluded from the calculations with the na.rm = T option
 filter(bay_laurel, plot == "YAHNG02", status == "Alive")
 # I'm removing it manually from the `plots_umca` data frame
-plots_umca <- plots_umca %>% filter(avg_lfct != "NaN")
-summary(plots_umca)
+umca_plots <- umca_plots %>% filter(avg_lfct != "NaN")
+summary(umca_plots)
 ```
+
 
 So now I have a plot-level of UMCA infection levels for each year. I want to join this with some of the environmental data.
 ```{r join env and umca data}
@@ -289,6 +296,7 @@ plots_umca <- left_join(plots_umca, plots_temps, by = c("plotid", "year"))
 ```
 
 
+#### Community vegetation data and variables
 Now I also want to calculate some plot-level community variables from the vegetation data. First, understory richness from the vegetation transects.
 
 ```{r calculate understory richness}
@@ -300,12 +308,10 @@ veg_us_2011
 veg_us_2005
 
 veg <- rbind(veg_us_2005, veg_us_2011)
-
 unique(veg$year)
 veg$year[veg$year < 2011] <- 2005 # Creates the two most complete veg sampling
 veg <- veg %>% rename(us_species = UnderstorySp, plotid = PlotID)
 unique(veg$us_species)
-
 
 # I want to match the species to those used by Sarah in her second chapter
 local_woody <- read.csv("analysis/data/presence_local_woody_n197.csv")
@@ -322,8 +328,8 @@ filter(veg, us_species == "ribes")
 veg$us_species[veg$us_species == "ribes"] <- "ribes sp."
 
 woody_spp <- c(woody_spp, "ceanothus sp.", "cebe", "cecu", "frla", "garrya sp.", "gemo", "juca", "mafu", "mane", "mimulus sp", "pisa", "quag x quke", "qube", "quercus sp.", "quwi", "rhamnus sp.", "rhcr", "ribes sp.", "rica", "risa", "roca", "rosa sp.", "rubus sp.", "rudi", "salix sp.", "syal", "vaccinium sp.")
-
 veg_sub <- filter(veg, veg$us_species %in% woody_spp)
+veg_sub <- droplevels(veg_sub)
 
 richness <- veg_sub %>%
       group_by(plotid, year) %>% 
@@ -341,22 +347,25 @@ untagged_dbh
 unique(untagged_dbh$year)
 untagged_dbh$year[untagged_dbh$year < 2014] <- 2005 # Create two most complete groups
 untagged_dbh$plotid <- tolower(untagged_dbh$plotid)
-
+unique(untagged_dbh$plotid)
+untagged_dbh <- filter(untagged_dbh, plotid != "bush01")
 untagged_dbh %>% group_by(plotid, year) %>% summarise(untagged_rich = length(unique(species)))
 
 stems <- as.tbl(stems)
 summary(stems)
 unique(stems$status)
-
 stems <- stems %>% select(-X) %>% filter(status == "Alive" | status == "Dead")
 unique(stems$species)
+unique(stems$plotid)
 stems$species <- tolower(stems$species)
 stems$species[stems$species == "quke x quag"] <- "quag x quke"
 stems$plotid <- tolower(stems$plotid)
+stems <- droplevels(stems)
 
-live_tagged_dbh <- stems %>% filter(status == "Alive") %>% group_by(plotid, year, species) %>% summarise(live_count = length(species))
-unique(live_tagged_dbh$species)
-os_richness <- rbind(live_tagged_dbh, select(untagged_dbh, plotid, species, year, live_count))
+
+live_tagged <- stems %>% filter(status == "Alive") %>% group_by(plotid, year, species) %>% summarise(live_count = length(species))
+unique(live_tagged$species)
+os_richness <- rbind(live_tagged, select(untagged_dbh, plotid, species, year, live_count))
 
 os_richness <- left_join(
       stems %>% filter(year == 2005 | year == 2014) %>% 
@@ -374,18 +383,18 @@ summary(richness)
 ```
 
 
-Now I want to join the richness data set and the canopy cover estimates to the `plots_umca` data frame that currently has the environmental and leaf count/infection variables. 
+Now I want to join the richness data set and the canopy cover estimates to the `umca_plots` data frame that currently has the environmental and leaf count/infection variables. 
 
 ```{r join richness and umca data}
-plots_umca
+umca_plots
 richness
-plots_umca <- rename(plots_umca, plotid = plot)
-plots_umca$plotid <- tolower(plots_umca$plotid)
+umca_plots <- rename(umca_plots, plotid = plot)
+umca_plots$plotid <- tolower(umca_plots$plotid)
 
-plots_umca <- left_join(plots_umca, richness, by = c("plotid", "year"))
+umca_plots <- left_join(umca_plots, richness, by = c("plotid", "year"))
 head(canopy_cover)
-canopy_cover <- select(canopy_cover, plotid, year, pct_cvr)
-plots_umca <- left_join(plots_umca, canopy_cover, by = c("plotid", "year"))
+canopy_cover <- select(canopy_cover, -X)
+umca_plots <- left_join(umca_plots, canopy_cover, by = c("plotid", "year"))
 ```
 
 Make a pairs plot of the continuous variables for UMCA plots.
@@ -411,7 +420,7 @@ panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)
       text(0.5, 0.5, txt, cex = cex.cor * r)
 }
 
-plots_umca <- ungroup(plots_umca)
+umca_plots <- ungroup(umca_plots)
 
 # pairs(select(plots_umca, -plotid, -year, -starts_with("psi"), -tagged_rich, -untagged_rich), lower.panel = panel.cor, diag.panel = panel.hist, main = "UMCA SOD Data")
 ```
@@ -419,10 +428,13 @@ plots_umca <- ungroup(plots_umca)
 Now that I have summarized some vegetation (not species specific), environmental, and bay laurel disease data to the plot-level I want to join this and the canopy cover data to the plot-level oak infection data.
 
 ```{r join umca and qusp data}
-plots_umca
+umca_plots
 plot_qusp # right now this is broken down by oak species
-summary(plot_qusp)
-oak_sod <- plot_qusp %>% group_by(plot, year) %>%
+qusp_plots <- plot_qusp
+rm(plot_qusp)
+summary(qusp_plots)
+qusp_plots
+oak_sod <- qusp_plots %>% group_by(plot, year) %>%
       summarise(uninf_oak_ct = sum(uninfected_oak_ct), 
                 inf_oak_ct = sum(infected_oak_ct), 
                 tot_oak_ct = sum(c(uninfected_oak_ct, infected_oak_ct)))
@@ -430,21 +442,31 @@ oak_sod
 oak_sod <- rename(oak_sod, plotid = plot)
 oak_sod$plotid <- tolower(oak_sod$plotid)
 
-oak_sod <- left_join(oak_sod, select(plots_umca, plotid, year, uninfected_bay_ct, infected_bay_ct, tot_bay, avg_lfct, tot_lfct), 
+
+oak_sod <- left_join(oak_sod, select(umca_plots, plotid, year, uninfected_bay_ct, infected_bay_ct, tot_bay, avg_lfct, tot_lfct), 
                      by = c("plotid", "year"))
 summary(oak_sod) # the NA's for the bay laurel variables are legitimately zeroes b/c there are no bay in some of these plots
+filter(oak_sod, is.na(tot_bay))
 oak_sod$uninfected_bay_ct[is.na(oak_sod$uninfected_bay_ct)] <- 0
 oak_sod$infected_bay_ct[is.na(oak_sod$infected_bay_ct)] <- 0
 oak_sod$tot_bay[is.na(oak_sod$tot_bay)] <- 0
 
+plots_env
+plots_env$plotid <- tolower(plots_env$plotid)
 oak_sod <- left_join(oak_sod, plots_env, by = "plotid")
-oak_sod <- left_join(oak_sod, plots_temps, 
-                     by = c("plotid", "year" = "year"))
+head(temps_data, 15)
+temps_data$plotid <- tolower(temps_data$plotid)
+temps_data <- rename(temps_data, year = sample_year)
+oak_sod <- left_join(oak_sod, temps_data, by = c("plotid", "year"))
 oak_sod
+names(oak_sod)
 
 richness
 oak_sod <- left_join(oak_sod, richness, by = c("plotid", "year"))
 summary(oak_sod)
+filter(oak_sod, is.na(elev15m))
+oak_sod <- filter(oak_sod, plotid != "duer01", plotid != "ponti01", plotid != "sweet01")
+
 summary(filter(oak_sod, is.na(avg_tmax)))
 filter(oak_sod, is.na(avg_tmax), year == 2005) # BUSH01 plot; I'm dropping that from the data set
 oak_sod <- filter(oak_sod, plotid != "bush01")
@@ -462,6 +484,10 @@ oak_sod$tot_bay[oak_sod$plotid == "ann05" & oak_sod$year == 2007] <- 15
 summary(oak_sod)
 
 oak_sod <- left_join(oak_sod, canopy_cover, by = c("plotid", "year"))
+summary(rain_data)
+rain_data$plotid <- tolower(rain_data$plotid)
+oak_sod <- left_join(oak_sod, rain_data, by = c("plotid", "year"))
+summary(filter(oak_sod, is.na(avg_tmax))) # all obs from 2003
 
 filter(oak_sod, year == 2003) # 85 records
 filter(oak_sod, year == 2004) # 88 records
@@ -487,8 +513,9 @@ oak_sod <- ungroup(oak_sod)
 pairs(select(oak_sod, -plotid, -year, -starts_with("psi"), -tagged_rich, -untagged_rich), lower.panel = panel.cor, diag.panel = panel.hist, main = "Oak_SOD Data")
 ```
 
-## Path Analysis Oak Infection 2005
+# Path Analysis Presented at 2015 IALE World Congress 
 
+#### Path Analysis Plot-Level Oak Infection 2005
 Here I am using the `oak_sod` data set which will be the oak infection (binomial) as the terminal response variable.
 
 ```{r oak_sod path model 2005}
@@ -695,7 +722,7 @@ summary(fit5)
 ```
 
 
-## Path Analysis Oak Infection - 2014
+#### Path Analysis Oak Infection - 2014
 Now I am going to fit the same path model to data from 2011.
 
 ```{r oak_sod path model 2014}
@@ -819,7 +846,7 @@ This C-statistic is much larger than the degrees of freedom, so I'm not confiden
 
 The models testing for conditional independence indicate direct effects of PSI and elevation on oak infection, as well as a direct effect of elevation on symptomatic leaf count. This is indicated by the p-values showing strong statistical significance in the relationship between these variables. Below I have generated a new path model that accounts for the unassumed direct effects, which means they become assumed direct effects.
 
-```{r oak path 2}
+```{r oak path 2014 v2}
 oak_path2 <- DAG(
       tmi ~ elevation,
       os_rich ~ tmi,
@@ -918,11 +945,13 @@ fit5_2014 <- lm(log(os_rich) ~ tmi, data = oak_2014); AIC(fit5_2014)
 summary(fit5_2014)
 ```
 
+
+#### Importance Value
 I also want to calculate some variables related to DBH, and in particular the "importance value" for each species. Importance value is calculated in the literature as:
 
 `IV = 0.5 * (relative density / relative dominance)` where 
-`Relative Density = # stems of species / total # of stems` and
-`Relative Dominance = basal area of species / total basal area`
+ - `Relative Density = # stems of species / total # of stems` and
+ - `Relative Dominance = basal area of species / total basal area`
 
 ```{r calculate importance value}
 unique(untagged_dbh$species)
@@ -947,9 +976,13 @@ summary(tagged_dbh)
 tagged_dbh
 untagged_dbh
 
-stems_dbh <- rbind(tagged_dbh, untagged_dbh)
+species_dbh <- rbind(tagged_dbh, untagged_dbh)
+species_dbh
+unique(species_dbh$species)
+species_dbh %>% group_by(plotid, species, year)
 
-stems_dbh <- stems_dbh %>% group_by(plotid, year) %>% mutate(all_live_count = sum(live_count), all_live_dbh = sum(live_tot_dbh, na.rm = T))
+stems_dbh <- species_dbh %>% group_by(plotid, year) %>% mutate(all_live_count = sum(live_count), all_live_dbh = sum(live_tot_dbh, na.rm = T), all_dead_count =  sum(dead_count, na.rm = T), all_dead_dbh = sum(dead_tot_dbh, na.rm = T))
+stems_dbh
 summary(stems_dbh)
 filter(stems_dbh, all_live_dbh > 800)
 
@@ -957,3 +990,39 @@ stems_dbh <- stems_dbh %>% mutate(rel_dens = live_count / all_live_count, rel_do
 summary(stems_dbh)
 write.csv(stems_dbh, "analysis/data/species_dbh_impval_plot.csv")
 ```
+
+```{r pare down stems dataframe}
+stems %>% select(year, tag, species, status, notes) %>% filter(species == "umca") 
+summary(stems) # Limited to "Alive/Dead"" status, "Missing" statuses excluded
+unique(stems$species)
+unique(stems$plotid)
+summary(bay_laurel) # Still includes stems with "Missing" status
+unique(bay_laurel$plot)
+
+names(stems)
+stemssub <- select(stems, plotid, year, cluster, tag, species, status, slc, canker, dbh, lide_lf_symp, sod_dead, location, dbh1, dbh2, delta_dbh, dbh2_1_ratio, inst_grwth_rate, doy, date)
+summary(stemssub)
+str(stemssub)
+
+summary(oak_sod) # plots with oak stems
+summary(umca_plots) # plots with bay laurel stems
+summary(rain_data)
+summary(temps_data)
+summary(plots_env)
+summary(veg_sub)
+summary(richness)
+summary(stems_dbh)
+
+save.image("~/GitHub/superspreaders/data_201508.RData")
+```
+
+```{r}
+load("~/GitHub/superspreaders/data_201508.RData")
+stemssub$cluster <- as.factor(stemssub$cluster)
+stemssub$tag <- as.factor(stemssub$tag)
+stemssub$canker <- as.factor(stemssub$canker)
+stemssub$sod_dead <- as.factor(stemssub$sod_dead)
+stemssub$date <- as.Date(stemssub$date)
+str(stemssub)
+```
+
