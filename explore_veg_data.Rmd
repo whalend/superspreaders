@@ -130,8 +130,9 @@ filter(veg_os_summ, PlotID == "jlsp05")
 ```
 
 Here I am adding a column that calculates the proportional coverage for each species based on the number of points they were observed in throughout the plot and the total number of points sampled in the plot.
-```{r calculate overstory proportianal coverage}
-mutate(veg_os_summ, pcov = ptct/totpts)
+```{r calculate overstory proportianal coverage at each point}
+veg_os_summ <- mutate(veg_os_summ, pcov = ptct/totpts)
+veg_os_summ
 ```
 
 ## Understory Vegetation
@@ -155,6 +156,7 @@ filter(veg_us, UnderstorySp == "vasp")
 
 unique(filter(veg_us, PlotID == "ann33", year == 2005)$UnderstorySp)
 unique(filter(veg_us, PlotID == "ann33", year == 2011)$UnderstorySp)
+filter(veg_us, UnderstorySp == "")
 veg_us$UnderstorySp[veg_us$PlotID == "ann33" & veg_us$year == 2011 & veg_us$UnderstorySp == "losp"] <- "lohi"
 veg_us$UnderstorySp[veg_us$PlotID == "ann33" & veg_us$year == 2011 & veg_us$UnderstorySp == "syal"] <- "symo"
 veg_us$UnderstorySp[veg_us$PlotID == "ann33" & veg_us$year == 2011 & veg_us$UnderstorySp == "roca"] <- "rogy"
@@ -267,10 +269,11 @@ alt_sp_dbh$Species <- tolower(alt_sp_dbh$Species)
 summary(alt_sp_dbh)
 unique(alt_sp_dbh$Species)
 unique(alt_sp_dbh$Dead)
-alt_sp_dbh$Dead <- ifelse(alt_sp_dbh$Dead == 0, "no", "yes")
+# alt_sp_dbh$Dead <- ifelse(alt_sp_dbh$Dead == 0, "no", "yes")
+alt_sp_dbh <- as.tbl(alt_sp_dbh)
 
-alt_sp_live <- filter(alt_sp_dbh, Dead == "no")
-alt_sp_dead <- filter(alt_sp_dbh, Dead == "yes")
+alt_sp_live <- filter(alt_sp_dbh, Dead == 0)
+alt_sp_dead <- filter(alt_sp_dbh, Dead == 1)
 
 alt_sp_summ <- left_join(
       # First data frame
@@ -280,6 +283,7 @@ alt_sp_summ <- left_join(
       alt_sp_dead %>% filter(year != 2012) %>% group_by(PlotID, Species, year) %>% 
       summarise(dead_count = length(Species), dead_avg_dbh = mean(dbh), dead_tot_dbh = sum(dbh))
 )
+summary(alt_sp_summ)
 
 write.csv(alt_sp_summ, "analysis/data/untagged_dbh_summary.csv")
 ```
