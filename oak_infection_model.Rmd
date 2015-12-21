@@ -10,8 +10,10 @@ I'm trying to define an empirical relationship between oak infection and bay lau
 ```{r load data}
 load("stems_plots.RData")
 summary(stems)
-summary(plot_qusp)
-summary(plots_umca)
+summary(qusp_plots)
+qusp_plots$plot <- tolower(qusp_plots$plot)
+qusp_plots <- rename(qusp_plots, plotid = plot)
+summary(umca_plots)
 ```
 
 ```{r load packages, message=FALSE}
@@ -20,17 +22,33 @@ library(plyr); library(dplyr); library(lme4); library(ggplot2)
 
 ```{r manipulate data}
 names(stems)
+
+inf_oak_stems <- stems %>% 
+      select(plotid, year, species, tag, status, canker, dbh2) %>% 
+      filter(species != "umca", species != "lide", species != "unknown sp.", canker != 0)
+
+summary(inf_oak_stems)
+summary(filter(inf_oak_stems, year == 2011))
+filter(inf_oak_stems, year == 2014)
+qplot(dbh2, data = inf_oak_stems)
+
 plot_aggregates <- stems %>%
-      select(plot, species, status, slc, canker, sod_dead, dbh, year) %>%
-      group_by(year, plot) %>% 
+      select(plotid, slc, canker, sod_dead, dbh, year) %>%
+      group_by(year, plotid) %>% 
       summarise(slc_total = sum(slc, na.rm=T), slc_avg = mean(slc, na.rm=T), oak_inf = sum(canker, na.rm=T), oak_dead = sum(sod_dead, na.rm=T), dbh_total = sum(dbh, na.rm=T), dbh_avg = mean(dbh, na.rm=T))
 
 summary(plot_aggregates)
 
-summary(plot_qusp)
-plot_aggregates <- left_join(plot_aggregates, select(plot_qusp, year, plot, uninfected_oak_ct, infected_oak_ct, tot_oak), by = c("year", "plot"))
-summary(plots_umca)
-plot_aggregates <- left_join(plot_aggregates, select(plots_umca, year, plot, uninfected_bay_ct, infected_bay_ct, tot_bay))
+summary(qusp_plots)
+plot_aggregates <- left_join(plot_aggregates, select(qusp_plots, year, plotid, uninfected_oak_ct, infected_oak_ct, tot_oak), by = c("year", "plotid"))
+summary(umca_plots)
+plot_aggregates <- left_join(plot_aggregates, select(umca_plots, year, plotid, uninfected_bay_ct, infected_bay_ct, tot_bay))
+
+plot_aggregates
+filter(plot_aggregates, year == 2011) %>% group_by(plotid) %>% summarise(inf_oak_ct = sum(infected_oak_ct, na.rm = T))
+
+plot_aggregates %>% group_by(year) %>% summarise(oak_inf = sum(oak_inf), oak_dead = sum(oak_dead))
+sum(plot_aggregates$oak_inf, na.rm = T)
 ```
 
 ```{r model oak infection}
@@ -44,11 +62,12 @@ summary(filter(plot_aggregates, infected_oak_ct == 1))
 ggplot(plot_aggregates, aes(tot_bay, infected_oak_ct)) +
       geom_point() +
       facet_grid(year ~ .)
+ggplot(plot_aggregates)
 
-oak.m1 <- glmer(cbind(infected_oak_ct, uninfected_oak_ct) ~ I(tot_bay/225) + (1 | plot), data = plot_aggregates, family = "binomial")
+oak.m1 <- glmer(cbind(infected_oak_ct, uninfected_oak_ct) ~ I(tot_bay/225) + (1 | plotid), data = plot_aggregates, family = "binomial")
 summary(oak.m1)
 
-oak.m2 <- glmer(cbind(infected_oak_ct, uninfected_oak_ct) ~ log1p(tot_bay) + (1 | plot), data = plot_aggregates, family = "binomial")
+oak.m2 <- glmer(cbind(infected_oak_ct, uninfected_oak_ct) ~ log1p(tot_bay) + (1 | plotid), data = plot_aggregates, family = "binomial")
 summary(oak.m2)
 ```
 
