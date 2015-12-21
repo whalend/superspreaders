@@ -43,7 +43,7 @@ library(rgdal); library(plyr); library(dplyr)
 plots_shp <- readOGR("analysis/data/plot_gis/", "soco_plots_metric")
 plots_env <- plots_shp@data
 summary(plots_env)
-plots_env <- select(plots_env, -cat)
+plots_env <- select(plots_env, -cat, -X, -Y)
 
 # Elevation and vegetation height are in feet, slope is degrees, and canopy density is the proportion of the cell covered by canopy (0-1)
 plots_topo.shp <- readOGR("analysis/data/plot_gis/", "plots202_vegtopo")
@@ -77,7 +77,7 @@ LiDAR products, variables derived from DEMs
 plots_env <- inner_join(plots_env, plots_vegtopo, by = "PLOT_ID")
 summary(plots_env)
 plots_env$elev_m <- plots_env$elev15m * .3048
-plots_env <- select(plots_env, -elevation, -tmi) #remove elevation, tmi from old derivation (I think a legacy 10m USGS DEM)
+# plots_env <- select(plots_env, -elevation, -tmi) #remove elevation, tmi from old derivation (I think a legacy 10m USGS DEM)
 plots_env$veght_m <- plots_env$veght15m * .3048
 rm(plots_vegtopo)
 ```
@@ -151,8 +151,8 @@ write.csv(rain_days, "analysis/data/rain_days_long.csv", row.names = F)
 ```{r explore plot_env data, message=FALSE}
 summary(plots_env)
 str(plots_env)
-plots_env <- plots_env %>% rename(plotid = PLOT_ID, easting = X, northing = Y)
-plots_env <- select(plots_env, -cat)
+plots_env <- plots_env %>% rename(plotid = PLOT_ID)
+
 write.csv(plots_env, "analysis/data/env_gis_variables.csv", row.names = F)
 plots_env <- read.csv("analysis/data/env_gis_variables.csv")
 ```
@@ -160,14 +160,17 @@ plots_env <- read.csv("analysis/data/env_gis_variables.csv")
 Examine temperature data, which is in long format and covers sample years 2004 through 2014. This means that I will need to exclude disease-related sampling from 2003.
 ```{r examine temperature & rain data}
 summary(plots_temps)
-summary(rain_data)
+summary(rain_days)
+summary(rain_total)
 unique(plots_temps$plotid)# 201 levels
-unique(rain_data$plotid)# 202 levels
+unique(rain_days$plotid)# 202 levels
+unique(rain_total$plotid)# 202 levels
 tempsid <- as.character(unique(plots_temps$plotid))
-rainid <- as.character(unique(rain_data$plotid))
+rainid <- as.character(unique(rain_days$plotid))
 rainid %in% tempsid
 rainid[62]# BUSH01 still in the rain data
-rain_data <- filter(rain_data, plotid != "BUSH01")
+rain_days <- filter(rain_days, plotid != "BUSH01")
+rain_total <- filter(rain_total, plotid != "BUSH01")
 # Temperature and rainfall data now have same number of observations
 rm(tempsid); rm(rainid)
 ```
