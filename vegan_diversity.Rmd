@@ -1,0 +1,85 @@
+---
+title: "vegan Diversity"
+author: "Whalen Dillon"
+date: "August 24, 2015"
+output: html_document
+---
+
+```{r load vegan package, echo=FALSE, results='hide'}
+library(vegan)
+data(BCI)
+summary(BCI)
+str(BCI)
+head(BCI)
+names(BCI)
+```
+
+The data example is a wide format, with each species a column and the number (abundunce) of that species observed in each row. Each row corresponds to the observation unit, in this case 1-hectare plots.
+
+The `diversity` function finds the Shannon-Wiener, Simpson, and inverse Simpson diversity indices:
+
+  - Shannon-Wiener: $H = -\sum_{i = 1}^{S} {(p_{i}) (log_b p_i)}$
+  - Simpson: $D_1 = 1 - \sum_{i = 1}^{S} p_i^2$ 
+  - inverse Simpson: $D_2 = 1 / \sum_{i = 1}^{S} p_i^2$
+     
+     - $p_i$ = proportion of species *i*
+     - *S* = number of species
+     - *b* = base of logarithm
+     
+The default uses the natural logarithm.
+
+```{r calculate diversity}
+H <- diversity(BCI, index = "shannon", MARGIN = 1, base = exp(1))
+D1 <- diversity(BCI, index = "simpson")
+D2 <- diversity(BCI, index = "invsimpson")
+H
+D1
+D2
+```
+
+#### Species Abundance Models
+
+Fisher's log-series estimates the expected number of species with *n* individuals, plotting species by frequencies. 
+```{r Fishers log series}
+k <- sample(nrow(BCI), 1)
+fish <- fisherfit(BCI[k,])
+plot(fish)
+fish
+```
+
+Preston's log-normal model bins species into frequency classes of increasing sizes instead of plotting species by frequencies. There are two alternative fucntions in the `vegan` pacakge for fitting the lognormal model:
+
+  1. `prestonfit` uses binning approach with arbitrary choices of limits and ties
+     - for ties between adjacent octaves half were in 1st octave and half transferred to next octave
+     - can either split ties or keep all limit cases in lower octave
+  2. `prestondistr` maximizes truncated log-normal likelihood without binning data
+     - recommended in `vegan` vignette paper
+  
+```{r Prestons lognormal}
+prest <- prestondistr(BCI[k,])
+plot(prest)
+prest
+```
+
+This uses maximum-likelihood method and, I think, log base 2 (?)
+
+#### Whittaker Plots - Ranked Abundance Distribution
+The `vegan` function `radfit` uses maximum likelihood to fit popular models:
+
+  - brokenstick: null model with no estimated parameters in `vegan`
+  - preemption: one estimated parameter ($\alpha$)
+  - log-normal: two estimated parameters ($\mu, sigma$)
+  - Zipf: two estimated parameters (p1, $\gamma$)
+  - Zipf-Mandlebrot: three estimated parameters (*c*, $\beta, gamma$)
+
+The models are customarily defined for proportions, but `radfit` works directly with abundance data. 
+
+```{r Whittaker plots}
+rad <- radfit(BCI[k,], family = poisson)
+plot(rad)
+radlattice(rad)
+rad
+```
+
+This function compares models using AIC or BIC (based on log-likelihood, penalized by number of estimated parameters).
+
