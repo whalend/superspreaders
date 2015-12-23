@@ -53,9 +53,13 @@ plots_vegtopo <- select(plots_vegtopo, -cat) %>% rename(lon_utm = X, lat_utm = Y
 ```
 ```{r load weather data, echo=FALSE}
 # Temperature: rainy season hour summaries (long format for each year)
-plots_temps <- read.csv("analysis/data/rainy_season_temps.csv")
-summary(plots_temps)
-plots_temps <- select(plots_temps, -X)
+rs_temps <- read.csv("analysis/data/rs_select_temps.csv")
+summary(rs_temps)
+rs_temps <- select(rs_temps, -X)
+
+summer_temps <- read.csv("analysis/data/summer_select_temps.csv")
+summary(summer_temps)
+summer_temps <- select(summer_temps, -X)
 
 # Rainfall: interpolated/estimated rainfall for each season
 load("~/Documents/soco_ppt/plot_ppt_estimates.RData")
