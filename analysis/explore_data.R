@@ -564,17 +564,12 @@ matplot(cbind(avg_rain_year,avg_slc_year),type="b")
 matplot(cbind(rainy_days,avg_slc_year),type="b")
 
 library(plotrix)
-twoord.stackplot(lx=years,rx=years,ldata=avg_slc_year,rdata=avg_rain_year,lcol="red",rcol="blue",
-                 ltype="b",rtype="b",rylab="Mean SLC",lylab="Mean Rainfall",xlab="Year")
+twoord.stackplot(lx=years, rx=years, ldata=avg_slc_year, rdata=avg_rain_year, lcol="red", rcol="blue", ltype="b", rtype="b", rylab="Mean SLC", lylab="Mean Rainfall", xlab="Year")
 
 library(ggplot2)
-qplot(years,avg_slc_year,geom=c("point","line"))
+qplot(years, avg_slc_year, geom = c("point", "line"))
 
 ggplot() +
-      geom_line(data=bay_dat1,aes(x=years,y=colMeans(cbind(amou2004,amou2005,amou2006,amou2007,amou2008,
-                                                           amou2009,amou2010,amou2011,amou2012)),
-                                  colour="blue")) +
-      geom_line(data=bay_dat1,aes(x=years,y=colMeans(cbind(cbind(avgslc04,avgslc05,avgslc06,avgslc07,avgslc08,
-                                                                 avgslc09,avgslc10,avgslc11,avgslc12))),
-                                  colour="red"))
+      geom_line(data = bay_dat1, aes(x = years, y = colMeans(cbind(amou2004, amou2005, amou2006, amou2007, amou2008, amou2009, amou2010, amou2011, amou2012)), colour="blue")) +
+      geom_line(data=bay_dat1,aes(x=years,y=colMeans(cbind(cbind(avgslc04, avgslc05, avgslc06, avgslc07, avgslc08, avgslc09, avgslc10, avgslc11, avgslc12))), colour="red"))
 
