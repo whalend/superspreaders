@@ -272,19 +272,171 @@ unique(alt_sp_dbh$Dead)
 # alt_sp_dbh$Dead <- ifelse(alt_sp_dbh$Dead == 0, "no", "yes")
 alt_sp_dbh <- as.tbl(alt_sp_dbh)
 
-alt_sp_live <- filter(alt_sp_dbh, Dead == 0)
-alt_sp_dead <- filter(alt_sp_dbh, Dead == 1)
+summary(filter(alt_sp_dbh, year == 2003))
+unique(droplevels(filter(alt_sp_dbh, year == 2003)$PlotID))
+pid2003 <- as.character(unique(filter(alt_sp_dbh, year == 2003)$PlotID))
+alt_sp_2003 <- filter(alt_sp_dbh, year == 2003)
 
-alt_sp_summ <- left_join(
+summary(filter(alt_sp_dbh, year == 2004))
+unique(droplevels(filter(alt_sp_dbh, year == 2004)$PlotID))
+pid2004 <- as.character(unique(filter(alt_sp_dbh, year == 2004)$PlotID))
+alt_sp_2004 <- filter(alt_sp_dbh, year == 2004)
+
+pid2003 %in% pid2004
+pid2004[47]; pid2004[69]
+filter(alt_sp_dbh, year == 2003, PlotID == "MITSU02")
+filter(alt_sp_dbh, year == 2004, PlotID == "MITSU02")
+
+summary(filter(alt_sp_dbh, year == 2005))
+unique(droplevels(filter(alt_sp_dbh, year == 2005)$PlotID))
+pid2005 <- as.character(unique(filter(alt_sp_dbh, year == 2005)$PlotID))
+alt_sp_2005 <- filter(alt_sp_dbh, year == 2005)
+
+# I think I should work this backwards so that the most recent sampling is added to
+pid2005 %in% pid2004# COOK02 is the only duplicate in the 2004 sampling
+filter(alt_sp_2004, PlotID=="COOK02")
+filter(alt_sp_2005, PlotID=="COOK02")
+# But there are a lot more records in the 2004 data, which is closer to the 2012 & 2014 sampling. I could combine the 2004 & 2005 data, including the potentially duplicated COOK02 data.
+summary(filter(alt_sp_2012, PlotID=="COOK02"))
+filter(alt_sp_2014, PlotID=="COOK02")
+
+alt_sp_45 <- rbind(alt_sp_2005, alt_sp_2004)
+summary(alt_sp_45)
+pid45 <- as.character(unique(alt_sp_45$PlotID))# 144 unique plots
+pid45 %in% pid2003
+pid45[71]; pid45[93]; pid45[133]
+filter(alt_sp_45, PlotID == "MITSU02")
+filter(alt_sp_2003, PlotID == "MITSU02")
+# Exclude MITSU02 from the 2003 data
+alt_sp_2003 <- filter(alt_sp_2003, PlotID != "MITSU02")
+
+filter(alt_sp_45, PlotID == "LINS01")
+filter(alt_sp_2003, PlotID == "LINS01")
+# Keep LINS01 from 2003 data, add to other data
+filter(alt_sp_45, PlotID == "GANAY02")
+filter(alt_sp_2003, PlotID == "GANAY02")
+# Exclude GANAY02 from the 2004, keep the 2003 data
+alt_sp_45 <- filter(alt_sp_45, PlotID != "GANAY02")
+unique(alt_sp_2003$PlotID) %in% unique(alt_sp_45$PlotID)
+alt_sp_45 <- rbind(alt_sp_45, alt_sp_2003)
+alt_sp_2005 <- alt_sp_45
+rm(alt_sp_45)
+
+
+summary(filter(alt_sp_dbh, year == 2012))
+pid2012 <- unique(droplevels(filter(alt_sp_dbh, year == 2012)$PlotID))# 171 plots
+alt_sp_2012 <- filter(alt_sp_dbh, year == 2012)
+
+summary(filter(alt_sp_dbh, year == 2014))
+pid2014 <- unique(droplevels(filter(alt_sp_dbh, year == 2014)$PlotID))# 164 plots
+alt_sp_2014 <- filter(alt_sp_dbh, year == 2014)
+
+# Determine which plots from 2012 (the one with more records) aren't in the 2014 data.
+pid2012 %in% pid2014
+pid2012sub <- droplevels(pid2012[c(4,12:13,20:21,52:53,111,114)])
+alt_sp_2012 <- filter(alt_sp_2012, PlotID == "ARBIT04" | PlotID == "LINS01" | PlotID == "LUPIN01" | PlotID == "MITSU02" | PlotID == "MITSU04" | PlotID == "SKILE01" | PlotID == "SPAUL01" | PlotID == "GANAY02" | PlotID == "HALOW02")
+
+alt_sp_2014 <- rbind(alt_sp_2014, alt_sp_2012)
+summary(alt_sp_2014)
+summary(alt_sp_2005)
+alt_sp_2005$year <- 2005
+
+alt_sp_2014 <- select(alt_sp_2014, -date)
+alt_sp_2005 <- select(alt_sp_2005, -date)
+
+# Create data frames of live and dead stems for '2005' and '2014' samplings. In reality the 2005 grouping has data from visits during 2003 and 2004, and the 2014 grouping includes data from some visits in 2012.
+alt_sp_2014_live <- filter(alt_sp_2014, Dead == 0)
+alt_sp_2014_live <- select(alt_sp_2014_live, -Dead)
+alt_sp_2005_live <- filter(alt_sp_2005, Dead == 0)
+alt_sp_2005_live <- select(alt_sp_2005_live, -Dead)
+alt_sp_2014_dead <- filter(alt_sp_2014, Dead == 1)
+alt_sp_2014_dead <- select(alt_sp_2014_dead, -Dead)
+alt_sp_2005_dead <- filter(alt_sp_2005, Dead == 1)
+alt_sp_2005_dead <- select(alt_sp_2005_dead, -Dead)
+
+# Confirm year assignments are correct/consistent.
+unique(alt_sp_2014_live$year)
+unique(alt_sp_2005_live$year)
+unique(alt_sp_2005_dead$year)
+unique(alt_sp_2014_dead$year)
+
+
+alt_sp_summ_2005 <- left_join(
       # First data frame
-      alt_sp_live %>% filter(year != 2012) %>% group_by(PlotID, Species, year) %>% 
-      summarise(live_count = length(Species), live_avg_dbh = mean(dbh), live_tot_dbh = sum(dbh)),
+      alt_sp_2005_live %>%
+            group_by(PlotID, Species, year) %>% 
+            summarise(
+                  live_count = length(Species),
+                  live_avg_dbh = mean(dbh),
+                  live_tot_dbh = sum(dbh)),
       # Second data frame
-      alt_sp_dead %>% filter(year != 2012) %>% group_by(PlotID, Species, year) %>% 
-      summarise(dead_count = length(Species), dead_avg_dbh = mean(dbh), dead_tot_dbh = sum(dbh))
+      alt_sp_2005_dead %>%
+            group_by(PlotID, Species, year) %>% 
+            summarise(
+                  dead_count = length(Species), 
+                  dead_avg_dbh = mean(dbh), 
+                  dead_tot_dbh = sum(dbh))
 )
-summary(alt_sp_summ)
+summary(alt_sp_summ_2005)
 
-write.csv(alt_sp_summ, "analysis/data/untagged_dbh_summary.csv")
+alt_sp_summ_2014 <- left_join(
+      # First data frame
+      alt_sp_2014_live %>%
+            group_by(PlotID, Species, year) %>% 
+            summarise(
+                  live_count = length(Species),
+                  live_avg_dbh = mean(dbh),
+                  live_tot_dbh = sum(dbh)),
+      # Second data frame
+      alt_sp_2014_dead %>%
+            group_by(PlotID, Species, year) %>% 
+            summarise(
+                  dead_count = length(Species), 
+                  dead_avg_dbh = mean(dbh), 
+                  dead_tot_dbh = sum(dbh))
+)
+summary(alt_sp_summ_2014)
+
+# Write out summary data frames of the untagged DBH species
+write.csv(alt_sp_summ_2005, "analysis/data/untagged_dbh2005_summary.csv", row.names = F)
+write.csv(alt_sp_summ_2014, "analysis/data/untagged_dbh2014_summary.csv", row.names = F)
+```
+
+```{r make wide format species abundance}
+unique(alt_sp_2014_live$Species)
+alt_sp_2014_live$Species[alt_sp_2014_live$Species=="arcto sp."] <- "arcto"
+alt_sp_2014_live$Species[alt_sp_2014_live$Species=="prunus sp."] <- "prunus"
+alt_sp_2014_live$Species[alt_sp_2014_live$Species=="unknown sp. 1"] <- "unk1"
+alt_sp_2014_live$Species[alt_sp_2014_live$Species=="quercus sp."] <- "qusp"
+
+unique(alt_sp_2005_live$Species)
+alt_sp_2005_live$Species[alt_sp_2005_live$Species=="quercus sp."] <- "qusp"
+alt_sp_2005_live$Species[alt_sp_2005_live$Species=="arcto sp."] <- "arcto"
+alt_sp_2005_live$Species[alt_sp_2005_live$Species=="prunus sp."] <- "prunus"
+
+# Aggregate to species counts by plot
+alt_sp_05_live_abund <- alt_sp_2005_live %>% select(-dbh, -year) %>% 
+      group_by(PlotID, Species) %>% summarise(count = length(Species))
+# Spread from long to wide format
+alt_sp_05_live_abund <- alt_sp_05_live_abund %>% spread(Species, count)
+
+alt_sp_14_live_abund <- alt_sp_2014_live %>% select(-dbh, -year) %>% 
+      group_by(PlotID, Species) %>% summarise(count = length(Species))
+alt_sp_14_live_abund <- alt_sp_14_live_abund %>% spread(Species, count)
+
+# Create species abundance data frames of dead species
+alt_sp_05_dead_abund <- alt_sp_2005_dead %>% select(-dbh, -year) %>% 
+      group_by(PlotID, Species) %>% summarise(count = length(Species))
+alt_sp_05_dead_abund <- alt_sp_05_dead_abund %>% spread(Species, count)
+
+alt_sp_14_dead_abund <- alt_sp_2014_dead %>% select(-dbh, -year) %>% 
+      group_by(PlotID, Species) %>% summarise(count = length(Species))
+alt_sp_14_dead_abund <- alt_sp_14_dead_abund %>% spread(Species, count)
+
+# Write out wide format abundance data frames
+write.csv(alt_sp_05_live_abund, "analysis/data/altsp05abund_live.csv")
+write.csv(alt_sp_14_live_abund, "analysis/data/altsp14abund_live.csv")
+write.csv(alt_sp_05_dead_abund, "analysis/data/altsp05abund_dead.csv")
+write.csv(alt_sp_14_dead_abund, "analysis/data/altsp14abund_dead.csv")
 ```
 
