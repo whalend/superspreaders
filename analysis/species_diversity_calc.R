@@ -8,7 +8,8 @@
 #' The Shannon and Simpson's indices can be calculated using functions in the `vegan` package. I have done some exploring of this package in the 'vegan_diversity.Rmd' script. 
 #' 
 #+ load plot sampling data
-## Ecological data: leaf counts, infection
+
+## Ecological data: leaf counts, infection, at stem and plot levels
 load("~/GitHub/superspreaders/stems_plots.RData")
 
 ## Vegetation transect data
@@ -35,21 +36,26 @@ veg_us_2011 <- as.tbl(select(veg_us_2011, -X))
 veg_us_2011# 1300 records
 veg_us_2005# 1249 records
 
-# Each record is a species in a plot, so it was observed in at least one sample point.
+# Each record is a species in a plot, so it was observed in at least one transect sample point.
 
+#' Transpose vegetation transect data from long to wide format. The wide format preps the data for the `diversity` function in the `vegan` package.
+#' 
+#+ transpose data long to wide
 library(tidyr)
-# 2005 Vegetation Data
+# 2005 vegetation data proportional species coverage
 veg_us_2005_wide1 <- select(veg_us_2005, PlotID, UnderstorySp, pcov)
 veg_us_2005_wide1 <- veg_us_2005_wide1 %>% spread(UnderstorySp, pcov)
 summary(veg_us_2005_wide1)
+# 2005 vegetation data point count species coverage
 veg_us_2005_wide2 <- select(veg_us_2005, PlotID, UnderstorySp, ptct)
 veg_us_2005_wide2 <- veg_us_2005_wide2 %>% spread(UnderstorySp, ptct)
 summary(veg_us_2005_wide2)
 
-# 2011 Vegetation Data
+# 2011 vegetation data proportianal species coverage
 veg_us_2011_wide1 <- select(veg_us_2011, PlotID, UnderstorySp, pcov)
 veg_us_2011_wide1 <- veg_us_2011_wide1 %>% spread(UnderstorySp, pcov)
 summary(veg_us_2011_wide1)
+# 2011 vegetation data point count species coverage
 veg_us_2011_wide2 <- select(veg_us_2011, PlotID, UnderstorySp, ptct)
 veg_us_2011_wide2 <- veg_us_2011_wide2 %>% spread(UnderstorySp, ptct)
 summary(veg_us_2011_wide2)
@@ -61,35 +67,56 @@ veg_us$year[veg_us$year < 2011] <- 2005 # Creates the two most complete veg samp
 veg_us <- veg_us %>% rename(us_species = UnderstorySp, plotid = PlotID)
 unique(veg_us$us_species)
 
+# Change species ID to be continuous (no spaces) for plants identified to genus
+veg_us$us_species <- as.character(veg_us$us_species)
+veg_us[veg_us=="quercus sp."] <- "qusp"
+veg_us[veg_us=="unknown sp. 1"] <- "unk1"
+veg_us[veg_us=="vaccinium sp."] <- "vacc"
+veg_us[veg_us=="vinca sp."] <- "vinca"
+veg_us[veg_us=="prunus sp."] <- "prunus"
+veg_us[veg_us=="rubus sp."] <- "rubus"
+veg_us[veg_us=="ribes sp."] <- "ribes"
+veg_us[veg_us=="ceanothus sp."] <- "ceanothus"
+veg_us[veg_us=="lupine sp."] <- "lupine"
+veg_us[veg_us=="mimulus sp."] <- "mimulus"
+veg_us[veg_us=="mimulus sp"] <- "mimulus"
+veg_us[veg_us=="unknown sp. 2"] <- "unk2"
+veg_us[veg_us=="garrya sp."] <- "garrya"
+veg_us[veg_us=="rose sp."] <- "rosa"
+veg_us[veg_us=="quag x quke"] <- "quagXquke"
+veg_us[veg_us=="quag x quga"] <- "quagXquke"
+veg_us[veg_us=="rhamnus sp."] <- "rhamnus"
+veg_us[veg_us=="salix sp."] <- "salix"
+veg_us[veg_us=="cotoneaster sp"] <- "cotoneaster"
+veg_us[veg_us=="quke x quwi"] <- "qukeXquwi"
+veg_us[veg_us=="quke x quch"] <- "qukeXquch"
+veg_us[veg_us=="rosa sp."] <- "rosa"
+sort(unique(veg_us$us_species))
+
 # I want to match the species to those used by Sarah in her second chapter
 local_woody <- read.csv("analysis/data/presence_local_woody_n197.csv")
 summary(local_woody)
 unique(local_woody$spp.local)
 woody_spp <- as.character(local_woody$spp.local)
-woody_spp[woody_spp == "prunus"] <- "prunus sp."
+
 sort(woody_spp) # only 29 species
-sort(unique(veg_us$us_species))
+sort(unique(veg_us$us_species))# 79 species
 # It looks like I will want to add a few more to her list
 
-filter(veg_us, us_species == "ribes sp.")
-filter(veg_us, us_species == "ribes")
-veg_us$us_species[veg_us$us_species == "ribes"] <- "ribes sp."
-
 # Add other selected woody species to the list for inclusion in species richness/diversity/evenness calculations
-woody_spp <- c(woody_spp, "ceanothus sp.", "cebe", "cecu", "frla", "garrya sp.", "gemo", "juca", "mafu", "mane", "mimulus sp", "pisa", "quag x quke", "qube", "quercus sp.", "quwi", "rhamnus sp.", "rhcr", "ribes sp.", "rica", "risa", "roca", "rosa sp.", "rubus sp.", "rudi", "salix sp.", "syal", "vaccinium sp.")
-veg_sub <- filter(veg_us, veg_us$us_species %in% woody_spp)
+woody_spp <- c(woody_spp, "ceanothus", "cebe", "cecu", "frla", "garrya", "gemo", "juca", "mafu", "mane", "mimulus", "pisa", "quagXquke", "qube", "qusp", "quwi", "rhamnus", "rhcr", "ribes", "rica", "risa", "roca", "rosa", "rubus", "rudi", "salix", "syal", "vacc")
+veg_sub <- filter(veg_us, veg_us$us_species %in% woody_spp)# 56 species
 veg_sub <- droplevels(veg_sub)# drop the unused levels from veg species
 
-# Calculate richness as number of species in each plot each year
+# Calculate basic richness as number of different species in each plot each year
 richness <- veg_sub %>%
       group_by(plotid, year) %>% 
       summarise(us_rich = length(unique(us_species)))
 richness
-```
 
-### Calculating Overstory Richness
-Next, overstory richness from the DBH data for tagged & untagged stems.
-```{r calculate overstory richness}
+#' # Calculating Un/tagged & Diversity
+#' Next, overstory richness from the DBH data for tagged & untagged stems.
+
 summary(untagged_dbh)
 untagged_dbh <- as.tbl(untagged_dbh %>% select(-X) %>% rename(plotid = PlotID, species = Species))
 untagged_dbh$plotid <- tolower(untagged_dbh$plotid)
