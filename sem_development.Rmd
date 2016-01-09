@@ -30,11 +30,14 @@ panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)
 ```{r load ecological data, echo=FALSE}
 # Ecological data: leaf counts, infection
 load("~/GitHub/superspreaders/stems_plots.RData")
-# Vegetation data
+
+# Vegetation transect data
 veg_us_2005 <- read.csv("analysis/data/understory_veg_2005.csv")
 veg_us_2011 <- read.csv("analysis/data/understory_veg_2011.csv")
+
 # Untagged dbh data
-untagged_dbh <- read.csv("analysis/data/untagged_dbh_summary.csv")
+untagged_dbh_2005 <- read.csv("analysis/data/untagged_dbh2005_summary.csv")
+untagged_dbh_2014 <- read.csv("analysis/data/untagged_dbh2014_summary.csv")
 canopy_cover <- read.csv("analysis/data/plot_canopy_cover_dens.csv")
 ```
 ```{r load physical data, echo=FALSE, message=F}
@@ -84,6 +87,8 @@ plots_env$elev_m <- plots_env$elev15m * .3048
 # plots_env <- select(plots_env, -elevation, -tmi) #remove elevation, tmi from old derivation (I think a legacy 10m USGS DEM)
 plots_env$veght_m <- plots_env$veght15m * .3048
 rm(plots_vegtopo)
+
+
 ```
 
 #### Convert rain data from wide to long
@@ -163,18 +168,24 @@ plots_env <- read.csv("analysis/data/env_gis_variables.csv")
 
 Examine temperature data, which is in long format and covers sample years 2004 through 2014. This means that I will need to exclude disease-related sampling from 2003.
 ```{r examine temperature & rain data}
-summary(plots_temps)
-summary(rain_days)
-summary(rain_total)
-unique(plots_temps$plotid)# 201 levels
-unique(rain_days$plotid)# 202 levels
-unique(rain_total$plotid)# 202 levels
-tempsid <- as.character(unique(plots_temps$plotid))
-rainid <- as.character(unique(rain_days$plotid))
+summary(rs_temps)
+summary(summer_temps)
+
+summary(ppt_days)
+summary(ppt_total)
+rain_df <- merge(ppt_days@data, ppt_total@data)
+summary(rain_df)
+
+unique(rs_temps$plotid)# 201 levels
+unique(summer_temps$plotid)# 201 levels
+unique(rain_df$plotid)# 202 levels
+
+tempsid <- as.character(unique(rs_temps$plotid))
+rainid <- as.character(unique(rain_df$plotid))
 rainid %in% tempsid
 rainid[62]# BUSH01 still in the rain data
-rain_days <- filter(rain_days, plotid != "BUSH01")
-rain_total <- filter(rain_total, plotid != "BUSH01")
+rain_df <- filter(rain_df, plotid != "BUSH01")
+
 # Temperature and rainfall data now have same number of observations
 rm(tempsid); rm(rainid)
 ```
@@ -187,47 +198,60 @@ A number of observations for above 25 threshold have NAs. I believe that these a
 
 # BUSH01 plot included. I think we have limited ecological data for this plot, and no microclimate data. So, I am going to exclude it from all the data sets
 # plots_env <- filter(plots_env, plotid != "BUSH01")
+stems <- as.tbl(stems)
+stems
+stems <- select(stems, -X) 
 stems <- rename(stems, plotid = plot) %>% filter(plotid != "BUSH01")
 
-plots_temps %>% filter(is.na(hrs_abv25))
-# I am replacing the NAs with `0`, assuming true observations.
-plots_temps[is.na(plots_temps)] <- 0
+rs_temps %>% filter(is.na(hrs_abv25))
+# I am replacing the NAs with 0, assuming true observations, i.e. there were zero hours where temperatures were above 25C
+rs_temps[is.na(rs_temps)] <- 0
 ```
 
 #### Save data with BUSH01 excluded
 ```{r save data}
 write.csv(plots_env, "analysis/data/env_gis_variables.csv", row.names = F)
-write.csv(rain_data, "analysis/data/rain_data_long.csv", row.names = F)
-write.csv(plots_temps, "analysis/data/temp_data_long.csv", row.names = F)
+write.csv(rain_df, "analysis/data/rain_data_long.csv", row.names = F)
+write.csv(rs_temps, "analysis/data/rs_temps_data.csv", row.names = F)
+write.csv(summer_temps, "analysis/data/summer_temps_data.csv", row.names = F)
 write.csv(stems, "analysis/data/stems_noBUSH01.csv", row.names = F)
 rm(plots_temps); rm(plots_rain)
 ```
 
-#### Reload data that has BUSH01 excluded
+### Reload data that has BUSH01 excluded
 ```{r reload data}
 plots_env <- read.csv("analysis/data/env_gis_variables.csv")
-rain_data <- read.csv("analysis/data/rain_data_long.csv")
-temps_data <- read.csv("analysis/data/temp_data_long.csv")
+rain_df <- read.csv("analysis/data/rain_data_long.csv")
+rs_temps <- read.csv("analysis/data/rs_temps_data.csv")
+summer_temps <- read.csv("analysis/data/summer_temps_data.csv")
 stems <- read.csv("analysis/data/stems_noBUSH01.csv")
 ```
 
-#### Plot contributing area vs. slope
+### Plot contributing area vs. slope
 This is a suggestion from Ryan to plot the contributing area vs. the slope for each of the plots in order to tease out how either influences infection and hosts. Decomposing TWI to determine which factor has a greater influence on disease dynamics. 
 ```{r decomposing TWI influence}
 library(ggplot2)
 # summary(plots_vegtopo)
 # par(mfrow = c(3,1))
-qplot(slope15m, flowacc15m, data = plots_env) +
-      geom_text(aes(label = plotid))
-qplot(slope15m, flowacc15m, data = filter(plots_env, flowacc15m < 20), 
-      main = "Flow Accumulation < 20") +
-      geom_text(aes(label = plotid))
-qplot(slope15m, flowacc15m, data = filter(plots_env, flowacc15m > 20 & flowacc15m < 1000), main = "Flow Accumulation 20 - 1000") +
-      geom_text(aes(label = plotid))
-qplot(slope15m, flowacc15m, data = filter(plots_env, flowacc15m > 1000), 
-      main = "Flow Accumulation > 1000") +
+names(plots_env)
+qplot(flowacc15m, facc_ws15m, data = plots_env) #+
       geom_text(aes(label = plotid))
 
+qplot(slope15m, flowacc15m, data = plots_env) #+
+      geom_text(aes(label = plotid))
+
+qplot(slope15m, flowacc15m, data = filter(plots_env, flowacc15m < 20), 
+      main = "Flow Accumulation < 20") #+
+      geom_text(aes(label = plotid))
+
+qplot(slope15m, flowacc15m, data = filter(plots_env, flowacc15m > 20 & flowacc15m < 1000), main = "Flow Accumulation 20 - 1000") #+
+      geom_text(aes(label = plotid))
+      
+qplot(slope15m, flowacc15m, data = filter(plots_env, flowacc15m > 1000), 
+      main = "Flow Accumulation > 1000") #+
+      geom_text(aes(label = plotid))
+
+# I think the 'facc_ws15m' is the estimate from the 'r.watershed' function in GRASS GIS
 qplot(slope15m, facc_ws15m, data = plots_env)
 qplot(slope15m, facc_ws15m, data = filter(plots_env, facc_ws15m < 15), 
       main = "facc < 15") +
@@ -299,6 +323,7 @@ f <- dataplot(plots_env)
 ```{r examine umca data}
 summary(plots_umca)
 # This only has number of infected, uninfected, and total, which must apply to living stems only. I want to analyze leaf counts.
+
 unique(plots_umca$plot)
 umca_plots <- filter(plots_umca, plot != "BUSH01")
 rm(plots_umca)
@@ -307,129 +332,59 @@ unique(bay_laurel$plot)
 bay_laurel <- filter(bay_laurel, plot != "BUSH01")
 ```
 
-I can use this to calculate plot level leaf count variables (sum, average) for each plot and year
+I can use this to calculate plot level leaf count variables (sum, average) for each plot and year.
 ```{r calculate plot level leaf counts}
-umca_plots <- left_join(umca_plots, bay_laurel %>% filter(status == "Alive") %>% group_by(plot, year) %>%  summarise(
-            avg_lfct = mean(slc, na.rm = T),
-            tot_lfct = sum(slc, na.rm = T)),
+umca_plots <- left_join(
+      umca_plots, bay_laurel %>% filter(status == "Alive") %>% 
+            group_by(plot, year) %>% 
+            summarise(avg_lfct = mean(slc, na.rm = T),
+                      tot_lfct = sum(slc, na.rm = T)),
       by = c("plot", "year"))
 summary(umca_plots)
 ```
 
+Explore the NAs in the UMCA leaf counts.
 ```{r examine lfct NAs}
 filter(umca_plots, is.na(avg_lfct))
 # I'm not sure why this wasn't excluded from the calculations with the na.rm = T option
 filter(bay_laurel, plot == "YAHNG02", status == "Alive")
-# I'm removing it manually from the `plots_umca` data frame
+# I'm removing it manually from the `umca_plots` data frame
 umca_plots <- umca_plots %>% filter(avg_lfct != "NaN")
 summary(umca_plots)
 ```
 
 
-So now I have a plot-level of UMCA infection levels for each year. I want to join this with some of the environmental data.
+So now I have a plot-level of UMCA infection levels for each year in terms of symptomatic leaf counts and number of un/infected stems. I want to join this with some of the plot-level environmental data.
 ```{r join env and umca data}
 summary(plots_env)
-plots_env$avg_psi <- rowMeans(cbind(plots_env$psiSpr, plots_env$psiSum, plots_env$psiWin))
-summary(plots_umca)
+
+# Calculate a mean potential solar radiation
+plots_env$avg_psi <- rowMeans(
+      cbind(plots_env$psiSpr, plots_env$psiSum, plots_env$psiWin))
+summary(umca_plots)
 # plot == plotid, year == sample_year
-plots_umca <- left_join(select(plots_umca, -species), plots_env, by = c("plot" = "plotid"))
-summary(plots_umca)
-filter(plots_umca, is.na(easting))
-# NAs due to no topo data for abandoned SUGAR02
-plots_umca <- na.omit(plots_umca)
 
-plots_temps <- as.tbl(plots_temps)
-plots_temps <- plots_temps %>% rename(year = sample_year)
-plots_temps$plotid <- tolower(plots_temps$plotid)
+# Join the environmental data to the bay laurel infection data
+umca_plots <- left_join(select(umca_plots, -species), plots_env, by = c("plot" = "plotid"))
+summary(umca_plots)
+filter(umca_plots, is.na(lon_utm))
+# NAs due to no topo data for abandoned SUGAR02; remove SUGAR02
+umca_plots <- na.omit(umca_plots)
+umca_plots <- rename(umca_plots, plotid = plot, sample_year = year)
+umca_plots$plotid <- tolower(umca_plots$plotid)
 
-plots_umca <- left_join(plots_umca, plots_temps, by = c("plotid", "year"))
-```
+# Join rainy season and summer temperatures to bay laurel infection data
+rs_temps <- as.tbl(rs_temps)
+rs_temps
+rs_temps$plotid <- tolower(rs_temps$plotid)
 
+summer_temps <- as.tbl(summer_temps)
+summer_temps
+summer_temps$plotid <- tolower(summer_temps$plotid)
 
-#### Community vegetation data and variables
-Now I also want to calculate some plot-level community variables from the vegetation data. First, understory richness from the vegetation transects.
-
-```{r calculate understory richness}
-summary(veg_us_2005)
-veg_us_2005 <- as.tbl(select(veg_us_2005, -X))
-summary(veg_us_2011)
-veg_us_2011 <- as.tbl(select(veg_us_2011, -X))
-veg_us_2011
-veg_us_2005
-
-veg <- rbind(veg_us_2005, veg_us_2011)
-unique(veg$year)
-veg$year[veg$year < 2011] <- 2005 # Creates the two most complete veg sampling
-veg <- veg %>% rename(us_species = UnderstorySp, plotid = PlotID)
-unique(veg$us_species)
-
-# I want to match the species to those used by Sarah in her second chapter
-local_woody <- read.csv("analysis/data/presence_local_woody_n197.csv")
-summary(local_woody)
-unique(local_woody$spp.local)
-woody_spp <- as.character(local_woody$spp.local)
-woody_spp[woody_spp == "prunus"] <- "prunus sp."
-sort(woody_spp) # only 29 species
-sort(unique(veg$us_species))
-# It looks like I will want to add a few more to her list
-
-filter(veg, us_species == "ribes sp.")
-filter(veg, us_species == "ribes")
-veg$us_species[veg$us_species == "ribes"] <- "ribes sp."
-
-woody_spp <- c(woody_spp, "ceanothus sp.", "cebe", "cecu", "frla", "garrya sp.", "gemo", "juca", "mafu", "mane", "mimulus sp", "pisa", "quag x quke", "qube", "quercus sp.", "quwi", "rhamnus sp.", "rhcr", "ribes sp.", "rica", "risa", "roca", "rosa sp.", "rubus sp.", "rudi", "salix sp.", "syal", "vaccinium sp.")
-veg_sub <- filter(veg, veg$us_species %in% woody_spp)
-veg_sub <- droplevels(veg_sub)
-
-richness <- veg_sub %>%
-      group_by(plotid, year) %>% 
-      summarise(us_rich = length(unique(us_species)))
-richness
-```
-
-
-Next, overstory richness from the DBH data for tagged & untagged stems.
-
-```{r calculate overstory richness}
-summary(untagged_dbh)
-untagged_dbh <- as.tbl(untagged_dbh %>% select(-X) %>% rename(plotid = PlotID, species = Species))
-untagged_dbh
-unique(untagged_dbh$year)
-untagged_dbh$year[untagged_dbh$year < 2014] <- 2005 # Create two most complete groups
-untagged_dbh$plotid <- tolower(untagged_dbh$plotid)
-unique(untagged_dbh$plotid)
-untagged_dbh <- filter(untagged_dbh, plotid != "bush01")
-untagged_dbh %>% group_by(plotid, year) %>% summarise(untagged_rich = length(unique(species)))
-
-stems <- as.tbl(stems)
-summary(stems)
-unique(stems$status)
-stems <- stems %>% select(-X) %>% filter(status == "Alive" | status == "Dead")
-unique(stems$species)
-unique(stems$plotid)
-stems$species <- tolower(stems$species)
-stems$species[stems$species == "quke x quag"] <- "quag x quke"
-stems$plotid <- tolower(stems$plotid)
-stems <- droplevels(stems)
-
-
-live_tagged <- stems %>% filter(status == "Alive") %>% group_by(plotid, year, species) %>% summarise(live_count = length(species))
-unique(live_tagged$species)
-os_richness <- rbind(live_tagged, select(untagged_dbh, plotid, species, year, live_count))
-
-os_richness <- left_join(
-      stems %>% filter(year == 2005 | year == 2014) %>% 
-            group_by(plotid, year) %>% 
-            summarise(tagged_rich = length(unique(species))),
-      untagged_dbh %>% 
-            group_by(plotid, year) %>% 
-            summarise(untagged_rich = length(unique(species))), by = c("plotid", "year")) %>% 
-      mutate(os_rich = rowSums(cbind(tagged_rich,untagged_rich), na.rm = T))
-os_richness
-
-richness <- left_join(os_richness, richness, by = c("plotid","year"))
-richness
-summary(richness)
+umca_plots <- left_join(umca_plots, rs_temps, by = c("plotid", "sample_year"))
+umca_plots <- left_join(umca_plots, summer_temps, by = c("plotid", "sample_year"))
+umca_plots
 ```
 
 
