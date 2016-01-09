@@ -297,8 +297,8 @@ pid2005 %in% pid2004# COOK02 is the only duplicate in the 2004 sampling
 filter(alt_sp_2004, PlotID=="COOK02")
 filter(alt_sp_2005, PlotID=="COOK02")
 # But there are a lot more records in the 2004 data, which is closer to the 2012 & 2014 sampling. I could combine the 2004 & 2005 data, including the potentially duplicated COOK02 data.
-summary(filter(alt_sp_2012, PlotID=="COOK02"))
-filter(alt_sp_2014, PlotID=="COOK02")
+# summary(filter(alt_sp_2012, PlotID=="COOK02"))
+# filter(alt_sp_2014, PlotID=="COOK02")
 
 alt_sp_45 <- rbind(alt_sp_2005, alt_sp_2004)
 summary(alt_sp_45)
@@ -338,6 +338,7 @@ alt_sp_2012 <- filter(alt_sp_2012, PlotID == "ARBIT04" | PlotID == "LINS01" | Pl
 
 alt_sp_2014 <- rbind(alt_sp_2014, alt_sp_2012)
 summary(alt_sp_2014)
+alt_sp_2014$year <- 2014
 summary(alt_sp_2005)
 alt_sp_2005$year <- 2005
 
@@ -351,7 +352,7 @@ alt_sp_2005_live <- filter(alt_sp_2005, Dead == 0)
 alt_sp_2005_live <- select(alt_sp_2005_live, -Dead)
 alt_sp_2014_dead <- filter(alt_sp_2014, Dead == 1)
 alt_sp_2014_dead <- select(alt_sp_2014_dead, -Dead)
-alt_sp_2005_dead <- filter(alt_sp_2005, Dead == 1)
+alt_sp_2005_dead <- filter(alt_sp_2005, Dead == 1)# only 12 obs, all at GANAY02
 alt_sp_2005_dead <- select(alt_sp_2005_dead, -Dead)
 
 # Confirm year assignments are correct/consistent.
