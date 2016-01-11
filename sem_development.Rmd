@@ -166,7 +166,7 @@ write.csv(plots_env, "analysis/data/env_gis_variables.csv", row.names = F)
 plots_env <- read.csv("analysis/data/env_gis_variables.csv")
 ```
 
-Examine temperature data, which is in long format and covers sample years 2004 through 2014. This means that I will need to exclude disease-related sampling from 2003.
+Examine temperature data, which is in long format and covers sample years 2004 through 2014. This means that I will need to exclude disease-related sampling from 2003 of the ecological data (NAs should fill-in if missing data when joining).
 ```{r examine temperature & rain data}
 summary(rs_temps)
 summary(summer_temps)
@@ -218,7 +218,8 @@ write.csv(stems, "analysis/data/stems_noBUSH01.csv", row.names = F)
 rm(plots_temps); rm(plots_rain)
 ```
 
-### Reload data that has BUSH01 excluded
+### Starting Point with Revised Data: Reload data that has BUSH01 excluded
+Still need to load the .RData source at the beginning of this document, line 32.
 ```{r reload data}
 plots_env <- read.csv("analysis/data/env_gis_variables.csv")
 rain_df <- read.csv("analysis/data/rain_data_long.csv")
@@ -324,8 +325,8 @@ f <- dataplot(plots_env)
 summary(plots_umca)
 # This only has number of infected, uninfected, and total, which must apply to living stems only. I want to analyze leaf counts.
 
-unique(plots_umca$plot)
-umca_plots <- filter(plots_umca, plot != "BUSH01")
+unique(plots_umca$plot)# 185 plots with bay laurel
+umca_plots <- filter(plots_umca, plot != "BUSH01")# now 184 plots
 rm(plots_umca)
 summary(bay_laurel) # This has stem-level data on bay laurel.
 unique(bay_laurel$plot)
@@ -373,33 +374,45 @@ umca_plots <- na.omit(umca_plots)
 umca_plots <- rename(umca_plots, plotid = plot, sample_year = year)
 umca_plots$plotid <- tolower(umca_plots$plotid)
 
-# Join rainy season and summer temperatures to bay laurel infection data
+# Join rainy season and summer temperatures to bay laurel infection data.
+## I need to rename temperature variables to differentiate rainy vs. dry season
 rs_temps <- as.tbl(rs_temps)
-rs_temps
 rs_temps$plotid <- tolower(rs_temps$plotid)
+rs_temps <- rename(rs_temps, 
+                   hrs_14_20_rs = hrs_14_20, hrs_abv25rs = hrs_abv25,
+                   hrs_abv20_rs = hrs_abv20, hrs_blw10rs = hrs_blw10,
+                   avg_tmax_rs = avg_tmax, avg_tmin_rs = avg_tmin)
 
 summer_temps <- as.tbl(summer_temps)
 summer_temps
 summer_temps$plotid <- tolower(summer_temps$plotid)
+summer_temps <- rename(summer_temps, 
+                       hrs_abv25ds = hrs_abv25, hrs_abv20ds = hrs_abv20,
+                       hrs_blw18ds = hrs_blw18, avg_tmax_ds = avg_tmax,
+                       avg_tmin_ds = avg_tmin)
 
+# Now I can join the data without duplicating variable names
 umca_plots <- left_join(umca_plots, rs_temps, by = c("plotid", "sample_year"))
 umca_plots <- left_join(umca_plots, summer_temps, by = c("plotid", "sample_year"))
 umca_plots
 ```
 
-
+### Load and Join Richness, Diversity, Evenness Data
 Now I want to join the richness data set and the canopy cover estimates to the `umca_plots` data frame that currently has the environmental and leaf count/infection variables. 
 
 ```{r join richness and umca data}
+os.us.diversity <- as.tbl(read.csv("analysis/data/os_us_diversity.csv"))
+os.us.diversity
 umca_plots
-richness
-umca_plots <- rename(umca_plots, plotid = plot)
-umca_plots$plotid <- tolower(umca_plots$plotid)
 
-umca_plots <- left_join(umca_plots, richness, by = c("plotid", "year"))
+
+umca_plots <- left_join(umca_plots, os.us.diversity, by = c("plotid"))
 head(canopy_cover)
 canopy_cover <- select(canopy_cover, -X)
-umca_plots <- left_join(umca_plots, canopy_cover, by = c("plotid", "year"))
+canopy_cover <- rename(canopy_cover, sample_year = year)
+unique(filter(canopy_cover, year == 2006)$plotid)
+
+umca_plots <- left_join(umca_plots, canopy_cover, by = c("plotid", "sample_year"))
 ```
 
 Make a pairs plot of the continuous variables for UMCA plots.
@@ -438,74 +451,86 @@ plot_qusp # right now this is broken down by oak species
 qusp_plots <- plot_qusp
 rm(plot_qusp)
 summary(qusp_plots)
-qusp_plots
+
 oak_sod <- qusp_plots %>% group_by(plot, year) %>%
       summarise(uninf_oak_ct = sum(uninfected_oak_ct), 
                 inf_oak_ct = sum(infected_oak_ct), 
                 tot_oak_ct = sum(c(uninfected_oak_ct, infected_oak_ct)))
 oak_sod
-oak_sod <- rename(oak_sod, plotid = plot)
+oak_sod <- rename(oak_sod, plotid = plot, sample_year = year)
 oak_sod$plotid <- tolower(oak_sod$plotid)
 
+unique(umca_plots$plotid) %in% unique(oak_sod$plotid)
 
-oak_sod <- left_join(oak_sod, select(umca_plots, plotid, year, uninfected_bay_ct, infected_bay_ct, tot_bay, avg_lfct, tot_lfct), 
-                     by = c("plotid", "year"))
+# Add bay laurel infection data to oak plots
+names(umca_plots)
+oak_sod <- left_join(oak_sod, 
+                     select(umca_plots, plotid, sample_year, uninfected_bay_ct, infected_bay_ct, tot_bay, avg_lfct, tot_lfct), 
+                     by = c("plotid", "sample_year"))
 summary(oak_sod) # the NA's for the bay laurel variables are legitimately zeroes b/c there are no bay in some of these plots
-filter(oak_sod, is.na(tot_bay))
+filter(oak_sod, is.na(tot_bay), sample_year != 2003)
+# Change NAs of bay laurel in oak only plots to zeroes
 oak_sod$uninfected_bay_ct[is.na(oak_sod$uninfected_bay_ct)] <- 0
 oak_sod$infected_bay_ct[is.na(oak_sod$infected_bay_ct)] <- 0
 oak_sod$tot_bay[is.na(oak_sod$tot_bay)] <- 0
 
+# Add environmental data to oak plot infection data.
 plots_env
 plots_env$plotid <- tolower(plots_env$plotid)
-oak_sod <- left_join(oak_sod, plots_env, by = "plotid")
-head(temps_data, 15)
-temps_data$plotid <- tolower(temps_data$plotid)
-temps_data <- rename(temps_data, year = sample_year)
-oak_sod <- left_join(oak_sod, temps_data, by = c("plotid", "year"))
+oak_sod <- left_join(oak_sod, plots_env, by = "plotid")# Topo data 
+
+rs_temps
+summer_temps
+oak_sod <- left_join(oak_sod, rs_temps, by = c("plotid", "sample_year"))
+oak_sod <- left_join(oak_sod, summer_temps, by = c("plotid", "sample_year"))
 oak_sod
 names(oak_sod)
 
-richness
-oak_sod <- left_join(oak_sod, richness, by = c("plotid", "year"))
+os.us.diversity
+oak_sod <- left_join(oak_sod, os.us.diversity, by = c("plotid"))
 summary(oak_sod)
 filter(oak_sod, is.na(elev15m))
+# NAs are plots that were abandoned early in the study
 oak_sod <- filter(oak_sod, plotid != "duer01", plotid != "ponti01", plotid != "sweet01")
 
-summary(filter(oak_sod, is.na(avg_tmax)))
-filter(oak_sod, is.na(avg_tmax), year == 2005) # BUSH01 plot; I'm dropping that from the data set
+
+summary(filter(oak_sod, is.na(avg_tmax_rs)))
+# Many of the NAs are due to the 2003 sample year
+oak_sod <- filter(oak_sod, sample_year != 2003)
+filter(oak_sod, is.na(avg_tmax_rs))
+# BUSH01 plot; I'm dropping that from the data set
 oak_sod <- filter(oak_sod, plotid != "bush01")
-filter(oak_sod, is.na(avg_tmax), year == 2004) # PONTI01 and SWEET01 were other early abandoned plots
-oak_sod <- filter(oak_sod, plotid != "ponti01", plotid != "sweet01")
-summary(filter(oak_sod, is.na(avg_tmax))) # Now the NAs in the temperature variables are just for year 2003 when we had severely incomplete temperature data
-summary(oak_sod)
-filter(oak_sod, is.na(easting))
-oak_sod <- filter(oak_sod, plotid != "duer01")
-
-filter(oak_sod, plotid == "ann05") # There is no 2007 record for ann05 in the UMCA form, but there is a plot visit. I will need to come back and investigate this further for correcting the database.
-oak_sod$infected_bay_ct[oak_sod$plotid == "ann05" & oak_sod$year == 2007] <- 15
-oak_sod$tot_bay[oak_sod$plotid == "ann05" & oak_sod$year == 2007] <- 15
-# I filled in the counts based on the values in the immediately preceding and following years, which I think is pretty solid reasoning. However, there is nothing I can do about the leaf counts.
 summary(oak_sod)
 
-oak_sod <- left_join(oak_sod, canopy_cover, by = c("plotid", "year"))
-summary(rain_data)
-rain_data$plotid <- tolower(rain_data$plotid)
-oak_sod <- left_join(oak_sod, rain_data, by = c("plotid", "year"))
-summary(filter(oak_sod, is.na(avg_tmax))) # all obs from 2003
+oak_sod <- left_join(oak_sod, canopy_cover, by = c("plotid", "sample_year"))
 
-filter(oak_sod, year == 2003) # 85 records
-filter(oak_sod, year == 2004) # 88 records
+summary(rain_total)
+rain_total$plotid <- tolower(rain_total$plotid)
+rain_total <- rename(rain_total, sample_year = year)
+# rain_total$sample_year <- as.numeric(rain_total$sample_year)
+summary(rain_days)
+rain_days$plotid <- tolower(rain_days$plotid)
+rain_days <- rename(rain_days, sample_year = year)
+#rain_days$sample_year <- as.numeric(as.character(rain_days$sample_year))
+
+
+oak_sod <- left_join(oak_sod, rain_total, by = c("plotid", "sample_year"))
+oak_sod <- left_join(oak_sod, rain_days, by = c("plotid", "sample_year"))
+summary(oak_sod)
+
+summary(filter(oak_sod, is.na(rain_tot_psm))) # all obs after 2010
+
+filter(oak_sod, sample_year == 2004) # 88 records
 # 2005 appears to be the first full year of observing all the plots
-filter(oak_sod, year == 2005) # 170 records
-filter(oak_sod, year == 2006) # 172 records
-filter(oak_sod, year == 2007) # 171 records
-filter(oak_sod, year == 2008) # 171 records
-filter(oak_sod, year == 2009) # 170 records
-filter(oak_sod, year == 2010) # 170 records
-filter(oak_sod, year == 2011) # 170 records; final year for Sarah's 2nd chapter
-filter(oak_sod, year == 2012) # 169 records
-filter(oak_sod, year == 2014) # 168 records
+filter(oak_sod, sample_year == 2005) # 170 records
+filter(oak_sod, sample_year == 2006) # 172 records
+filter(oak_sod, sample_year == 2007) # 171 records
+filter(oak_sod, sample_year == 2008) # 171 records
+filter(oak_sod, sample_year == 2009) # 170 records
+filter(oak_sod, sample_year == 2010) # 170 records
+filter(oak_sod, sample_year == 2011) # 170 records; final year for Sarah's 2nd chapter
+filter(oak_sod, sample_year == 2012) # 169 records
+filter(oak_sod, sample_year == 2014) # 168 records
 # In Sarah's analysis we end up using only 163 plots
 ```
 
