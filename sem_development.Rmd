@@ -394,7 +394,20 @@ summer_temps <- rename(summer_temps,
 # Now I can join the data without duplicating variable names
 umca_plots <- left_join(umca_plots, rs_temps, by = c("plotid", "sample_year"))
 umca_plots <- left_join(umca_plots, summer_temps, by = c("plotid", "sample_year"))
-umca_plots
+names(umca_plots)
+
+# Add rainfall data to UMCA plots data frame
+names(rain_total)
+names(rain_days)
+umca_plots <- left_join(umca_plots, rain_total, by = c("plotid", "sample_year"))
+umca_plots <- left_join(umca_plots, rain_days, by = c("plotid", "sample_year"))
+summary(umca_plots)
+
+filter(umca_plots, is.na(rain_tot_2d))
+# NAs in rainfall data are from 2003
+filter(umca_plots, sample_year == 2003)
+# Only 7 plots w/UMCA sampled in 2003, so removing these records
+umca_plots <- filter(umca_plots, sample_year != 2003)
 ```
 
 ### Load and Join Richness, Diversity, Evenness Data
