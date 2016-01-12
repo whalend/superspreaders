@@ -7,6 +7,7 @@
 #+ oak_sod path model 2005
 # load data
 load("pathmodel_data_20160112.RData")
+
 library(ggm)
 names(oak_sod)
 oak_path1 <- DAG(
@@ -43,12 +44,11 @@ shipley.test(oak_path1, cov(select(oak_2005, elev15m, twi15m, os_rich, hrs_14_20
 
 shipley.test(oak_path2, cov(select(oak_2005, elev15m, twi15m, os_rich, hrs_blw10, d2c, avg_psi, tot_lfct, inf_oak_ct)), n = 170)
 # The p-value of .04 indicates that the conditional independence assumptions under the application of a Gaussian model are questionable.
-```
 
 
-Violation or questioning of conditional independence supports addressing the complexity of the data using different model distributions to deal with the data.
+#' Violation or questioning of conditional independence supports addressing the complexity of the data using different model distributions to deal with the data.
 
-```{r assess conditional independence claims 2005}
+#+ assess conditional independence claims 2005
 bu_oak_path1 # 15 independence claims means 15 models
 library(nlme); library(lme4); library(MuMIn)
 
@@ -120,22 +120,22 @@ summary(f14) # twi15m; p = 0.61177
 f15 <- lm(os_rich ~ hrs_14_20 + avg_psi + d2c + elev15m + twi15m, data = oak_2005)
 # f15 <- lme(os_rich ~ hrs_14_20 + avg_psi + d2c + elevation + tmi, data = oak_2005, random = ~1|plotid)
 summary(f15) # hrs_14_20; p = 0.08468
-
-# Calculate C-statistic
+#'
+#'
+#+ Calculate C-statistic for 2005 data model
 pvalues <- c(summary(f1)$tTable[2,5], summary(f2)$tTable[2,5], summary(f3)$tTable[2,5], summary(f4)$tTable[2,5], summary(f5)$coefficients[2,4], summary(f6)$coefficients[2,4], summary(f7)$tTable[2,5], summary(f8)$tTable[2,5], summary(f9)$tTable[2,5], summary(f10)$tTable[2,5], summary(f11)$coefficients[2,4], summary(f12)$coefficients[2,4], summary(f13)$coefficients[2,4], summary(f14)$coefficients[2,4], summary(f15)$tTable[2,5])
 
 cstat <- -2 * sum(log(pvalues))
 cstat
-```
-
-Given the C-statistic of 26.9 and that 2k degrees of freedom would be 30 I think that this meets the criteria for supporting the conditional independence claims. So, this supports my path model, now I need to run the models to produce estimates for the path coefficients. This is the model set that I need to get the estimated path coefficients:
+#'
+#' Given the C-statistic of 26.9 and that 2k degrees of freedom would be 30 I think that this meets the criteria for supporting the conditional independence claims. So, this supports my path model, now I need to run the models to produce estimates for the path coefficients. This is the model set that I need to get the estimated path coefficients:
       
-      1. os_rich ~ twi15m,
-2. hrs_14_20 ~ elev15m + d2c + avg_psi + twi15m,
-3. tot_lfct ~ hrs_14_20 + os_rich + d2c,
-4. infected oak ~ tot_lfct + os_rich + hrs_14_20 + d2c
-
-```{r estimate path coefficients 2005}
+#'      1. os_rich ~ twi15m,
+#'      2. hrs_14_20 ~ elev15m + d2c + avg_psi + twi15m,
+#'      3. tot_lfct ~ hrs_14_20 + os_rich + d2c,
+#'      4. infected oak ~ tot_lfct + os_rich + hrs_14_20 + d2c
+#'      
+#+ estimate path coefficients 2005
 # f0 <- fitted(mlme1, level = 0)# Values from population model
 # f1 <- fitted(mlme1, level = 1)# Within beach fitted values
 
@@ -207,13 +207,12 @@ summary(fit5)
 #       lines(sort(x1), y1[K], col = "red")
 # }
 # text(oak_2005$hrs_14_20, oak_2005$tot_lfct, oak_2005$plotid, cex = 0.9)
-```
 
 
-#### Path Analysis Oak Infection - 2014
-Now I am going to fit the same path model to data from 2011.
+#' ## Path Analysis Oak Infection - 2014
+#' Now I am going to fit the same path model to data from 2011.
 
-```{r oak_sod path model 2014}
+#+ oak_sod path model 2014
 oak_path1 <- DAG(
       tmi ~ elevation,
       os_rich ~ tmi,
@@ -242,9 +241,9 @@ shipley.test(oak_path1, cov(select(oak_2014, elevation, tmi, os_rich, hrs_14_20,
 #       inf_oak_ct ~ tot_lfct + os_rich + hrs_blw10 + d2c), 
 #       cov(select(oak_2014, elevation, tmi, os_rich, hrs_blw10, d2c, avg_psi, tot_lfct, inf_oak_ct)), 
 #       n = 168)
-```
-
-```{r assess conditional independence 2014}
+#'
+#'
+#+ assess conditional independence claims 2014
 f1 <- lme(avg_psi ~ d2c, data = oak_2014, random = ~1|plotid)
 summary(f1) # p = 0.591
 f2 <- lme(avg_psi ~ elevation, data = oak_2014, random = ~1|plotid)
@@ -328,13 +327,12 @@ cstat # 69.18
 chisq.test(c(cstat,30))
 qchisq(pvalues, df = 30)
 chisq.test(cbind(pvalues, qchisq(pvalues, df = 30)))
-```
-
-This C-statistic is much larger than the degrees of freedom, so I'm not confident in the conditional independencies of the structural model being met for the 2014 data. In fact, based on the C-test value from the earlier call to `shipleys.test` on these data this value is significantly different.
-
-The models testing for conditional independence indicate direct effects of PSI and elevation on oak infection, as well as a direct effect of elevation on symptomatic leaf count. This is indicated by the p-values showing strong statistical significance in the relationship between these variables. Below I have generated a new path model that accounts for the unassumed direct effects, which means they become assumed direct effects.
-
-```{r oak path 2014 v2}
+#'
+#' This C-statistic is much larger than the degrees of freedom, so I'm not confident in the conditional independencies of the structural model being met for the 2014 data. In fact, based on the C-test value from the earlier call to `shipleys.test` on these data this value is significantly different.
+#'
+#' The models testing for conditional independence indicate direct effects of PSI and elevation on oak infection, as well as a direct effect of elevation on symptomatic leaf count. This is indicated by the p-values showing strong statistical significance in the relationship between these variables. Below I have generated a new path model that accounts for the unassumed direct effects, which means they become assumed direct effects.
+#'
+#+ oak path 2014 v2
 oak_path2 <- DAG(
 tmi ~ elevation,
 os_rich ~ tmi,
@@ -349,11 +347,10 @@ bu_oak_path2
 shipley.test(oak_path2, cov(select(oak_2014, elevation, tmi, os_rich, hrs_14_20, d2c, avg_psi, tot_lfct, inf_oak_ct)), n = 168)
 
 plotGraph(oak_path2)
-```
+#'
+#' This means commenting out models `f6` (oak ~ PSI), `f12` (oak ~ elevation), and `f11` (leaf count ~ elevation) in the `pvalues` summary.
 
-This means commenting out models `f6` (oak ~ PSI), `f12` (oak ~ elevation), and `f11` (leaf count ~ elevation) in the `pvalues` summary.
-
-```{r recalculate c-statistic}
+#+ recalculate c-statistic 2014
 pvalues <- c(
 summary(f1)$tTable[2,5], summary(f2)$tTable[2,5], summary(f3)$tTable[2,5],
 summary(f4)$coefficients[2,4], summary(f5)$coefficients[2,4], 
@@ -367,12 +364,13 @@ summary(f13)$coefficients[2,4], summary(f14)$coefficients[2,4], summary(f15)$coe
 cstat <- -2 * sum(log(pvalues))
 cstat # 36.56767
 chisq.test(c(cstat,30))
-```
-I think this would be evidence for wanting/needing to use the repeated measures approach across all the data to capture interannual variation in the relationships.
+#'
+#' I think this would be evidence for wanting/needing to use the repeated measures approach across all the data to capture interannual variation in the relationships.
+#' 
+#' I am continuing with fitting the models to estimate the path coefficients for 2014 data based on this redrawn path model.
+#' 
+#+ estimate path coefficients 2014
 
-I am continuing with fitting the models to estimate the path coefficients for 2014 data based on this redrawn path model.
-
-```{r estimate path coefficients 2014}
 # f0 <- fitted(mlme1, level = 0)# Values from population model
 # f1 <- fitted(mlme1, level = 1)# Within beach fitted values
 
@@ -431,17 +429,18 @@ fit5_2014 <- lm(log(os_rich) ~ tmi, data = oak_2014); AIC(fit5_2014)
 # fit5_2014 <- lme(os_rich ~ tmi, data = oak_2014, random = ~1|plotid)
 # fit5_2014 <- lme(log(os_rich) ~ tmi, data = oak_2014, random = ~1|plotid)
 summary(fit5_2014)
-```
 
 
-#### Importance Value
-I also want to calculate some variables related to DBH, and in particular the "importance value" for each species. Importance value is calculated in the literature as:
+#' ## Importance Value
+#' I also want to calculate some variables related to DBH, and in particular the "importance value" for each species. Importance value is calculated in the literature as:
 
-`IV = 0.5 * (relative density / relative dominance)` where 
-- `Relative Density = # stems of species / total # of stems` and
-- `Relative Dominance = basal area of species / total basal area`
-
-```{r calculate importance value}
+#' `IV = 0.5 * (relative density / relative dominance)` where:
+#'     
+#'     - `Relative Density = # stems of species / total # of stems` and
+#'     
+#'     - `Relative Dominance = basal area of species / total basal area`
+#'     
+#+ calculate importance value
 unique(untagged_dbh$species)
 untagged_dbh
 unique(stems$species)
@@ -477,9 +476,8 @@ filter(stems_dbh, all_live_dbh > 800)
 stems_dbh <- stems_dbh %>% mutate(rel_dens = live_count / all_live_count, rel_dom = live_tot_dbh / all_live_dbh, imp_value = 0.5*(rel_dens + rel_dom))
 summary(stems_dbh)
 write.csv(stems_dbh, "analysis/data/species_dbh_impval_plot.csv")
-```
-
-```{r pare down stems dataframe}
+#'
+#+ pare down stems dataframe
 stems %>% select(year, tag, species, status, notes) %>% filter(species == "umca") 
 summary(stems) # Limited to "Alive/Dead"" status, "Missing" statuses excluded
 unique(stems$species)
@@ -502,9 +500,7 @@ summary(richness)
 summary(stems_dbh)
 
 save.image("~/GitHub/superspreaders/data_201508.RData")
-```
 
-```{r}
 load("~/GitHub/superspreaders/data_201508.RData")
 stemssub$cluster <- as.factor(stemssub$cluster)
 stemssub$tag <- as.factor(stemssub$tag)
@@ -512,5 +508,4 @@ stemssub$canker <- as.factor(stemssub$canker)
 stemssub$sod_dead <- as.factor(stemssub$sod_dead)
 stemssub$date <- as.Date(stemssub$date)
 str(stemssub)
-```
 
