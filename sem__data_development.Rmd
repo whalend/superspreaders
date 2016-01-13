@@ -2,10 +2,12 @@
 title: "Path Analysis Data Development - Chapter 2"
 author: "Whalen Dillon"
 date: "June 15, 2015"
-output: html_document
+output: 
+  html_document:
+    toc: true
 ---
 
-#### Load data
+## Load data
 ```{r pairs helper functions, echo=FALSE}
 panel.hist <- function(x, ...)
 {
@@ -78,7 +80,7 @@ ppt_days@data <- rename(ppt_days@data, plotid = PLOT_ID)
 ppt_total@data <- rename(ppt_total@data, plotid = PLOT_ID)
 ```
 
-#### Join remotely sensed and derived physical data
+## Join remotely sensed and derived physical data
 LiDAR products, variables derived from DEMs
 ```{r join remotely sensed data}
 plots_env <- inner_join(plots_env, plots_vegtopo, by = "PLOT_ID")
@@ -87,11 +89,9 @@ plots_env$elev_m <- plots_env$elev15m * .3048
 # plots_env <- select(plots_env, -elevation, -tmi) #remove elevation, tmi from old derivation (I think a legacy 10m USGS DEM)
 plots_env$veght_m <- plots_env$veght15m * .3048
 rm(plots_vegtopo)
-
-
 ```
 
-#### Convert rain data from wide to long
+## Convert rain data from wide to long
 ```{r rain wide to long}
 library(tidyr)
 rain2d_total <- ppt_total@data %>% select(plotid, ends_with("2d"))
@@ -138,13 +138,18 @@ rain_total <- left_join(rain2d_total,
                         by = c("plotid","year"))
 rain_total <- left_join(rain_total, rain_r_total, by = c("plotid", "year"))
 rain_total <- left_join(rain_total, rain_psm_total, by = c("plotid", "year"))
+summary(rain_total)# NAs are due to current PRISM data only going through 2010
+unique(rain_total$plotid)# 202 plots
+unique(rain_total$year)# 10 sampling seasons
 
 rain_days <- left_join(rain2d_days,
                        left_join(rain3d_days, rain_v_days, 
                                  by = c("plotid", "year")),
                        by = c("plotid", "year"))
 rain_days <- left_join(rain_days, rain_r_days, by = c("plotid", "year"))
-
+summary(rain_days)
+unique(rain_days$plotid)# 202 plots
+unique(rain_days$year)# 10 sampling seasons
 
 rm(list = ls(pattern = "^rain_v"))
 rm(list = ls(pattern = "^rain2d"))
@@ -156,7 +161,7 @@ write.csv(rain_total, "analysis/data/rain_total_long.csv", row.names = F)
 write.csv(rain_days, "analysis/data/rain_days_long.csv", row.names = F)
 ```
 
-#### Explore data for completeness and matching
+## Explore data for completeness and matching
 ```{r explore plot_env data, message=FALSE}
 summary(plots_env)
 str(plots_env)
@@ -168,17 +173,19 @@ plots_env <- read.csv("analysis/data/env_gis_variables.csv")
 
 Examine temperature data, which is in long format and covers sample years 2004 through 2014. This means that I will need to exclude disease-related sampling from 2003 of the ecological data (NAs should fill-in if missing data when joining).
 ```{r examine temperature & rain data}
+# Temperature Data
 summary(rs_temps)
 summary(summer_temps)
 
+# Rainfall Data
 summary(ppt_days)
 summary(ppt_total)
 rain_df <- merge(ppt_days@data, ppt_total@data)
 summary(rain_df)
 
-unique(rs_temps$plotid)# 201 levels
-unique(summer_temps$plotid)# 201 levels
-unique(rain_df$plotid)# 202 levels
+unique(rs_temps$plotid)# 201 plots
+unique(summer_temps$plotid)# 201 plots
+unique(rain_df$plotid)# 202 plots
 
 tempsid <- as.character(unique(rs_temps$plotid))
 rainid <- as.character(unique(rain_df$plotid))
@@ -190,7 +197,7 @@ rain_df <- filter(rain_df, plotid != "BUSH01")
 rm(tempsid); rm(rainid)
 ```
 
-#### Investigating `NAs` in the `plots_temps` data set
+## Investigating `NAs` in the `plots_temps` data set
 A number of observations for above 25 threshold have NAs. I believe that these are in fact truly zero observations. NAs occurred for the 2010, 2011, and 2014 seasons, and the only NAs in the data set are associated with the above 25 threshold. I do believe that it is possible that the temperature was never above 25 C during the wet season November - May in some years.
 ```{r investigate NAs, eval=FALSE, echo=FALSE}
 # summary(plots_env)
@@ -208,7 +215,7 @@ rs_temps %>% filter(is.na(hrs_abv25))
 rs_temps[is.na(rs_temps)] <- 0
 ```
 
-#### Save data with BUSH01 excluded
+### Save data with BUSH01 excluded
 ```{r save data}
 write.csv(plots_env, "analysis/data/env_gis_variables.csv", row.names = F)
 write.csv(rain_df, "analysis/data/rain_data_long.csv", row.names = F)
@@ -218,7 +225,7 @@ write.csv(stems, "analysis/data/stems_noBUSH01.csv", row.names = F)
 rm(plots_temps); rm(plots_rain)
 ```
 
-### Starting Point with Revised Data: Reload data that has BUSH01 excluded
+## Starting Point with Revised Data: Reload data that has BUSH01 excluded
 Still need to load the .RData source at the beginning of this document, line 32.
 ```{r reload data}
 plots_env <- read.csv("analysis/data/env_gis_variables.csv")
@@ -228,38 +235,58 @@ summer_temps <- read.csv("analysis/data/summer_temps_data.csv")
 stems <- read.csv("analysis/data/stems_noBUSH01.csv")
 ```
 
-### Plot contributing area vs. slope
+## Plot Contributing Area vs. Slope
 This is a suggestion from Ryan to plot the contributing area vs. the slope for each of the plots in order to tease out how either influences infection and hosts. Decomposing TWI to determine which factor has a greater influence on disease dynamics. 
 ```{r decomposing TWI influence}
 library(ggplot2)
-# summary(plots_vegtopo)
 # par(mfrow = c(3,1))
 names(plots_env)
+summary(plots_env)
+## 'facc_ws15m' is the estimate from the 'r.watershed' function in GRASS GIS
+
+# Plot estimates from two different functions agains each other.
 qplot(flowacc15m, facc_ws15m, data = plots_env) #+
       geom_text(aes(label = plotid))
+cor(plots_env$flowacc15m, plots_env$facc_ws15m)
+## There are 9 plots that really stand out from the others.
+## The r.watershed calculation provides similar, but generally smaller values.
+qplot(flowacc15m, facc_ws15m, data = filter(plots_env, flowacc15m > 300),
+      main = "'High' Flow Accumulation Value Plots") +
+      geom_text(aes(label = plotid))
+qplot(flowacc15m, facc_ws15m, data = filter(plots_env, flowacc15m < 300),
+      main = "'Low' Flow Accumulation Value Plots") +
+      geom_text(aes(label = plotid))
+## Much of the variability between the two estimates stems from a few plots.
 
+# Plot flow accumulation vs. slope
 qplot(slope15m, flowacc15m, data = plots_env) #+
       geom_text(aes(label = plotid))
+## Can't see much pattern (if there is any) because of a few big values
+      cor(plots_env$slope15m, plots_env$flowacc15m)
+      ## negative, but weak
 
-qplot(slope15m, flowacc15m, data = filter(plots_env, flowacc15m < 20), 
-      main = "Flow Accumulation < 20") #+
+qplot(slope15m, flowacc15m, data = filter(plots_env, flowacc15m < 300), 
+      main = "Flow Accumulation <300") #+
       geom_text(aes(label = plotid))
-
-qplot(slope15m, flowacc15m, data = filter(plots_env, flowacc15m > 20 & flowacc15m < 1000), main = "Flow Accumulation 20 - 1000") #+
-      geom_text(aes(label = plotid))
+## Generally, a shallower slope means higher flow accumulation, but it's not a strong pattern
       
-qplot(slope15m, flowacc15m, data = filter(plots_env, flowacc15m > 1000), 
-      main = "Flow Accumulation > 1000") #+
+qplot(slope15m, flowacc15m, data = filter(plots_env, flowacc15m > 300), 
+      main = "Flow Accumulation >300 ") #+
+      geom_text(aes(label = plotid))
+## The set of high flow accumulation plots shows an opposite general trend in the relationship between flow accumulation and slope. It's a small sample size, which leads me to consider the general trend from the large sample size being closer to the real relationship.
+      
+
+qplot(slope15m, facc_ws15m, data = plots_env)
+cor(plots_env$slope15m, plots_env$facc_ws15m)
+## weakly negative correlation between slope and flow accumulation
+
+qplot(slope15m, facc_ws15m, data = filter(plots_env, facc_ws15m < 300), 
+      main = "Flow Accumulation (r.watershed) <300") #+
+      geom_text(aes(label = plotid))
+qplot(slope15m, facc_ws15m, data = filter(plots_env, facc_ws15m > 300), 
+      main = "Flow Accumulation (r.watershed) >300") #+
       geom_text(aes(label = plotid))
 
-# I think the 'facc_ws15m' is the estimate from the 'r.watershed' function in GRASS GIS
-qplot(slope15m, facc_ws15m, data = plots_env)
-qplot(slope15m, facc_ws15m, data = filter(plots_env, facc_ws15m < 15), 
-      main = "facc < 15") +
-      geom_text(aes(label = plotid))
-qplot(slope15m, facc_ws15m, data = filter(plots_env, facc_ws15m > 15 & facc_ws15m < 50), 
-      main = "facc 15 - 50") +
-      geom_text(aes(label = plotid))
 qplot(slope15m, facc_ws15m, data = filter(plots_env, facc_ws15m > 50 & facc_ws15m < 200), 
       main = "facc 50 - 200") +
       geom_text(aes(label = plotid))
@@ -285,16 +312,16 @@ qplot(slope15m, facc_ws15m, data = filter(plots_env, facc_ws15m > 1000),
 #       lower.panel = panel.cor, diag.panel = panel.hist,
 #       main = "Flow accumulation > 1000")
 
-plot(flowacc15m ~ slope15m, data = filter(plots_env, flowacc15m < 30))
-pairs(select(plots_env, -plotid) %>% filter(flowacc15m < 30), 
+plot(flowacc15m ~ slope15m, data = filter(plots_env, flowacc15m > 300))
+pairs(select(plots_env, flowacc15m, slope15m) %>% filter(flowacc15m > 300), 
       lower.panel = panel.cor, diag.panel = panel.hist)
 
 library(manipulate)
 manipulate(
       qplot(slope15m, flowacc15m, data = plots_env,
            axes = axes,
-           cex = cex,
-           pch = if(pch) 19 else 1
+           cex = cex
+           #pch = if(pch) 19 else 1
            ),
       axes = checkbox(TRUE, "Show axes"),
       cex = slider(0, 5, initial = 1, step = 0.1, label = "Point size"),
@@ -320,7 +347,7 @@ dataplot <- function(dat){
 f <- dataplot(plots_env)
 ```
 
-#### Examine the bay laurel data at individual and plot levels
+## Examine the bay laurel data at individual and plot levels
 ```{r examine umca data}
 summary(plots_umca)
 # This only has number of infected, uninfected, and total, which must apply to living stems only. I want to analyze leaf counts.
@@ -333,8 +360,11 @@ unique(bay_laurel$plot)
 bay_laurel <- filter(bay_laurel, plot != "BUSH01")
 ```
 
-I can use this to calculate plot level leaf count variables (sum, average) for each plot and year.
+I can use the stem-level data to calculate plot level leaf count variables (sum, average) for each plot and year.
 ```{r calculate plot level leaf counts}
+live_umca <- bay_laurel %>% filter(status == "Alive")
+filter(live_umca, is.na(slc))
+# Spot checking some of these shows that NAs are reasonable
 umca_plots <- left_join(
       umca_plots, bay_laurel %>% filter(status == "Alive") %>% 
             group_by(plot, year) %>% 
@@ -347,15 +377,15 @@ summary(umca_plots)
 Explore the NAs in the UMCA leaf counts.
 ```{r examine lfct NAs}
 filter(umca_plots, is.na(avg_lfct))
-# I'm not sure why this wasn't excluded from the calculations with the na.rm = T option
 filter(bay_laurel, plot == "YAHNG02", status == "Alive")
+# I'm not sure why this wasn't excluded from the calculations with the na.rm = T option
 # I'm removing it manually from the `umca_plots` data frame
 umca_plots <- umca_plots %>% filter(avg_lfct != "NaN")
 summary(umca_plots)
 ```
 
 
-So now I have a plot-level of UMCA infection levels for each year in terms of symptomatic leaf counts and number of un/infected stems. I want to join this with some of the plot-level environmental data.
+So now I have a plot-level data frame of UMCA infection for each year in terms of symptomatic leaf counts and number of un/infected stems. I want to join this with some of the plot-level environmental data.
 ```{r join env and umca data}
 summary(plots_env)
 
@@ -378,14 +408,15 @@ umca_plots$plotid <- tolower(umca_plots$plotid)
 ## I need to rename temperature variables to differentiate rainy vs. dry season
 rs_temps <- as.tbl(rs_temps)
 rs_temps$plotid <- tolower(rs_temps$plotid)
+summary(rs_temps)
 rs_temps <- rename(rs_temps, 
                    hrs_14_20_rs = hrs_14_20, hrs_abv25rs = hrs_abv25,
                    hrs_abv20_rs = hrs_abv20, hrs_blw10rs = hrs_blw10,
                    avg_tmax_rs = avg_tmax, avg_tmin_rs = avg_tmin)
 
 summer_temps <- as.tbl(summer_temps)
-summer_temps
 summer_temps$plotid <- tolower(summer_temps$plotid)
+summary(summer_temps)
 summer_temps <- rename(summer_temps, 
                        hrs_abv25ds = hrs_abv25, hrs_abv20ds = hrs_abv20,
                        hrs_blw18ds = hrs_blw18, avg_tmax_ds = avg_tmax,
@@ -394,38 +425,60 @@ summer_temps <- rename(summer_temps,
 # Now I can join the data without duplicating variable names
 umca_plots <- left_join(umca_plots, rs_temps, by = c("plotid", "sample_year"))
 umca_plots <- left_join(umca_plots, summer_temps, by = c("plotid", "sample_year"))
-names(umca_plots)
+summary(umca_plots)# 7 NAs introduced into the temperature variables
+filter(umca_plots, is.na(avg_tmax_rs))# NAs due to records from 2003
+## I don't think these will end up in my analysis, but no reason to remove them at this time.
 
 # Add rainfall data to UMCA plots data frame
-names(rain_total)
-names(rain_days)
+summary(rain_total)
+unique(rain_total$plotid)
+rain_total$plotid <- tolower(rain_total$plotid)
+summary(rain_days)
+unique(rain_days$plotid)
+rain_days$plotid <- tolower(rain_days$plotid)
+
+rain_total <- rename(rain_total, sample_year = year)
+rain_total$sample_year <- as.character(rain_total$sample_year)
+rain_days <- rename(rain_days, sample_year = year)
+rain_days$sample_year <- as.character(rain_days$sample_year)
+
+summary(umca_plots)
+umca_plots$sample_year <- as.character(umca_plots$sample_year)
 umca_plots <- left_join(umca_plots, rain_total, by = c("plotid", "sample_year"))
 umca_plots <- left_join(umca_plots, rain_days, by = c("plotid", "sample_year"))
 summary(umca_plots)
 
 filter(umca_plots, is.na(rain_tot_2d))
-# NAs in rainfall data are from 2003
-filter(umca_plots, sample_year == 2003)
-# Only 7 plots w/UMCA sampled in 2003, so removing these records
-umca_plots <- filter(umca_plots, sample_year != 2003)
+# Same case of NAs in rainfall due to data from 2003
 ```
 
-### Load and Join Richness, Diversity, Evenness Data
+## Load and Join Richness, Diversity, Evenness Data
 Now I want to join the richness data set and the canopy cover estimates to the `umca_plots` data frame that currently has the environmental and leaf count/infection variables. 
 
 ```{r join richness and umca data}
 os.us.diversity <- as.tbl(read.csv("analysis/data/os_us_diversity.csv"))
-os.us.diversity
+summary(os.us.diversity)
+# variables prefixed with 'us' indicate understory metrics
 umca_plots
 
-
 umca_plots <- left_join(umca_plots, os.us.diversity, by = c("plotid"))
+summary(umca_plots)
+filter(umca_plots, is.na(H.2014))$plotid
+## NAs due to plots abandoned/lost between 2005 and 2014; 4 unique plots
+filter(umca_plots, is.na(us.H.2005))
+## NAs due to plot having '0' for understory richness
+filter(umca_plots, is.na(us.H.2011))
+## NAs due to 2 plots being abaondoned prior to 2011 & one plot having '0' for understory richness
+
 head(canopy_cover)
 canopy_cover <- select(canopy_cover, -X)
 canopy_cover <- rename(canopy_cover, sample_year = year)
-unique(filter(canopy_cover, year == 2006)$plotid)
+summary(canopy_cover)
+unique(filter(canopy_cover, sample_year == 2006)$plotid)
+canopy_cover$sample_year <- as.character(canopy_cover$sample_year)
 
 umca_plots <- left_join(umca_plots, canopy_cover, by = c("plotid", "sample_year"))
+summary(umca_plots)# NAs because canopy cover was not measured every year
 ```
 
 Make a pairs plot of the continuous variables for UMCA plots.
@@ -453,13 +506,24 @@ panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)
 
 umca_plots <- ungroup(umca_plots)
 
-# pairs(select(plots_umca, -plotid, -year, -starts_with("psi"), -tagged_rich, -untagged_rich), lower.panel = panel.cor, diag.panel = panel.hist, main = "UMCA SOD Data")
+pairs(select(umca_plots, candens15m, pct_cvr, veght15m), 
+      lower.panel = panel.cor, diag.panel = panel.hist, 
+      main = "Canopy Data - UMCA Plots")
+cor(umca_plots$candens15m, umca_plots$pct_cvr, use = "complete.obs")
+cor(umca_plots$veght15m, umca_plots$pct_cvr, use = "complete.obs")
+
+pairs(na.omit(select(umca_plots, avg_lfct, tot_lfct, contains("hrs"), contains("rain_tot"), H.2005, H.2014)),
+      lower.panel = panel.cor, diag.panel = panel.hist, 
+      main = "Leaf Count, Temperature, Rainfall, Diversity - UMCA Plots")
+## Rainfall and temperature all have fairly weak correlations (<0.36)
+## The diversity metrics are the only correlates with leaf count >0.20
 ```
 
 Now that I have summarized some vegetation (not species specific), environmental, and bay laurel disease data to the plot-level I want to join this and the canopy cover data to the plot-level oak infection data.
 
 ```{r join umca and qusp data}
 umca_plots
+umca_plots$sample_year <- as.integer(umca_plots$sample_year)
 plot_qusp # right now this is broken down by oak species
 qusp_plots <- plot_qusp
 rm(plot_qusp)
@@ -502,7 +566,7 @@ names(oak_sod)
 os.us.diversity
 oak_sod <- left_join(oak_sod, os.us.diversity, by = c("plotid"))
 summary(oak_sod)
-filter(oak_sod, is.na(elev15m))
+filter(oak_sod, is.na(elev_m))
 # NAs are plots that were abandoned early in the study
 oak_sod <- filter(oak_sod, plotid != "duer01", plotid != "ponti01", plotid != "sweet01")
 
@@ -515,16 +579,20 @@ filter(oak_sod, is.na(avg_tmax_rs))
 oak_sod <- filter(oak_sod, plotid != "bush01")
 summary(oak_sod)
 
+filter(oak_sod, is.na(H.2014))$plotid
+## plots that were decommissioned prior to 2014
+filter(oak_sod, is.na(us.H.2011))$plotid
+## plots that have legit 0 for richness or were decommissioned prior to 2011
+
+
+canopy_cover$sample_year <- as.integer(canopy_cover$sample_year)
 oak_sod <- left_join(oak_sod, canopy_cover, by = c("plotid", "sample_year"))
 
 summary(rain_total)
-rain_total$plotid <- tolower(rain_total$plotid)
-rain_total <- rename(rain_total, sample_year = year)
-# rain_total$sample_year <- as.numeric(rain_total$sample_year)
+rain_total$sample_year <- as.integer(rain_total$sample_year)
+
 summary(rain_days)
-rain_days$plotid <- tolower(rain_days$plotid)
-rain_days <- rename(rain_days, sample_year = year)
-#rain_days$sample_year <- as.numeric(as.character(rain_days$sample_year))
+rain_days$sample_year <- as.integer(rain_days$sample_year)
 
 
 oak_sod <- left_join(oak_sod, rain_total, by = c("plotid", "sample_year"))
@@ -532,6 +600,11 @@ oak_sod <- left_join(oak_sod, rain_days, by = c("plotid", "sample_year"))
 summary(oak_sod)
 
 summary(filter(oak_sod, is.na(rain_tot_psm))) # all obs after 2010
+summary(filter(oak_sod, is.na(us.J.2011)))
+filter(oak_sod, is.na(us.J.2011))$plotid# ann06, mroth03, sumtv02
+# ann06 & mroth03 are legitimate zeroes for understory richness in 2011
+# sumtv02 was abandoned after 2008, so it should be an NA for later years
+
 
 filter(oak_sod, sample_year == 2004) # 88 records
 # 2005 appears to be the first full year of observing all the plots
@@ -553,10 +626,15 @@ Now to do a pairs plot of the variables from the `oak_sod` data frame.
 ```{r oak_sod pairs plot}
 class(oak_sod)
 oak_sod <- ungroup(oak_sod)
+summary(oak_sod)
 pairs(select(oak_sod, elev_m, starts_with("hrs"), starts_with("avg_t"), contains("rain_tot")), lower.panel = panel.cor, diag.panel = panel.hist, main = "Oak-SOD Rainfall & Temperature Data")
+
+pairs(na.omit(select(oak_sod, c(3:4,7:8,9:10), H.2005, H.2014)),
+      lower.panel = panel.cor, diag.panel = panel.hist, 
+      main = "Oak-SOD Infection & Diversity Data")
 ```
 
-### Save patha analysis data environment
+### Save path analysis data environment
 ```{r save data environment}
 save.image("~/GitHub/superspreaders/pathmodel_data_20160112.RData")
 ```
