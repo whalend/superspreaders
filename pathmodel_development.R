@@ -7,15 +7,17 @@
 #+ oak_sod path model 2005
 # load data
 load("pathmodel_data_20160112.RData")
+library(plyr); library(dplyr)
+pairs(select(oak_sod, elev_m, starts_with("hrs"), starts_with("avg_t"), contains("rain_tot")), lower.panel = panel.cor, diag.panel = panel.hist, main = "Oak-SOD Rainfall & Temperature Data")
 
 library(ggm)
 names(oak_sod)
 oak_path1 <- DAG(
-      twi15m ~ elev15m,
-      os_rich ~ twi15m,
-      hrs_14_20 ~ elev15m + d2c + avg_psi + twi15m,
-      tot_lfct ~ hrs_14_20 + os_rich + d2c,
-      inf_oak_ct ~ tot_lfct + os_rich + hrs_14_20 + d2c
+      twi15m ~ elev_m,
+      os_rich05 ~ twi15m,
+      hrs_14_20_rs ~ elev_m + d2c + avg_psi + twi15m,
+      tot_lfct ~ hrs_14_20_rs + os_rich05 + d2c,
+      inf_oak_ct ~ tot_lfct + os_rich05 + hrs_14_20_rs + d2c
 )
 isAcyclic(oak_path1)
 bu_oak_path1 <- basiSet(oak_path1)
@@ -30,13 +32,36 @@ oak_path2 <- DAG(
 )
 isAcyclic(oak_path2)
 
-oak_2005 <- filter(oak_sod, year == 2005)
+oak_2005 <- filter(oak_sod, sample_year == 2005)
 summary(oak_2005)
-oak_2005 <- select(oak_2005, plotid, uninf_oak_ct, inf_oak_ct, tot_lfct, hrs_14_20, hrs_blw10, hrs_abv25, avg_tmax, avg_tmin, rain05_2d, rain05_v, elev15m, twi15m, avg_psi, os_rich, d2c)
+# oak_2005 <- select(oak_2005, plotid, uninf_oak_ct, inf_oak_ct, tot_lfct, hrs_14_20, hrs_blw10, hrs_abv25, avg_tmax, avg_tmin, rain05_2d, rain05_v, elev15m, twi15m, avg_psi, os_rich, d2c)
+filter(oak_2005, is.na(oak_2005$tot_lfct))
+
 oak_2005$tot_lfct[is.na(oak_2005$tot_lfct)] <- 0
-filter(oak_2005, is.na(os_rich))
+filter(oak_2005, is.na(os_rich05))
 # oak_2005 <- na.omit(oak_2005)
 oak_2005$plotid <- as.factor(oak_2005$plotid)
+
+oak2005.modlist <- list(
+      lme(twi15m ~ elev_m, random = ~1|plotid, data = oak_2005, 
+          na.action = na.omit),
+      lme(os_rich05 ~ twi15m, random = ~1|plotid, data = oak_2005,
+          na.action = na.omit),
+      lme(I(hrs_14_20_rs/10) ~ elev_m + I(d2c/10000) + avg_psi + twi15m, random = ~1|plotid,
+          data = oak_2005, na.action = na.omit),
+      glmer(I(tot_lfct/10) ~ I(hrs_14_20_rs/10) + os_rich05 + I(d2c/10000) + (1|plotid), family = "poisson", data = oak_2005, na.action = na.omit),
+      glmer(cbind(inf_oak_ct,uninf_oak_ct) ~ I(tot_lfct/10) + os_rich05 + I(hrs_14_20_rs/10) + I(d2c/10000) + (1|plotid), family = binomial(link = "logit"), data = oak_2005, na.action = na.omit) 
+)
+
+sem.basis.set(oak2005.modlist)
+
+system.time(oak2005.fit <- sem.fit(oak2005.modlist, oak_2005))
+oak2005.fit
+
+sem.coefs(oak2005.modlist, oak_2005)
+
+sem.model.fits(oak2005.modlist)
+
 
 # This model makes Gaussian assumptions, which should be incorrect for these data
 shipley.test(oak_path1, cov(select(oak_2005, elev15m, twi15m, os_rich, hrs_14_20, d2c, avg_psi, tot_lfct, inf_oak_ct)), n = 170)
@@ -440,7 +465,7 @@ summary(fit5_2014)
 #'     
 #'     - `Relative Dominance = basal area of species / total basal area`
 #'     
-#+ calculate importance value
+#+ calculate importance value ####
 unique(untagged_dbh$species)
 untagged_dbh
 unique(stems$species)
