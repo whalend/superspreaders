@@ -2,11 +2,11 @@
 output: html_document
 ---
 
-## Steps for Performing a d-Sep Test
-###### (Shipley 2000, 2003, 2004, 2009)
+## Steps for Performing a d-Sep Test (Shipley 2000, 2003, 2004, 2009)
 
 1. Express the hypothesized causal relationships between the variables in the form of a directed acyclic graph
 <img src="figures/CH2_DAG.svg" width="600px" height="600px">
+
 2. List each of the *k* pairs of variables in the graph that do not have an arrow between them:
 
 	Row |Variable Pairs 1 | Variable Pairs 2 | Variable Pairs 3
@@ -36,10 +36,10 @@ This methodology can be extended into the mixed-model context using standard sta
 
 It is also possible to apply this method to multilevel Bayesian (MCMC) models (McCarthy 2007) by testing the independence of the partial slopes and determining the 95% credible intervals.
 
-### Example from Shipley 2009 on how to perform the d-sep test in a generalized multilevel context 
+## Example from Shipley 2009 on how to perform the d-sep test in a generalized multilevel context 
 This is to demonstrate how to assess a multilevel, repeated measures path model by applying mixed models in the tests of d-separation. I am using the supplementary material, including the data provided.
 
-##### Path Model
+### Path Model
 `Latitude` --> `Degree-days` --> `Date of bud burst` --> `Growth` --> `Live`
 
 Load the two libraries and read in the data Shipley uses
@@ -64,6 +64,7 @@ I am now going to load the `ggm` library for identifying the directed acyclic gr
 
 This means composing each the regressions between variables directly connected by arrows in the graph, which is pretty easy in this simple example because each variable has no more than one direct cause. 
 
+### Establish Basis Set
 ```{r get basis set, eval=TRUE}
 library(ggm)
 dag <- DAG(Live ~ Growth, Growth ~ Date, Date ~ DD, DD ~ Latitude)
@@ -78,6 +79,7 @@ print(Bu)
 ```
 Six claims equals six models. The first two variables listed in each item are claimed to be independent based on the following set of zero or more variables.
 
+### Assess Independence Claims
 The first independence claim is that `Date` is independent of `Latitude` after controlling for `DD`. So, I need to obtain the *precise* null probability for this claim. Choosing the correct modeling procedure requires identifying the appropriate distribution of the dependent variable, in this case `Date`. Using some helper fucntions and the `pairs()` function in the base `graphics` package I can look at the correlations and distributions simultaneously.
 ```{r helper functions for scatterplot matrix, echo=FALSE}
 # These were copied from the help pages of the `pairs` function with minor alterations
@@ -162,6 +164,8 @@ summary(fit6)
 Again got warnings about large eigenvalues, as well as failure of the model to converge, with suggestion to rescale the variables.
 
 Now I want to get the fixed-effects summaries for each model, and in particular the null probability estimates (p-values) for the pair of variables in each independence claim.
+
+### Independence Claim Model Summaries
 ```{r nlme model & probability summaries}
 # These four lines were to help me figure out how to access the right part of the summary object
 #sum_fit1 <- summary(fit1)
@@ -189,6 +193,7 @@ summary(fit5)$coefficients# Independence of Live and DD
 ```{r}
 summary(fit6)$coefficients# Independence of Live and Date
 ```
+
 
 Create a vector of the probabilities for the independence claims (6 values).
 ```{r vector of probabilities}
