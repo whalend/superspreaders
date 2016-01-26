@@ -6,7 +6,7 @@ output: html_document
 ---
 
 
-```{r load data}
+```{r load data, echo=F, message=F}
 # Ecological data: leaf counts, infection
 load("~/GitHub/superspreaders/stems_plots.RData")
 # Vegetation data
@@ -18,20 +18,20 @@ canopy_cover <- read.csv("analysis/data/plot_canopy_cover_dens.csv")
 
 # Physical environment: topography
 library(rgdal)
-plots_shp <- readOGR("analysis/data/plot_gis/", "soco_plots_metric")
+plots_shp <- readOGR("analysis/data/plot_gis/", "soco_plots_metric", verbose = F)
 summary(plots_shp)
 plot(plots_shp, axes=T)
 plots_env <- plots_shp@data
 
 # Temperature: rainy season hour summaries
 library(plyr); library(dplyr)
-plots_temps <- read.csv("analysis/data/rainy_season_temps.csv")
+plots_temps <- read.csv("analysis/data/rs_temps_data.csv")
 summary(plots_temps)
-plots_temps <- select(plots_temps, -X)
+# plots_temps <- select(plots_temps, -X)
 ```
 
 Join the plot level environmental data (geographic/topographic & temperatures)
-```{r join plot data, message=FALSE}
+```{r join plot data, message=FALSE, echo=F}
 plots_env <- left_join(plots_env, plots_temps, by = c("PLOT_ID"="plotid"))
 summary(plots_env)
 str(plots_env)
@@ -39,7 +39,7 @@ plots_env <- plots_env %>% select(-cat) %>% rename(easting = X, northing = Y, pl
 ```
 
 Investigating `NAs` in the `plots_env` data set
-```{r investigate NAs}
+```{r investigate NAs, echo=F}
 summary(plots_env)
 filter(plots_env, is.na(sample_year))
 
@@ -55,7 +55,7 @@ plots_env[is.na(plots_env)] <- 0
 ```
 
 Examine the bay laurel data at individual and plot levels
-```{r examine umca data}
+```{r examine umca data, echo=F}
 summary(plots_umca)
 # This only has number of infected, uninfected, and total, which must apply to living stems only. I want to analyze leaf counts.
 summary(bay_laurel)
@@ -63,7 +63,7 @@ summary(bay_laurel)
 ```
 
 I can use this to calculate plot level leaf count variables (sum, average) for each plot and year
-```{r calculate plot level leaf counts}
+```{r calculate plot level leaf counts, echo=F}
 plots_umca <- left_join(plots_umca, bay_laurel %>% filter(status == "Alive") %>% 
       group_by(plot, year) %>% 
       summarise(
@@ -73,7 +73,7 @@ plots_umca <- left_join(plots_umca, bay_laurel %>% filter(status == "Alive") %>%
 summary(plots_umca)
 ```
 
-```{r examine lfct NAs}
+```{r examine lfct NAs, echo=F, results='hide'}
 filter(plots_umca, is.na(avg_lfct))
 # I'm not sure why this wasn't excluded from the calculations with the na.rm = T option
 filter(bay_laurel, plot == "YAHNG02", status == "Alive")
@@ -84,7 +84,7 @@ summary(plots_umca)
 
 So now I have a plot-level of UMCA infection levels for each year. I want to join this with some of the environmental data.
 
-```{r join env and umca data}
+```{r join env and umca data, echo=F, results='hide'}
 summary(plots_env)
 plots_env$avg_psi <- rowMeans(cbind(plots_env$psiSpr, plots_env$psiSum, plots_env$psiWin))
 summary(plots_umca)
@@ -96,7 +96,7 @@ filter(plots_umca, is.na(easting))
 ```
 
 Now I also want to calculate some plot-level community variables from the vegetation data. First, understory richness from the vegetation transects.
-```{r calculate understory richness}
+```{r calculate understory richness, echo=F, results='hide'}
 summary(veg_us_2005)
 veg_us_2005 <- as.tbl(select(veg_us_2005, -X))
 summary(veg_us_2011)
@@ -137,7 +137,7 @@ richness
 
 Next, overstory richness from the DBH data for tagged & untagged stems.
 
-```{r calculate overstory richness}
+```{r calculate overstory richness, echo=F, results='hide'}
 summary(untagged_dbh)
 untagged_dbh <- as.tbl(untagged_dbh %>% select(-X) %>% rename(plotid = PlotID, species = Species))
 untagged_dbh
@@ -174,7 +174,7 @@ summary(richness)
 
 Now I want to join the richness data set and the canopy cover estimates to the `plots_umca` data frame that currently has the environmental and leaf count/infection variables. 
 
-```{r join richness and umca data}
+```{r join richness and umca data, echo=F, results='hide'}
 plots_umca
 richness
 plots_umca <- rename(plots_umca, plotid = plot)
@@ -187,7 +187,7 @@ plots_umca <- left_join(plots_umca, canopy_cover, by = c("plotid", "year"))
 ```
 
 Make a pairs plot of the continuous variables for UMCA plots.
-```{r umca sod pairs plot}
+```{r umca sod pairs plot, echo=F, results='hide'}
 # Helper functions for `pairs`
 panel.hist <- function(x, ...)
 {
@@ -216,7 +216,7 @@ pairs(select(plots_umca, -plotid, -year, -starts_with("psi"), -tagged_rich, -unt
 
 Now that I have summarized some vegetation (not species specific), environmental, and bay laurel disease data to the plot-level I want to join this and the canopy cover data to the plot-level oak infection data.
 
-```{r join umca and qusp data}
+```{r join umca and qusp data, echo=F, results='hide'}
 plots_umca
 plot_qusp # right now this is broken down by oak species
 summary(plot_qusp)
@@ -275,7 +275,7 @@ filter(oak_sod, year == 2014) # 168 records
 
 Now to do a pairs plot of the `oak_sod` data frame
 
-```{r oak_sod pairs plot}
+```{r oak_sod pairs plot, echo=F}
 class(oak_sod)
 oak_sod <- ungroup(oak_sod)
 pairs(select(oak_sod, -plotid, -year, -starts_with("psi"), -tagged_rich, -untagged_rich), lower.panel = panel.cor, diag.panel = panel.hist, main = "Oak_SOD Data")
@@ -316,10 +316,21 @@ shipley.test(oak_path1, cov(select(oak_2005, elevation, tmi, os_rich, hrs_14_20,
 
 Still I am going to fully asses the conditional independence claims
 
-```{r assess conditional independence claims 2005}
+```{r assess conditional independence claims 2005, message=F}
 bu_oak_path1 # 15 independence claims means 15 models
-library(nlme)
-library(lme4)
+library(nlme); library(lme4); library(MuMIn)
+
+x.quasibinomial <- function(...) {
+    res <- quasibinomial(...)
+    res$aic <- binomial(...)$aic
+    res
+}
+
+x.quasipoisson <- function(...) {
+    res <- quasipoisson(...)
+    res$aic <- poisson(...)$aic
+    res
+}
 
 f1 <- lme(avg_psi ~ d2c, data = oak_2005, random = ~1|plotid)
 summary(f1) # p = 0.5091
@@ -397,7 +408,7 @@ Given the C-statistic of 26.9 and that 2k degrees of freedom would be 30 I think
       3. tot_lfct ~ hrs_14_20 + os_rich + d2c,
       4. infected oak ~ tot_lfct + os_rich + hrs_14_20 + d2c
 
-```{r estimate path coefficients 2005}
+```{r estimate path coefficients 2005, message=F}
 # f0 <- fitted(mlme1, level = 0)# Values from population model
 # f1 <- fitted(mlme1, level = 1)# Within beach fitted values
 
@@ -506,7 +517,7 @@ shipley.test(oak_path1, cov(select(oak_2014, elevation, tmi, os_rich, hrs_14_20,
 #       n = 168)
 ```
 
-```{r assess conditional independence 2014}
+```{r assess conditional independence 2014, message=F}
 f1 <- lme(avg_psi ~ d2c, data = oak_2014, random = ~1|plotid)
 summary(f1) # p = 0.591
 f2 <- lme(avg_psi ~ elevation, data = oak_2014, random = ~1|plotid)
@@ -615,7 +626,7 @@ plotGraph(oak_path2)
 
 This means commenting out models `f6` (oak ~ PSI), `f12` (oak ~ elevation), and `f11` (leaf count ~ elevation) in the `pvalues` summary.
 
-```{r recalculate c-statistic}
+```{r recalculate c-statistic, echo=F}
 pvalues <- c(
       summary(f1)$tTable[2,5], summary(f2)$tTable[2,5], summary(f3)$tTable[2,5],
       summary(f4)$coefficients[2,4], summary(f5)$coefficients[2,4], 
@@ -634,7 +645,7 @@ I think this would be evidence for wanting/needing to use the repeated measures 
 
 I am continuing with fitting the models to estimate the path coefficients for 2014 data based on this redrawn path model.
 
-```{r estimate path coefficients 2014}
+```{r estimate path coefficients 2014, message=F}
 # f0 <- fitted(mlme1, level = 0)# Values from population model
 # f1 <- fitted(mlme1, level = 1)# Within beach fitted values
 
@@ -671,8 +682,6 @@ fit3_2014 <- glm(tot_lfct ~ scale(hrs_14_20) + scale(os_rich) + scale(d2c) + sca
 summary(fit3_2014)
 
 # fit4_2014 <- lm((inf_oak_ct/(inf_oak_ct+uninf_oak_ct)) ~ scale(tot_lfct) + scale(os_rich) + scale(hrs_14_20) + scale(d2c) + scale(elevation) + scale(avg_psi), data = oak_2014)
-par(mfrow = c(2,2))
-plot(fit4_2014)
 
 fit4_2014 <- glm(cbind(inf_oak_ct, uninf_oak_ct) ~ scale(tot_lfct) + scale(os_rich) + scale(hrs_14_20) + scale(d2c) + scale(elevation) + scale(avg_psi), data = oak_2014, family = "binomial")
 (chat <- deviance(fit4_2014) / df.residual(fit4_2014))
@@ -687,6 +696,8 @@ fit4_2014 <- glm(cbind(inf_oak_ct, uninf_oak_ct) ~ scale(tot_lfct) + scale(os_ri
 
 # fit4_2014 <- glmer(cbind(inf_oak_ct, uninf_oak_ct) ~ scale(tot_lfct) + scale(os_rich) + scale(hrs_14_20) + scale(d2c) + (1|plotid), data = oak_2014, family = "binomial") # best model
 summary(fit4_2014)
+par(mfrow = c(2,2))
+plot(fit4_2014)
 
 # fit5_2014 <- lm(os_rich ~ tmi, data = oak_2014); AIC(fit5_2014)
 fit5_2014 <- lm(log(os_rich) ~ tmi, data = oak_2014); AIC(fit5_2014)
@@ -701,7 +712,7 @@ I also want to calculate some variables related to DBH, and in particular the "i
 `Relative Density = # stems of species / total # of stems` and
 `Relative Dominance = basal area of species / total basal area`
 
-```{r calculate importance value}
+```{r calculate importance value, eval=F, echo=F}
 unique(untagged_dbh$species)
 untagged_dbh
 unique(stems$species)
