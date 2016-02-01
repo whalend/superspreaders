@@ -66,7 +66,7 @@ pairs(select(oak_sod, ends_with("ds"), starts_with("rain")),
 
 #' # Oak Plots Path Models
 #+ repeated measures plot-level path model ####
-pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, avg_lfct, H.2005, H.2014, us.H.2005, us.H.2011, hrs_14_20_rs, avg_tmax_ds, rain_tot_v)),
+pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, avg_lfct, H.2005, H.2014, us.H.2005, us.H.2011, hrs_14_20_rs, avg_tmax_rs, avg_tmin_rs, avg_tmax_ds, avg_tmin_ds, rain_tot_v, rain_tot_2d, twi15m)),
       lower.panel = panel.cor, diag.panel = panel.hist)
 
 # RS temperature hours 14-20, voronoi rain total, OS diversity 2005
@@ -78,12 +78,20 @@ summary(oakplots.sub)
 oakplots.sub$oak.inf <- cbind(oakplots.sub$inf_oak_ct, oakplots.sub$uninf_oak_ct)
 summary(filter(oak_sod, is.na(tot_lfct)))# lfct NAs are 0 bay plots
 oakplots.sub$tot_lfct[is.na(oakplots.sub$tot_lfct)] <- 0
+oakplots.sub$avg_lfct[is.na(oakplots.sub$avg_lfct)] <- 0
+
 oakplots.sub$rain_tot_v.cm <- oakplots.sub$rain_tot_v/10
+oakplots.sub$rain_tot_2d.cm <- oakplots.sub$rain_tot_2d/10
+oakplots.sub$rain_tot_3d.cm <- oakplots.sub$rain_tot_3d/10
+
 oakplots.sub$dys_14_20_rs <- oakplots.sub$hrs_14_20_rs/24
+oakplots.sub$dys_blw10_rs <- oakplots.sub$hrs_blw10rs/24
+oakplots.sub$dys_abv25_rs <- oakplots.sub$hrs_abv25rs/24
 # oakplots.sub$tot_lfct.10 <- oakplots.sub$tot_lfct/10
 # oakplots.sub$tot_lfct.100 <- oakplots.sub$tot_lfct/100
 oakplots.sub$tot_lfct.log <- log1p(oakplots.sub$tot_lfct)
 oakplots.sub$tot_bay.log <- log1p(oakplots.sub$tot_bay)
+oakplots.sub$avg_lfct.log <- log1p(oakplots.sub$avg_lfct)
 
 oakplots.modlist <- list(
       glmer(tot_bay ~ twi15m + H.2005 + (1|sample_year) + (1|plotid), 
@@ -104,7 +112,7 @@ oakplots.modlist <- list(
             na.action = na.omit)
 )
 
-pairs(na.omit(select(oakplots.sub, inf_oak_ct, tot_bay, tot_bay.log, tot_lfct.log, avg_lfct, H.2005, H.2014, us.H.2005, us.H.2011, dys_14_20_rs, avg_tmax_ds, rain_tot_v, twi15m)),
+pairs(na.omit(select(oakplots.sub, inf_oak_ct, tot_bay, tot_bay.log, tot_lfct.log, avg_lfct, H.2005, H.2014, us.H.2005, us.H.2011, dys_14_20_rs, avg_tmax_rs, avgtmin_rs, avg_tmin_ds, avg_tmax_ds, rain_tot_v, twi15m)),
       lower.panel = panel.cor, diag.panel = panel.hist)
 
 sem.fit(oakplots.modlist, data = oakplots.sub)
@@ -119,7 +127,7 @@ sem.model.fits(oakplots.modlist)
                              standardize = 'scale'))
 
 
-# Add indicated missing paths
+#+ Add indicated missing paths ####
 oakplots.modlist2 <- list(
 #       glmer(tot_bay ~ twi15m + H.2005 + (1|plotid) + (1|sample_year), 
 #             data = oakplots.sub, family = "poisson", na.action = na.omit),
@@ -143,7 +151,7 @@ oakplots.modlist2 <- list(
 )
 
 sem.lavaan(oakplots.modlist2, oakplots.sub)
-# Unacceptable using Gaussian assumptions
+# Unacceptable fit using Gaussian assumptions, p = 0
 
 sem.fit(oakplots.modlist2, oakplots.sub)
 # Unacceptable fit at p = 0.05 threshold (p = 0) using glmer bay count
@@ -163,9 +171,65 @@ sem.model.fits(oakplots.modlist2)
 
 (coef.table.std <- sem.coefs(oakplots.modlist2, oakplots.sub, 
                              standardize = 'scale'))
+
+pairs(na.omit(select(oakplots.sub, inf_oak_ct, tot_bay, tot_bay.log, tot_lfct.log, avg_lfct.log, H.2005, H.2014, us.H.2005, us.H.2011, dys_14_20_rs, avg_tmax_rs, avg_tmin_rs, avg_tmin_ds, avg_tmax_ds, rain_tot_v, twi15m)),
+      lower.panel = panel.cor, diag.panel = panel.hist)
 #'
 #'
+#' Change temperature variable to average for the rainy season, the leaf count variable to average for the plot, and the
+#+ path model using rainy season average #### 
+oakplots.modlist <- list(
+#       glmer(tot_bay ~ twi15m + H.2005 + (1|sample_year) + (1|plotid), 
+#             data = oakplots.sub, family = "poisson", na.action = na.omit),
+      
+      lme(tot_bay.log ~ twi15m + H.2005, random = ~1|sample_year/plotid,
+          data = oakplots.sub, na.action = na.omit),
+      
+      lme(H.2005 ~ twi15m, random = ~1|sample_year/plotid, data = oakplots.sub,
+          na.action = na.omit),
+      
+      lme(avg_tmax_rs ~ tot_bay.log + twi15m, random = ~1|sample_year/plotid,
+          data = oakplots.sub, na.action = na.omit),
+      
+      lme(avg_lfct.log ~ tot_bay.log + avg_tmax_rs + rain_tot_2d.cm + twi15m + H.2005,
+          random = ~1|sample_year/plotid, data = oakplots.sub,
+          na.action = na.omit),
+      
+      glmer(oak.inf ~ avg_lfct.log + avg_tmax_rs + rain_tot_2d.cm + H.2005 + (1|sample_year) + (1|plotid),
+            data = oakplots.sub, family = binomial(link = "logit"), 
+            na.action = na.omit)
+)
 
+sem.missing.paths(oakplots.modlist, oakplots.sub)
+sem.fit(oakplots.modlist, oakplots.sub)
+sem.model.fits(oakplots.modlist)
+sem.coefs(oakplots.modlist, oakplots.sub)
+sem.coefs(oakplots.modlist, oakplots.sub, standardize = 'scale')
 
+# Path model using dry season temperature variable ####
+oakplots.modlist <- list(
+      #       glmer(tot_bay ~ twi15m + H.2005 + (1|sample_year) + (1|plotid), 
+      #             data = oakplots.sub, family = "poisson", na.action = na.omit),
+      
+      lme(tot_bay.log ~ twi15m + H.2005, random = ~1|sample_year/plotid,
+          data = oakplots.sub, na.action = na.omit),
+      
+      lme(H.2005 ~ twi15m, random = ~1|sample_year/plotid, data = oakplots.sub,
+          na.action = na.omit),
+      
+      lme(avg_tmax_ds ~ tot_bay.log + twi15m, random = ~1|sample_year/plotid,
+          data = oakplots.sub, na.action = na.omit),
+      
+      lme(avg_lfct.log ~ tot_bay.log + avg_tmax_ds + rain_tot_2d.cm + twi15m + H.2005,
+          random = ~1|sample_year/plotid, data = oakplots.sub,
+          na.action = na.omit),
+      
+      glmer(oak.inf ~ avg_lfct.log + avg_tmax_ds + rain_tot_2d.cm + H.2005 + (1|sample_year) + (1|plotid),
+            data = oakplots.sub, family = binomial(link = "logit"), 
+            na.action = na.omit)
+)
 
-
+sem.fit(oakplots.modlist, oakplots.sub)
+sem.model.fits(oakplots.modlist)
+sem.coefs(oakplots.modlist, oakplots.sub)
+sem.coefs(oakplots.modlist, oakplots.sub, standardize = 'scale')
