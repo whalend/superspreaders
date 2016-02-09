@@ -403,9 +403,9 @@ str(stems)
 summary(stems)
 
 # Exploratory plot of dbh data
-qplot(delta_dbh, dbh1, data = stems %>% select(plot, cluster, tag, species, delta_dbh, dbh1, year, status) %>% 
-            group_by(plot, cluster, tag) %>%
-            filter(year == 2014, status == "Alive" | status == "Dead"), 
+qplot(delta_dbh, dbh1, data = stems %>% select(plotid, cluster, tag, species, delta_dbh, dbh1, year, status) %>% 
+            group_by(plotid, cluster, tag) %>%
+            filter(year == 2014, status == "Alive" | status == "Dead", species == "UMCA"), 
       color = status)
 # A visual check shows that there are a handful of stems with growth > 20cm
 
@@ -425,27 +425,47 @@ write.csv(stems, "analysis/data/stems_growth.csv")
 summary(stems$status)
 summary(stems$tag)
 
-qplot(dbh2_1_ratio, data = stems %>% select(plot, tag, species, dbh2_1_ratio, dbh1, year, status, doy) %>% 
-            group_by(plot, tag) %>% 
+qplot(dbh2_1_ratio, data = stems %>% select(plotid, tag, species, dbh2_1_ratio, dbh1, year, status, doy) %>% 
+            group_by(plotid, tag) %>% 
             filter(status == "Alive" | status == "Dead", dbh1 >= 2.0),
       color = status)
 
 qplot(stems$dbh2_1_ratio, main = "Relative Growth")
 
-qplot(dbh1, dbh2_1_ratio, data = stems %>% select(plot, cluster, tag, species, dbh2_1_ratio, dbh1, year, status, dbh) %>% 
-            group_by(plot, cluster, tag) %>%
+qplot(dbh1, dbh2_1_ratio, data = stems %>% select(plotid, cluster, tag, species, dbh2_1_ratio, dbh1, year, status, dbh) %>% 
+            group_by(plotid, cluster, tag) %>%
             filter(year == 2014, status == "Alive" | status == "Dead", dbh1 >= 2.0), 
       color = status, main = "Change in DBH vs. Original DBH")
 
-qplot(dbh1, inst_grwth_rate, data = stems %>% select(plot, cluster, tag, species, inst_grwth_rate, dbh1, year, status) %>% 
+qplot(dbh1, inst_grwth_rate, data = stems %>% select(plotid, cluster, tag, species, inst_grwth_rate, dbh1, year, status) %>% 
             group_by(plot, cluster, tag) %>%
             filter(year == 2014, status == "Alive" | status == "Dead", dbh1 >= 2.0), 
       color = status, main = "Instantaneous Growth Rate vs. Original DBH")
 
-qplot(dbh1, inst_grwth_rate, data = stems %>% select(plot, cluster, tag, species, inst_grwth_rate, dbh1, year_dbh1, year, status) %>% 
+qplot(dbh1, inst_grwth_rate, data = stems %>% select(plotid, cluster, tag, species, inst_grwth_rate, dbh1, year_dbh1, year, status) %>% 
             group_by(plot, cluster, tag) %>%
             filter(species == "QUAG", year == 2014, status == "Dead" | status == "Alive", dbh1 >= 2.0), 
       color = status, main = "QUAG Instantaneous Growth Rate vs Original DBH")
+
+qplot(dbh1, inst_grwth_rate, data = stems %>% select(plotid, cluster, tag, species, inst_grwth_rate, dbh1, year_dbh1, year, status) %>% 
+            group_by(plotid, cluster, tag) %>%
+            filter(species == "UMCA", year == 2014, status == "Dead" | status == "Alive", dbh1 >= 2.0), 
+      color = status, main = "UMCA Instantaneous Growth Rate vs Original DBH")
+
+boxplot(dbh ~ year, data = stems %>% filter(species == "UMCA", status == "Alive", year == 2005|year==2012|year == 2014))
+
+stems %>% filter(species == "UMCA", status == "Alive", year == 2005|year==2012|year == 2014)
+
+u.2005 <- stems %>%
+      filter(species == "UMCA", status == "Alive", year == 2005|year==2014)
+
+t.test(dbh~year, data = stems %>% filter(species == "UMCA", status == "Alive", year_dbh1 == 2005|year_dbh2 == 2014))
+t.test(dbh~year, data = stems %>% filter(species == "QUAG", status == "Alive", year == 2005|year == 2014))
+t.test(dbh~year, data = stems %>% filter(species == "QUAG", status == "Dead", year == 2005|year == 2014))
+t.test(dbh~year, data = stems %>% filter(species == "QUKE", status == "Alive", year == 2005|year == 2014))
+t.test(dbh~year, data = stems %>% filter(species=="QUAG"|species == "QUKE", status == "Alive", year == 2005|year == 2014))
+
+
 
 stems %>% select(plot, cluster, tag, species, year, year_dbh1, status, delta_dbh, dbh1, dbh2, notes) %>% 
       group_by(plot, cluster, tag) %>% 
