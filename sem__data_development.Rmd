@@ -639,3 +639,13 @@ pairs(na.omit(select(oak_sod, c(3:4,7:8,9:10), H.2005, H.2014)),
 save.image("~/GitHub/superspreaders/pathmodel_data_20160112.RData")
 ```
 
+### Update path analysis data
+Updating the path analysis data with the temperature during wet days variables.
+```{r update data}
+load("pathmodel_data_20160112.RData")
+wet_hrs <- read.csv("analysis/data/wet-days-temperature-variables.csv")
+save.image("~/GitHub/superspreaders/pathmodel_data.RData")
+```
+
+
+
