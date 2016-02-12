@@ -220,7 +220,7 @@ stems <- read.csv("analysis/data/all_stems_corrected.csv")
 library(dplyr)
 
 plots_umca <- stems %>%
-      select(plot, date, species, slc, year, status) %>%
+      select(plot, Date, species, slc, year, status) %>%
       group_by(plot, year, species) %>%
       filter(species == "UMCA", status == "Alive") %>%
       summarise(uninfected_bay_ct = length(which(slc==0)), infected_bay_ct = length(which(slc > 0)), tot_bay = length(species)) 
@@ -231,8 +231,8 @@ plots_umca <- droplevels(plots_umca)
 
 
 length(which(plots_umca$ct_bay_NA > 0))
-filter(plots_umca, infected == 0)
-filter(plots_umca, infected_bay_ct == 0)
+# filter(plots_umca, infected == 0)
+summary(filter(plots_umca, infected_bay_ct == 0))# 49 plots, max year = 2010
 
 write.csv(plots_umca, "analysis/data/plots_umca_infection.csv")
 # I sent this file to Francesco for informing the spread model
@@ -260,7 +260,7 @@ tmp <- plot_qusp %>%
       dcast(year + plot ~ species, value.var = "infected_oak_ct")
 head(tmp)
 
-#### Checking large positive DBH changes ####
+# Checking large positive DBH changes ####
 ## So at this point I think I have corrected all the negative dbh change values that I legitimately could in the database. I have gone back and exported the query again and use this file below, and then recycling code from the beginning of this document.
 stems <- read.csv("analysis/data/Stem_Summary_negDBH_corrected_201402.csv")
 summary(stems)
@@ -284,7 +284,7 @@ summary(stems)
 stems[stems == -9999] <- NA
 summary(stems)
 
-stems <- rename(stems, plot = PlotID)
+stems <- rename(stems, plotid = PlotID)
 stems <- rename(stems, cluster = HostID, tag = TagNumber, 
                 species = SpeciesID, status = StemStatus, 
                 alive_class = AliveClass, dead_class= DeadClass,
@@ -303,65 +303,113 @@ stems <- as.tbl(stems)
 
 detach("package:lubridate", unload=TRUE)# b/c it has `union` function masking the one from `dplyr` that apparently behaves a little differently, creating a list instead of a data frame
 
-dbh2014 <- stems %>% filter(dbh>0, year == 2014)
-length(unique(dbh2014$tag))
-# 4158, indicating there are 294 stems with no dbh measured in 2014
 
-dbh2003 <- stems %>% select(plot, tag, dbh, year, date) %>% 
+dbh2003 <- stems %>% select(plotid, tag, species, dbh, year, date) %>% 
       filter(dbh>0, year == 2003) # these 2 are the same as in 2005
 # 11 observations
 
-dbh2004 <- stems %>% select(plot, tag, dbh, year, date) %>%
+dbh2004 <- stems %>% select(plotid, tag, species, dbh, year, date) %>%
       filter(dbh>0, year == 2004)
 # 3109 observations
-anti_join(dbh2003, dbh2004, by = "tag")
+anti_join(dbh2003, dbh2004, by = c("plotid", "tag"))# 11 new DBH observations in 2004
 dbh_a <- union(dbh2004, dbh2003)
 
-dbh2005 <- stems %>% select(plot, tag, dbh, year, date) %>%
+dbh2005 <- stems %>% select(plotid, tag, species, dbh, year, date) %>%
       filter(dbh>0, year == 2005)
 # 704 observations
-anti_join(dbh2005, dbh_a, by = "tag") # this indicates that the dbh data for 2004 and 2005 are unique
-dbh_a <- union(dbh_a, anti_join(dbh2005, dbh_a, by = "tag"))
+anti_join(dbh2005, dbh_a, by = c("plotid","tag")) # this indicates that the dbh data for 2003/04 and 2005 are nearly unique, 702 new DBH values at 109 plots in 2005
+dbh_a <- union(dbh_a, anti_join(dbh2005, dbh_a, by = c("plotid","tag")))
+unique(dbh_a$plotid)# 204 plots on record at this point
+dbh_t1 <- dbh_a# data frame for DBH at time 1
 
-dbh2006 <- stems %>% select(plot, tag, dbh, year, date) %>%
+dbh2006 <- stems %>% select(plotid, tag, species, dbh, year, date) %>%
       filter(dbh>0, year == 2006)
-anti_join(dbh2006, dbh_a, by = "tag") # 2004, 2005, 2006 are independent sets
-dbh_a <- union(dbh_a, anti_join(dbh2006, dbh_a, by = "tag"))
+anti_join(dbh2006, dbh_a, by = c("plotid","tag")) # 2004, 2005, 2006 are independent sets, 86 new DBH values in 2006
+dbh_a <- union(dbh_a, anti_join(dbh2006, dbh_a, by = c("plotid","tag")))
 
-dbh2007 <- stems %>% select(plot, tag, dbh, year, date) %>%
+dbh2007 <- stems %>% select(plotid, tag, species, dbh, year, date) %>%
       filter(dbh>0, year == 2007)
-anti_join(dbh2007, dbh_a, by = "tag") # there is one tag with remeasured dbh in 2007
-dbh_a <- union(dbh_a, anti_join(dbh2007, dbh_a, by = "tag"))
-length(unique(dbh_a$tag)) # check for repeated tags, if obs > value, then there is a duplicate
+anti_join(dbh2007, dbh_a, by = c("plotid","tag")) # there is one tag with remeasured DBH in 2007 and 36 new DBH observations
+dbh_a <- union(dbh_a, anti_join(dbh2007, dbh_a, by = c("plotid","tag")))
+anyDuplicated(dbh_a$tag)# check for repeated tags
 
-dbh2008 <- stems %>% select(plot, tag, dbh, year, date) %>%
+dbh2008 <- stems %>% select(plotid, tag, species, dbh, year, date) %>%
       filter(dbh>0, year == 2008)
-anti_join(dbh2008, dbh_a, by = "tag")
-dbh_a <- union(dbh_a, anti_join(dbh2008, dbh_a, by = "tag"))
+anti_join(dbh2008, dbh_a, by = c("plotid","tag"))# 12 new DBH observations
+dbh_a <- union(dbh_a, anti_join(dbh2008, dbh_a, by = c("plotid","tag")))
 
-dbh2009 <- stems %>% select(plot, tag, dbh, year, date) %>%
+dbh2009 <- stems %>% select(plotid, tag, species, dbh, year, date) %>%
       filter(dbh>0, year == 2009)
-anti_join(dbh2009, dbh_a, by = "tag")
-dbh_a <- union(dbh_a, anti_join(dbh2009, dbh_a, by = "tag"))
+anti_join(dbh2009, dbh_a, by = c("plotid","tag"))# 21 new DBH observations
+dbh_a <- union(dbh_a, anti_join(dbh2009, dbh_a, by = c("plotid","tag")))
 
-dbh2010 <- stems %>% select(plot, tag, dbh, year, date) %>%
+dbh2010 <- stems %>% select(plotid, tag, species, dbh, year, date) %>%
       filter(dbh>0, year == 2010)
-anti_join(dbh2009, dbh_a, by = "tag") # no unique dbh values for 2010, so no new recruitment, or stems entering the study
+anti_join(dbh2009, dbh_a, by = c("plotid","tag")) # no unique DBH values for 2010, so no new recruitment or stems entering the study, just remeasurement of 109 stems
 
-dbh2011 <- stems %>% select(plot, tag, dbh, year, date) %>%
+dbh2011 <- stems %>% select(plotid, tag, species, dbh, year, date) %>%
       filter(dbh>0, year == 2011)
-anti_join(dbh2011, dbh_a, by = "tag")
-dbh_a <- union(dbh_a, anti_join(dbh2011, dbh_a, by = "tag"))
+anti_join(dbh2011, dbh_a, by = c("plotid","tag"))# 74 new DBH observations
+dbh_a <- union(dbh_a, anti_join(dbh2011, dbh_a, by = c("plotid","tag")))
 
-dbh2012 <- stems %>% select(plot, tag, dbh, year, date) %>%
-      filter(dbh>0, year == 2012)
-anti_join(dbh2012, dbh_a, by = "tag")
-dbh_a <- union(dbh_a, anti_join(dbh2012, dbh_a, by = "tag"))
+dbh2012 <- stems %>% select(plotid, tag, species, dbh, year, date) %>%
+      filter(dbh>0, year == 2012)# remeasured all stems
+anti_join(dbh2012, dbh_a, by = c("plotid","tag"))# 289 new DBH observations (maybe...)
+dbh_a <- union(dbh_a, anti_join(dbh2012, dbh_a, by = c("plotid","tag")))
+anyDuplicated(dbh_a$tag) # check for repeated tags
+dbh_a[1836,]
+filter(dbh_a, tag == 4041)
+filter(dbh_a, plotid == "SUGAR02")
+filter(dbh_a, plotid == "SUGAR30")
+filter(dbh_a, plotid == "SUGAR02")$tag %in% filter(dbh_a, plotid == "SUGAR30")$tag
+# correct based on database, where SUGAR02 was abandoned in 2004
+dbh_a$plotid[dbh_a$plotid=="SUGAR02" & dbh_a$year == 2004] <- "SUGAR30"
 
-dbh2014 <- stems %>% select(plot, tag, dbh, year, date) %>%
+tmp <- filter(dbh_a, plotid == "SUGAR30", year == 2012, tag != 7302, tag != 7303, tag != 7301)
+dbh_a <- anti_join(dbh_a, tmp); rm(tmp)
+anyDuplicated(dbh_a$tag)
+# Final count of 4329 stems after 2012, up from 3822 after 2005.
+length(unique(dbh_a$plotid)); length(unique(dbh_t1$plotid))
+
+
+dbh2014 <- stems %>% select(plotid, tag, species, dbh, year, date) %>%
       filter(dbh>0, year == 2014)
+anyDuplicated(dbh2014$tag)# 1852 duplicated tags, WTF? 
+filter(dbh2014, duplicated(tag))# nope, that's the row number
+filter(dbh2014, tag == 4194)
+# dbh2014 <- dbh2014[-1852,]
+summary(dbh2014)
+
 anti_join(dbh2014, dbh_a, by = "tag") # this inidcates that there are 113 stems that were measured for the first time in 2014
-anti_join(dbh_a, dbh2014, by = "tag")# this indicates that there were 284 stems previously measured that were not part of the remeasurement in 2014. This looks in part to be due to plot abandonments/decomissions, but may also be due to other reasons.
+
+no2014 <- anti_join(dbh_a, dbh2014, by = "tag")# this indicates that there were 284 stems previously measured that were not part of the remeasurement in 2014. This looks in part to be due to plot abandonments/decomissions, but may also be due to other reasons. It looks like a few of these had measurements < 2.0 cm, and the McNeil plots were removed by the landowner before 2014.
+
+# 'dbh_a' has all measurements through 2012
+# 'dbh2014' has all remeasurements in 2014, some plots lost at this point
+# As of 2004 there were 3120 stems, by 2005 there were 3824 stems, and then after 2012 there were 4329 stems, but 284 of these were not remeasured in 2014.
+
+summary(no2014); unique(no2014$plotid)# 73 plots; for proper comparison, whether using 2012 or 2014 data, I need to limit the set to plots that were in the establishment and final sampling.
+
+head(dbh_t1)
+head(dbh2014)
+ 
+dbhs <- left_join(
+      select(dbh2014, plotid, tag, species, dbh2 = dbh, year2 = year),
+      select(dbh_t1, plotid, tag, species, dbh1 = dbh, year1 = year))
+str(dbhs)
+unique(dbhs$plotid)# 195 plots still revisited in 2014
+summary(dbhs)
+dbhs$year1 <- 2005
+
+par(mfrow=c(2,1))
+boxplot(dbh1 ~ species, data = dbhs, main = "DBHs at Plot Establishment")
+boxplot(dbh2 ~ species, data = dbhs, main = "DBHs in 2014")
+dbhs %>% group_by(plotid, species) %>% 
+      summarise(avg_dbh1 = mean(dbh1, na.rm = T), 
+                avg_dbh2 = mean(dbh2, na.rm = T),
+                tot_dbh1 = sum(dbh1, na.rm = T),
+                tot_dbh2 = sum(dbh2, na.rm = T))
+
 
 ## Some plots of DBH measurements ####
 library(ggplot2)
@@ -373,7 +421,7 @@ qplot(tag, dbh, data = dbh2014, geom = "jitter", facets = year ~.)
 qplot(dbh, data = dbh2014)
 
 # Data frame of stems that were measured or remeasured in 2014
-dbh <- right_join(dbh_a, dbh2014, by = c("plot","tag"))
+dbh <- right_join(dbh_a, dbh2014, by = c("plotid","tag"))
 summary(dbh)
 
 dbh <- rename(dbh, dbh1 = dbh.x, dbh2 = dbh.y, year_dbh1 = year.x, year_dbh2 = year.y) # This data frame has all the stems for which we have an initial measurement AND a remeasurement in 2014
