@@ -18,19 +18,19 @@ stems$year <- as.factor(stems$year)
 
 #' Create bay laurel only data frame ####
 umca <- as.tbl(stems) %>%
-      select(plot, cluster, tag, species, status, slc, dbh, delta_dbh, dbh2_1_ratio, year, date) %>%
+      select(plotid, cluster, tag, species, status, slc, dbh, delta_dbh, dbh2_1_ratio, year, date) %>%
       filter(species == "UMCA", status == "Alive" | status == "Dead")
 summary(umca)
 umca <- droplevels(umca)
 
 #' Develop plot level summaries data frame and join to stems data frame ####
 umca <- left_join(umca, plot_umca <- umca %>%
-      select(plot, cluster, tag, status, slc, year) %>% 
-      group_by(plot, year) %>%
+      select(plotid, cluster, tag, status, slc, year) %>% 
+      group_by(plotid, year) %>%
       filter(slc != "NA" & status == "Alive") %>%
       summarise(avg_slc = mean(slc), tot_slc = sum(slc), 
                 live_dens = length(tag)), 
-      by = c("plot", "year"))
+      by = c("plotid", "year"))
 summary(umca)# One NA in the summarized leaf count variables
 filter(umca, is.na(avg_slc))
 filter(umca, plot == "YAHNG02")# Looks like leaf count probably not done/recorded
@@ -51,7 +51,7 @@ filter(umca, plot == "YAHNG02")# Looks like leaf count probably not done/recorde
 ##     2. E ~ N(0, var), errors "white noise"
 ##     3. These terms are independent in their distributions
 
-## The use of random effects prevent systematic variation between groups from ending up in the residual errors "white noise"
+## The use of random effects prevent systematic variation between groups from ending up in the residual errors ("white noise").
 
 #' Starting with plot level data b/c simpler w/fewer nested groups
 library(lme4)
@@ -67,24 +67,24 @@ library(lme4)
 
 #' Simplest models, with only one random effect (random intercept)
 m0 <- lmer(tot_slc ~ 1 + (1 | year), data = plot_umca)
-m0a <- lmer(tot_slc ~ 1 + (1 | plot), data = plot_umca)
+m0a <- lmer(tot_slc ~ 1 + (1 | plotid), data = plot_umca)
 #' Add a second random effect where plot is nested within year
-m0b <- lmer(tot_slc ~ 1 + (1 | year) + (1 | plot), data = plot_umca)
+m0b <- lmer(tot_slc ~ 1 + (1 | year) + (1 | plotid), data = plot_umca)
  
 #' One predictor + random effect (intercept)
 m1 <- lmer(tot_slc ~ live_dens + (1 | year), data = plot_umca)
-m1a <- lmer(tot_slc ~ live_dens + (1 | plot), data = plot_umca)
+m1a <- lmer(tot_slc ~ live_dens + (1 | plotid), data = plot_umca)
 #' One predictor + 2 random effects
-m1b <- lmer(tot_slc ~ live_dens + (1 | year) + (1 | plot), data = plot_umca)
+m1b <- lmer(tot_slc ~ live_dens + (1 | year) + (1 | plotid), data = plot_umca)
 
 #' Random slope, random intercept model ####
 #' The random effects term in the random slope, random intercept model accounts for the interaction between the predictor variable(s) and group in addition to the systematic variation between groups.
 #'    - similar to linear regresstion with nominal & continuous variables, but requires a lot of parameters to be estimated if there are many groups (1 for each)
 m2 <- lmer(tot_slc ~ live_dens + (1 + live_dens | year), data = plot_umca)
-m2a <- lmer(tot_slc ~ live_dens + (1 | year) + (1 + live_dens | plot), data = plot_umca)
+m2a <- lmer(tot_slc ~ live_dens + (1 | year) + (1 + live_dens | plotid), data = plot_umca)
 #' add the second random effect
-m2b <- lmer(tot_slc ~ live_dens + (1 + live_dens | year) + (1 | plot), data = plot_umca)
-m2c <- lmer(tot_slc ~ live_dens + (1 | year) + (1 + live_dens | plot), data = plot_umca)
+m2b <- lmer(tot_slc ~ live_dens + (1 + live_dens | year) + (1 | plotid), data = plot_umca)
+m2c <- lmer(tot_slc ~ live_dens + (1 | year) + (1 + live_dens | plotid), data = plot_umca)
 
 #' Compare all models using Chi-square test of ANOVA ####
 #' Refits model(s) with maximum likelihood instead of REML
@@ -107,22 +107,22 @@ plot(m2c)
 par(mfrow = c(2,2))
 hist(plot_umca$tot_slc)
 hist(plot_umca$live_dens)
-#' Log transformation improves the distributions, but with some zeroes for symptomatic leaf count I need to add a constant. The `log1p` function computes log(1+x) accurately for |x| much less than one (automatically adds the constant 
+#' Log transformation improves the distributions, but with some zeroes for symptomatic leaf count I need to add a constant. The `log1p` function computes log(1+x) accurately for |x| much less than one (automatically adds the constant 1) 
 log_tot_slc <- log1p(plot_umca$tot_slc); hist(log_tot_slc)
 log_live_dens <- log(plot_umca$live_dens); hist(log_live_dens)
 
 
 #' Refit models with transformed variables ####
 m0 <- lmer(log_tot_slc ~ 1 + (1 | year), data = plot_umca)
-m0a <- lmer(log_tot_slc ~ 1 + (1 | plot), data = plot_umca)
-m0b <- lmer(log_tot_slc ~ 1 + (1 | year) + (1 | plot), data = plot_umca)
+m0a <- lmer(log_tot_slc ~ 1 + (1 | plotid), data = plot_umca)
+m0b <- lmer(log_tot_slc ~ 1 + (1 | year) + (1 | plotid), data = plot_umca)
 m1 <- lmer(log_tot_slc ~ log_live_dens + (1 | year), data = plot_umca)
-m1a <- lmer(log_tot_slc ~ log_live_dens + (1 | plot), data = plot_umca)
-m1b <- lmer(log_tot_slc ~ log_live_dens + (1 | year) + (1 | plot), data = plot_umca)
+m1a <- lmer(log_tot_slc ~ log_live_dens + (1 | plotid), data = plot_umca)
+m1b <- lmer(log_tot_slc ~ log_live_dens + (1 | year) + (1 | plotid), data = plot_umca)
 m2 <- lmer(log_tot_slc ~ log_live_dens + (1 + log_live_dens | year), data = plot_umca)
-m2a <- lmer(log_tot_slc ~ log_live_dens + (1 + log_live_dens | plot), data = plot_umca)
-m2b <- lmer(log_tot_slc ~ log_live_dens + (1 + log_live_dens | year) + (1 | plot), data = plot_umca)
-m2c <- lmer(log_tot_slc ~ log_live_dens + (1 | year) + (1 + log_live_dens | plot), data = plot_umca)
+m2a <- lmer(log_tot_slc ~ log_live_dens + (1 + log_live_dens | plotid), data = plot_umca)
+m2b <- lmer(log_tot_slc ~ log_live_dens + (1 + log_live_dens | year) + (1 | plotid), data = plot_umca)
+m2c <- lmer(log_tot_slc ~ log_live_dens + (1 | year) + (1 + log_live_dens | plotid), data = plot_umca)
 
 #models <- ls(pattern = "^m") # make vector of model object names; commented out b/c noticed that the row names are the model names of the anova
 m_anova <- anova(m0, m1, m2, m0a, m0b, m1a, m1b, m2a, m2b, m2c)
@@ -142,6 +142,15 @@ plot(m2c, main = "Model m2c")
 m2b
 m1b
 m2c
+
+#' View image of the Cholesky factor matrix "L" ####
+#+ image Cholesky factor matrix “L" --------------------------------
+image(getME(m2b, name = "L"))
+image(getME(m1b, name = "L"))
+
+image((getME(m1b, name = "Z")))
+methods(class = "merMod")
+
 #' Print Model Coefficients
 coef(m2b)
 coef(m1b)
