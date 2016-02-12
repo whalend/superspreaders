@@ -40,20 +40,31 @@ summary(oak_sod)
 oak_sod$plotid <- as.factor(oak_sod$plotid)
 str(oak_sod)
 
+## join wet-hours data
+summary(wet_hrs)# since these are counts the NAs are in fact zeroes
+wet_hrs[is.na(wet_hrs)] <- 0# introduce a lot of zeroes for some columns
+oak_sod <- left_join(
+      oak_sod, select(wet_hrs, -X), by = c("plotid","sample_year"))
+oak_sod$plotid <- as.factor(oak_sod$plotid)
+
 #+ pairs plots of oak plots data ####
-pairs(na.omit(select(oak_sod, starts_with("rain"))), 
+pairs(na.omit(select(oak_sod, starts_with("rain"), ends_with("wet"))), 
       lower.panel = panel.cor, diag.panel = panel.hist,
       main = "Oak Plots Rainfall Variables")
 # The regression variables are the least correlated within totals & days.
 # The 2D/3D interpolations are strongly correlated with each other, and strongly correlated with with the Voronoi polygon extractions.
 # The days & total precipitation variables are fairly strongly correlated.
+# Total wet hours & hours below 10 & 14 are strongly correlated with rainy days.
+# Wet hours below 14 & total hours are correlated with total rainfall r = 0.66 - 0.76
+# Wet hours below 10 is correlated with total rainfall r = 0.61 - 0.68
 
-pairs(select(oak_sod, ends_with("rs"), ends_with("ds")),
+pairs(select(oak_sod, ends_with("rs"), ends_with("ds"), ends_with("wet")),
       lower.panel = panel.cor, diag.panel = panel.hist,
       main = "Oak Plots Temperature Variables")
 # Overall, correlations among variables are relatively weak with a few strong pairs. For specific pairs of variables it may be okay to use one from the dry season and one from the rainy season.
+# 
 
-pairs(select(oak_sod, ends_with("rs"), starts_with("rain")),
+pairs(select(oak_sod, ends_with("rs"), starts_with("rain"), ends_with("wet")),
       lower.panel = panel.cor, diag.panel = panel.hist,
       main = "Oak Plots RS Temperature and Rainfall Variables")
 # For the most part rainfall and temperature variables are fairly weakly correlated. 
@@ -64,6 +75,9 @@ pairs(select(oak_sod, ends_with("ds"), starts_with("rain")),
       main = "Oak Plots DS Temperature and Rainfall Variables")
 # Dry season temperature variables are only very weakly correlated with rainfall variables.
 
+pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, avg_lfct, H.2005, us.H.2005, hrsblw14_wet, hrsblw10_wet, hrs1020_wet, avgtmax_wet, avgtmin_wet, hrs_blw10rs, avg_tmax_rs, avg_tmin_rs, hrs_abv25ds, avg_tmax_ds, avg_tmin_ds, rain_tot_v, rain_tot_2d, twi15m)),
+      lower.panel = panel.cor, diag.panel = panel.hist)
+
 #' # Oak Plots Path Models
 #+ repeated measures plot-level path model ####
 pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, avg_lfct, H.2005, H.2014, us.H.2005, us.H.2011, hrs_14_20_rs, avg_tmax_rs, avg_tmin_rs, avg_tmax_ds, avg_tmin_ds, rain_tot_v, rain_tot_2d, twi15m)),
@@ -71,7 +85,8 @@ pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, avg_lfct, H.2005, H
 
 # RS temperature hours 14-20, voronoi rain total, OS diversity 2005
 ## create binomial variable for oak infection
-oak_sod$oak.inf <- cbind(oak_sod$inf_oak_ct, oak_sod$uninf_oak_ct)
+# oak_sod$oak.inf <- cbind(oak_sod$inf_oak_ct, oak_sod$uninf_oak_ct)
+
 ## subset data frame and transform/rescale variables
 oakplots.sub <- select(oak_sod, plotid:tot_lfct, candens15m, twi15m, elev_m, veght_m, hrs_14_20_rs:rain_tot_v, rain_tot_psm:rain_days_v)
 summary(oakplots.sub)
