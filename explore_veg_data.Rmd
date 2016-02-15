@@ -352,7 +352,7 @@ alt_species <- rbind(alt_sp_2005, alt_sp_2014)
 write.csv(alt_species, "analysis/data/alt-species-dbh-corrected.csv", row.names = F)
 ```
 
-```{r group alt dbh to plot and year}
+```{r group alt species dbh to plot and year}
 alt_species
 alt_species$Dead[alt_species$Dead==0] <- "Alive"
 alt_species$Dead[alt_species$Dead==1] <- "Dead"
@@ -427,24 +427,32 @@ write.csv(alt_sp_summ_2014, "analysis/data/untagged_dbh2014_summary.csv", row.na
 ```
 
 ```{r make wide format species abundance}
-alt_species$PlotID <- tolower(alt_species$PlotID)
-unique(alt_species$Species)
-alt_species$Species[alt_species$Species=="arcto sp."] <- "arcto"
-alt_species$Species[alt_species$Species=="prunus sp."] <- "prunus"
-alt_species$Species[alt_species$Species=="unknown sp. 1"] <- "unk1"
-alt_species$Species[alt_species$Species=="quercus sp."] <- "qusp"
-alt_species
+library(tidyr)
+alt_dbh_plot <- read.csv("analysis/data/alt-dbh-plot.csv")
+# alt_species$PlotID <- tolower(alt_species$PlotID)
+# unique(alt_species$species)
+# alt_species$Species[alt_species$Species=="arcto sp."] <- "arcto"
+# alt_species$Species[alt_species$Species=="prunus sp."] <- "prunus"
+# alt_species$Species[alt_species$Species=="unknown sp. 1"] <- "unk1"
+# alt_species$Species[alt_species$Species=="quercus sp."] <- "qusp"
+# head(alt_species)
 
-unique(alt_sp_2014_live$Species)
-alt_sp_2014_live$Species[alt_sp_2014_live$Species=="arcto sp."] <- "arcto"
-alt_sp_2014_live$Species[alt_sp_2014_live$Species=="prunus sp."] <- "prunus"
-alt_sp_2014_live$Species[alt_sp_2014_live$Species=="unknown sp. 1"] <- "unk1"
-alt_sp_2014_live$Species[alt_sp_2014_live$Species=="quercus sp."] <- "qusp"
+head(alt_dbh_plot)
+unique(alt_dbh_plot$species)
+alt_dbh_plot.wide <- as.tbl(alt_dbh_plot %>% 
+      select(plotid, species, status, year, abundance) %>% 
+      spread(species, abundance))
 
-unique(alt_sp_2005_live$Species)
-alt_sp_2005_live$Species[alt_sp_2005_live$Species=="quercus sp."] <- "qusp"
-alt_sp_2005_live$Species[alt_sp_2005_live$Species=="arcto sp."] <- "arcto"
-alt_sp_2005_live$Species[alt_sp_2005_live$Species=="prunus sp."] <- "prunus"
+# unique(alt_sp_2014_live$Species)
+# alt_sp_2014_live$Species[alt_sp_2014_live$Species=="arcto sp."] <- "arcto"
+# alt_sp_2014_live$Species[alt_sp_2014_live$Species=="prunus sp."] <- "prunus"
+# alt_sp_2014_live$Species[alt_sp_2014_live$Species=="unknown sp. 1"] <- "unk1"
+# alt_sp_2014_live$Species[alt_sp_2014_live$Species=="quercus sp."] <- "qusp"
+# 
+# unique(alt_sp_2005_live$Species)
+# alt_sp_2005_live$Species[alt_sp_2005_live$Species=="quercus sp."] <- "qusp"
+# alt_sp_2005_live$Species[alt_sp_2005_live$Species=="arcto sp."] <- "arcto"
+# alt_sp_2005_live$Species[alt_sp_2005_live$Species=="prunus sp."] <- "prunus"
 
 # Aggregate to species counts by plot
 alt_sp_05_live_abund <- alt_sp_2005_live %>% select(-dbh, -year) %>% 
