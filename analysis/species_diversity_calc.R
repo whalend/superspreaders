@@ -86,6 +86,7 @@ sort(unique(veg_us$us_species))# 79 species
 woody_spp <- c(woody_spp, "ceanothus", "cebe", "cecu", "frla", "garrya", "gemo", "juca", "mafu", "mane", "mimulus", "pisa", "quagXquke", "qube", "qusp", "quwi", "rhamnus", "rhcr", "ribes", "rica", "risa", "roca", "rosa", "rubus", "rudi", "salix", "syal", "vacc")
 veg_sub <- filter(veg_us, veg_us$us_species %in% woody_spp)# 56 species
 veg_sub <- droplevels(veg_sub)# drop the unused levels from veg species
+write.csv(veg_sub, "analysis/data/us-veg-sub.csv")
 
 # Calculate basic richness as number of different species in each plot each year
 us_richness <- full_join(
@@ -105,7 +106,7 @@ us_richness <- filter(us_richness,
 # ann06 and mroth03 are actually zeroes for understory species in 2011
 us_richness$us_rich11[us_richness$plotid=="ann06"] <- 0
 us_richness$us_rich11[us_richness$plotid=="mroth03"] <- 0
-# This leaves to legitimate NAs or understory species in 2011
+# This leaves two legitimate NAs for understory species in 2011
 
 filter(us_richness, is.na(us_rich05))# this should be zero for 2005
 us_richness$us_rich05[us_richness$plotid=="jlsp05"] <- 0
@@ -194,7 +195,7 @@ untagged_dbh_2005 %>% group_by(plotid, year) %>% summarise(untagged_rich = lengt
 untagged_dbh_2014 %>% group_by(plotid, year) %>% summarise(untagged_rich = length(unique(species)))
 
 
-# Calculate the richness of the tagged stems
+# Calculate the richness of the tagged stems ####
 stems <- as.tbl(stems)
 summary(stems)
 unique(stems$status)
@@ -263,6 +264,10 @@ os_richness <- filter(os_richness, plotid != "ann28", plotid != "halow01",
 # Join overstory richness and understory richness (counts) into single data frame
 richness <- full_join(os_richness, us_richness, by = c("plotid"))
 summary(richness)
+filter(richness, is.na(us_rich05))
+filter(richness, is.na(us_rich11))
+filter(richness, is.na(os_rich14))
+richness <- filter(richness, plotid != "bush01")
 
 
 #' ## Calculate Diversity Indices
@@ -299,13 +304,16 @@ os.diversity <- full_join(diversity.2005, diversity.2014, by = "plotid")
 
 summary(os.diversity)
 filter(os.diversity, is.na(H.2014))
-# remove 3 early abandoned plots, keep 4 late abandoned plots
-os.diversity <- filter(os.diversity, plotid != "ann28", plotid != "halow01",
-                       plotid != "sweet01")
+# remove 4 early abandoned plots, keep 4 late abandoned plots
+os.diversity <- filter(os.diversity, plotid != "ann28", plotid != "bush01",
+                       plotid != "halow01", plotid != "sweet01")
 
 
-# Understory Diversity - based on transect point counts
+# Understory Diversity - based on transect point counts ####
+## I'm not sure it is appropriate to use Shannon's or Pielou's because these aren't true species counts, just whether or not a species was represented at least once within a microplot.
 H.2005 <- diversity(select(veg_us_2005_ptct, -plotid), index = "shannon", MARGIN = 1, base = exp(1))
+# H.2005a <- diversity(select(veg_us_2005_pcov, -plotid), index = "shannon", MARGIN = 1, base = exp(1)) # gives precisely same results
+# cor(H.2005,H.2005a)
 D.2005 <- diversity(select(veg_us_2005_ptct, -plotid), index = "simpson")
 inv.D.2005 <- diversity(select(veg_us_2005_ptct, -plotid), index = "invsimpson")
 H.2011 <- diversity(select(veg_us_2011_ptct, -plotid), index = "shannon", MARGIN = 1, base = exp(1))
@@ -316,14 +324,22 @@ inv.D.2011 <- diversity(select(veg_us_2011_ptct, -plotid), index = "invsimpson")
 us.J.2005 <- H.2005/log1p(specnumber(select(veg_us_2005_ptct, -plotid)))
 us.J.2011 <- H.2011/log1p(specnumber(select(veg_us_2011_ptct, -plotid)))
 
+# Calculate Simpson's evnenness for understory data
+us.E.2005 <- D.2005/specnumber(select(veg_us_2005_ptct, -plotid))
+us.E.inv.2005 <- inv.D.2005/specnumber(select(veg_us_2005_ptct, -plotid))
+us.E.2011 <- D.2011/specnumber(select(veg_us_2011_ptct, -plotid))
+us.E.inv.2011 <- inv.D.2011/specnumber(select(veg_us_2011_ptct, -plotid))
+
+
+# Create data frame with understory diversity metrics
 diversity.2005 <- select(veg_us_2005_ptct, plotid) %>% 
-      mutate(us.H.2005 = H.2005, us.D.2005 = D.2005, us.inv.D.2005 = inv.D.2005, us.J.2005 = us.J.2005)
+      mutate(us.H.2005 = H.2005, us.D.2005 = D.2005, us.inv.D.2005 = inv.D.2005, us.J.2005 = us.J.2005, us.E.2005 = us.E.2005, us.E.inv.2005 = us.E.inv.2005)
 diversity.2011 <- select(veg_us_2011_ptct, plotid) %>% 
-      mutate(us.H.2011 = H.2011, us.D.2011 = D.2011, us.inv.D.2011 = inv.D.2011, us.J.2011 = us.J.2011)
+      mutate(us.H.2011 = H.2011, us.D.2011 = D.2011, us.inv.D.2011 = inv.D.2011, us.J.2011 = us.J.2011, us.E.2011 = us.E.2011, us.E.inv.2011 = us.E.inv.2011)
 
 us.diversity <- full_join(diversity.2005, diversity.2011, by = "plotid")
 summary(us.diversity)
-filter(us.diversity, is.na(us.H.2005))# calculation w/0 richness = NAs
+filter(us.diversity, is.na(us.H.2005))# calculation with 0 richness = NAs
 filter(us.diversity, is.na(us.H.2011))
 # remove abandoned plots
 us.diversity <- filter(us.diversity, plotid != "bush01", plotid != "halow01",
@@ -332,18 +348,24 @@ us.diversity <- filter(us.diversity, plotid != "bush01", plotid != "halow01",
 # mcneil01 & sumtv02 were abandoned prior to the 2011 season
 
 
+# Create dataframe with overstory and understory diversity metrics
 os.us.diversity <- full_join(os.diversity, us.diversity, by = "plotid")
 os.us.diversity <- full_join(os.us.diversity, richness, by = "plotid")
 
 summary(os.us.diversity)
-
+os.us.diversity$plotid <- as.factor(os.us.diversity$plotid)
+filter(os.us.diversity, is.na(H.2014))
+filter(os.us.diversity, is.na(us.H.2005))
+summary(filter(os.us.diversity, plotid == "jlsp05"))# 0 understory species in 2005
+summary(filter(os.us.diversity, is.na(us.D.2011)))# 2 plots not resampled and 2 plots (ann06 & mroth03) with 0 understory species in 2011
 
 write.csv(os.us.diversity, "analysis/data/os_us_diversity.csv", row.names = F)
 #'
-#'  - H is the Shannon-Weiner Index
-#'  - D is Simpson's Index
-#'  - inv.D is the inverse Simpson's Index
-#'  - J is Pielou's Evenness
+#'  - H is the Shannon-Weiner Index (-sum p_i log(b) p_i)
+#'  - D is Simpson's Index (1-D)
+#'  - inv.D is the inverse Simpson's Index (1/D)
+#'  - J is Pielou's Evenness (H / log S, where S is number of species)
+#'  - E is Simpson's Evenness calculated using either D or inv.D
 #' 
 #' Unsurprisingly, the diversity metrics are larger for the understory than the overstory, because there are more understory species than overstory species. The range of the evenness metric, J, is pretty similar between the overstory and understory.
 #' 
