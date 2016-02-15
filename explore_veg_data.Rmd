@@ -249,6 +249,7 @@ write.csv(veg_us_2005, "analysis/data/understory_veg_2005.csv")
 write.csv(veg_us_2011, "analysis/data/understory_veg_2011.csv")
 ```
 
+# Untagged Overstory
 Now I need to examine the data for alternate and non-host species DBH. These are the stems that are untagged and meet a 5cm DBH threshold.
 
 ```{r untagged species}
@@ -260,6 +261,8 @@ alt_sp_dbh$Date[alt_sp_dbh$Date == ""] <- "5/22/2012 0:00:00"
 alt_sp_dbh$date <- as.Date(alt_sp_dbh$Date, format = "%m/%d/%Y")
 summary(alt_sp_dbh)
 alt_sp_dbh$year <- year(alt_sp_dbh$date)
+head(alt_sp_dbh)
+
 alt_sp_dbh <- alt_sp_dbh %>% select(-PlotVisit_PlotVisitID, -Date) %>% 
       rename(dbh = Measure)
 unique(as.character(alt_sp_dbh$Species))
@@ -269,16 +272,17 @@ alt_sp_dbh$Species <- tolower(alt_sp_dbh$Species)
 summary(alt_sp_dbh)
 unique(alt_sp_dbh$Species)
 unique(alt_sp_dbh$Dead)
+unique(alt_sp_dbh$year)
 # alt_sp_dbh$Dead <- ifelse(alt_sp_dbh$Dead == 0, "no", "yes")
 alt_sp_dbh <- as.tbl(alt_sp_dbh)
 
 summary(filter(alt_sp_dbh, year == 2003))
-unique(droplevels(filter(alt_sp_dbh, year == 2003)$PlotID))
+unique(droplevels(filter(alt_sp_dbh, year == 2003)$PlotID))# 32 plots
 pid2003 <- as.character(unique(filter(alt_sp_dbh, year == 2003)$PlotID))
 alt_sp_2003 <- filter(alt_sp_dbh, year == 2003)
 
 summary(filter(alt_sp_dbh, year == 2004))
-unique(droplevels(filter(alt_sp_dbh, year == 2004)$PlotID))
+unique(droplevels(filter(alt_sp_dbh, year == 2004)$PlotID))# 120 plots
 pid2004 <- as.character(unique(filter(alt_sp_dbh, year == 2004)$PlotID))
 alt_sp_2004 <- filter(alt_sp_dbh, year == 2004)
 
@@ -288,7 +292,7 @@ filter(alt_sp_dbh, year == 2003, PlotID == "MITSU02")
 filter(alt_sp_dbh, year == 2004, PlotID == "MITSU02")
 
 summary(filter(alt_sp_dbh, year == 2005))
-unique(droplevels(filter(alt_sp_dbh, year == 2005)$PlotID))
+unique(droplevels(filter(alt_sp_dbh, year == 2005)$PlotID))# 25 plots
 pid2005 <- as.character(unique(filter(alt_sp_dbh, year == 2005)$PlotID))
 alt_sp_2005 <- filter(alt_sp_dbh, year == 2005)
 
@@ -317,11 +321,10 @@ filter(alt_sp_45, PlotID == "GANAY02")
 filter(alt_sp_2003, PlotID == "GANAY02")
 # Exclude GANAY02 from the 2004, keep the 2003 data
 alt_sp_45 <- filter(alt_sp_45, PlotID != "GANAY02")
-unique(alt_sp_2003$PlotID) %in% unique(alt_sp_45$PlotID)
+unique(alt_sp_2003$PlotID) %in% unique(alt_sp_45$PlotID)# LINS01 still there
 alt_sp_45 <- rbind(alt_sp_45, alt_sp_2003)
 alt_sp_2005 <- alt_sp_45
 rm(alt_sp_45)
-
 
 summary(filter(alt_sp_dbh, year == 2012))
 pid2012 <- unique(droplevels(filter(alt_sp_dbh, year == 2012)$PlotID))# 171 plots
@@ -345,6 +348,26 @@ alt_sp_2005$year <- 2005
 alt_sp_2014 <- select(alt_sp_2014, -date)
 alt_sp_2005 <- select(alt_sp_2005, -date)
 
+alt_species <- rbind(alt_sp_2005, alt_sp_2014)
+write.csv(alt_species, "analysis/data/alt-species-dbh-corrected.csv", row.names = F)
+```
+
+```{r group alt dbh to plot and year}
+alt_species
+alt_species$Dead[alt_species$Dead==0] <- "Alive"
+alt_species$Dead[alt_species$Dead==1] <- "Dead"
+alt_species <- rename(alt_species, status = Dead, plotid = PlotID, species = Species)
+alt_dbh_plot <- alt_species %>% 
+      group_by(plotid, species, status, year) %>% 
+      summarise(tot_dbh = sum(dbh, na.rm = T), avg_dbh = mean(dbh, na.rm = T),
+                tot_ba_m2 = sum(pi*dbh^2/40000, na.rm = T),
+                avg_ba_m2 = mean(pi*dbh^2/40000, na.rm = T),
+                abundance = length(dbh))
+write.csv(alt_dbh_plot, "analysis/data/alt-dbh-plot.csv", row.names = F)
+```
+
+
+```{r }
 # Create data frames of live and dead stems for '2005' and '2014' samplings. In reality the 2005 grouping has data from visits during 2003 and 2004, and the 2014 grouping includes data from some visits in 2012.
 alt_sp_2014_live <- filter(alt_sp_2014, Dead == 0)
 alt_sp_2014_live <- select(alt_sp_2014_live, -Dead)
@@ -404,6 +427,14 @@ write.csv(alt_sp_summ_2014, "analysis/data/untagged_dbh2014_summary.csv", row.na
 ```
 
 ```{r make wide format species abundance}
+alt_species$PlotID <- tolower(alt_species$PlotID)
+unique(alt_species$Species)
+alt_species$Species[alt_species$Species=="arcto sp."] <- "arcto"
+alt_species$Species[alt_species$Species=="prunus sp."] <- "prunus"
+alt_species$Species[alt_species$Species=="unknown sp. 1"] <- "unk1"
+alt_species$Species[alt_species$Species=="quercus sp."] <- "qusp"
+alt_species
+
 unique(alt_sp_2014_live$Species)
 alt_sp_2014_live$Species[alt_sp_2014_live$Species=="arcto sp."] <- "arcto"
 alt_sp_2014_live$Species[alt_sp_2014_live$Species=="prunus sp."] <- "prunus"
