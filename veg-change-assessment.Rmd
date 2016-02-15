@@ -1,0 +1,73 @@
+---
+title: "Vegetation Change Assessment - SOD Plots in Sonoma County"
+author: "Whalen Dillon"
+date: "February 15, 2016"
+output: html_document
+
+---
+
+
+
+
+
+```{r}
+boxplot(tot_ba_m2 ~ year, 
+        data = basal_abund %>% filter(status == "Alive", species == "UMCA"),
+        ylab = "m^2",
+        main = "Live UMCA Basal Area")
+boxplot(tot_ba_m2 ~ year, 
+        data = basal_abund %>% filter(status == "Dead", species == "UMCA"),
+        ylab = "m^2",
+        main = "Dead UMCA Basal Area")
+
+boxplot(tot_ba_m2 ~ year, 
+        data = basal_abund %>% filter(status == "Alive", species == "QUAG"),
+        ylab = "m^2",
+        main = "Live QUAG Basal Area")
+boxplot(tot_ba_m2 ~ year, 
+        data = basal_abund %>% filter(status == "Dead", species == "QUAG"),
+        ylab = "m^2",
+        main = "Dead QUAG Basal Area")
+
+ggplot(data = basal_abund %>% filter(status == "Alive", species == "QUAG"),
+       aes(year, tot_ba_m2, group = year)) +
+      geom_boxplot()
+
+boxplot(abundance ~ year, 
+        data = basal_abund %>% filter(status == "Alive", species == "QUAG"),
+        ylab = "Number of stems",
+        main = "Live QUAG Abundance")
+boxplot(tot_ba_m2 ~ year, 
+        data = basal_abund %>% filter(status == "Dead", species == "QUAG"),
+        ylab = "Number of stems",
+        main = "Dead QUAG Abundance")
+
+
+ggplot(data = basal_abund,
+       aes(species, tot_ba_m2, label = plotid)) +
+      geom_boxplot() +
+      facet_grid(status ~ year) +
+      geom_text() +
+      ylab("Basal Area (m^2)")
+
+filter(dbhs, plotid == "SUGAR05", species == "QUAG")
+# new giant dead stem in 2014, was probably dead entire study period
+
+ggplot(data = basal_abund,
+       aes(species, abundance)) +
+      geom_boxplot() +
+      facet_grid(status ~ year) +
+      #geom_text() +
+      ylab("Abundance")
+
+ggplot(basal_abund %>% filter(status == "Alive"), aes(tot_ba_m2)) + 
+      geom_histogram() +
+      facet_grid(species ~ year)
+ggplot(basal_abund %>% filter(status == "Alive"), aes(avg_ba_m2)) + 
+      geom_histogram() +
+      facet_grid(species ~ year)
+ggplot(basal_abund %>% filter(status == "Alive"), aes(abundance)) + 
+      geom_histogram() +
+      facet_grid(species ~ year)
+```
+
