@@ -299,66 +299,67 @@ stems <- droplevels(stems)
 class(stems)
 stems <- as.tbl(stems)
 
-#### Subset DBH data to create a data frame of remeasured stems: Round 2 ####
+# Subset DBH data to create a data frame of remeasured stems: Round 2 ####
 
 detach("package:lubridate", unload=TRUE)# b/c it has `union` function masking the one from `dplyr` that apparently behaves a little differently, creating a list instead of a data frame
 
 
-dbh2003 <- stems %>% select(plotid, tag, species, dbh, year, date) %>% 
+dbh2003 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp) %>% 
       filter(dbh>0, year == 2003) # these 2 are the same as in 2005
 # 11 observations
 
-dbh2004 <- stems %>% select(plotid, tag, species, dbh, year, date) %>%
+dbh2004 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp) %>%
       filter(dbh>0, year == 2004)
 # 3109 observations
-anti_join(dbh2003, dbh2004, by = c("plotid", "tag"))# 11 new DBH observations in 2004
+anti_join(dbh2003, dbh2004, by = c("plotid", "tag"))# 11 DBH observations different between 2003 and 2004
 dbh_a <- union(dbh2004, dbh2003)
 
-dbh2005 <- stems %>% select(plotid, tag, species, dbh, year, date) %>%
+dbh2005 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp) %>%
       filter(dbh>0, year == 2005)
 # 704 observations
 anti_join(dbh2005, dbh_a, by = c("plotid","tag")) # this indicates that the dbh data for 2003/04 and 2005 are nearly unique, 702 new DBH values at 109 plots in 2005
+# The 'union' with the 'anti_join' selects only the new records from 2005
 dbh_a <- union(dbh_a, anti_join(dbh2005, dbh_a, by = c("plotid","tag")))
 unique(dbh_a$plotid)# 204 plots on record at this point
 dbh_t1 <- dbh_a# data frame for DBH at time 1
 
-dbh2006 <- stems %>% select(plotid, tag, species, dbh, year, date) %>%
+dbh2006 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp) %>%
       filter(dbh>0, year == 2006)
-anti_join(dbh2006, dbh_a, by = c("plotid","tag")) # 2004, 2005, 2006 are independent sets, 86 new DBH values in 2006
+anti_join(dbh2006, dbh_a, by = c("plotid","tag")) # 2004, 2005, 2006 are independent sets, 86 newly tagged DBH values in 2006
 dbh_a <- union(dbh_a, anti_join(dbh2006, dbh_a, by = c("plotid","tag")))
 
-dbh2007 <- stems %>% select(plotid, tag, species, dbh, year, date) %>%
+dbh2007 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp) %>%
       filter(dbh>0, year == 2007)
 anti_join(dbh2007, dbh_a, by = c("plotid","tag")) # there is one tag with remeasured DBH in 2007 and 36 new DBH observations
 dbh_a <- union(dbh_a, anti_join(dbh2007, dbh_a, by = c("plotid","tag")))
-anyDuplicated(dbh_a$tag)# check for repeated tags
+anyDuplicated(dbh_a$tag)# check for any repeated tags, stops at first encounter
 
-dbh2008 <- stems %>% select(plotid, tag, species, dbh, year, date) %>%
+dbh2008 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp) %>%
       filter(dbh>0, year == 2008)
 anti_join(dbh2008, dbh_a, by = c("plotid","tag"))# 12 new DBH observations
 dbh_a <- union(dbh_a, anti_join(dbh2008, dbh_a, by = c("plotid","tag")))
 
-dbh2009 <- stems %>% select(plotid, tag, species, dbh, year, date) %>%
+dbh2009 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp) %>%
       filter(dbh>0, year == 2009)
 anti_join(dbh2009, dbh_a, by = c("plotid","tag"))# 21 new DBH observations
 dbh_a <- union(dbh_a, anti_join(dbh2009, dbh_a, by = c("plotid","tag")))
 
-dbh2010 <- stems %>% select(plotid, tag, species, dbh, year, date) %>%
+dbh2010 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp) %>%
       filter(dbh>0, year == 2010)
 anti_join(dbh2009, dbh_a, by = c("plotid","tag")) # no unique DBH values for 2010, so no new recruitment or stems entering the study, just remeasurement of 109 stems
 
-dbh2011 <- stems %>% select(plotid, tag, species, dbh, year, date) %>%
+dbh2011 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp) %>%
       filter(dbh>0, year == 2011)
 anti_join(dbh2011, dbh_a, by = c("plotid","tag"))# 74 new DBH observations
 dbh_a <- union(dbh_a, anti_join(dbh2011, dbh_a, by = c("plotid","tag")))
 
-dbh2012 <- stems %>% select(plotid, tag, species, dbh, year, date) %>%
+dbh2012 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp) %>%
       filter(dbh>0, year == 2012)# remeasured all stems
 anti_join(dbh2012, dbh_a, by = c("plotid","tag"))# 289 new DBH observations (maybe...)
 dbh_a <- union(dbh_a, anti_join(dbh2012, dbh_a, by = c("plotid","tag")))
 anyDuplicated(dbh_a$tag) # check for repeated tags
-dbh_a[1836,]
-filter(dbh_a, tag == 4041)
+dbh_a[1091,]
+filter(dbh_a, tag == 4042)
 filter(dbh_a, plotid == "SUGAR02")
 filter(dbh_a, plotid == "SUGAR30")
 filter(dbh_a, plotid == "SUGAR02")$tag %in% filter(dbh_a, plotid == "SUGAR30")$tag
@@ -372,7 +373,7 @@ anyDuplicated(dbh_a$tag)
 length(unique(dbh_a$plotid)); length(unique(dbh_t1$plotid))
 
 
-dbh2014 <- stems %>% select(plotid, tag, species, dbh, year, date) %>%
+dbh2014 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp) %>%
       filter(dbh>0, year == 2014)
 anyDuplicated(dbh2014$tag)# 1852 duplicated tags, WTF? 
 filter(dbh2014, duplicated(tag))# nope, that's the row number
@@ -390,25 +391,72 @@ no2014 <- anti_join(dbh_a, dbh2014, by = "tag")# this indicates that there were 
 
 summary(no2014); unique(no2014$plotid)# 73 plots; for proper comparison, whether using 2012 or 2014 data, I need to limit the set to plots that were in the establishment and final sampling.
 
+# Compare Basal & Species Abundances ####
 head(dbh_t1)
+dbh_t1 <- select(dbh_t1, -date) %>% arrange(plotid)
+dbh_t1$year <- 2005# change all to last sampling season included
+dbh_t1 <- droplevels(dbh_t1)
 head(dbh2014)
- 
-dbhs <- left_join(
-      select(dbh2014, plotid, tag, species, dbh2 = dbh, year2 = year),
-      select(dbh_t1, plotid, tag, species, dbh1 = dbh, year1 = year))
+dbh2014 <- select(dbh2014, -date) %>% arrange(plotid)
+dbh2014 <- droplevels(dbh2014)
+
+# Match plots between establishment and 2014 remeasurement
+length(unique(dbh_t1$plotid))# 204 plots
+length(unique(dbh2014$plotid))# 195 plots
+tmp1 <- droplevels(unique(dbh_t1$plotid))
+tmp2 <- droplevels(unique(dbh2014$plotid))
+setdiff(tmp1,tmp2)# identify plots not in 2014 data, note that one is SUGAR02
+filter(dbh_t1, plotid == "SUGAR02" | plotid == "SUGAR30")
+# change SUGAR02 to SUGAR30 for early data
+dbh_t1$plotid[dbh_t1$plotid == "SUGAR02"] <- "SUGAR30"
+
+tmp1 <- droplevels(unique(dbh_t1$plotid))
+tmp2 <- droplevels(unique(dbh2014$plotid))
+setdiff(tmp1,tmp2)
+dbh2014 <- rbind(dbh2014, select(dbh2012, -date) %>% 
+                       filter(plotid == "MROTH03"))
+# enter 2014 DBH values from database
+dbh2014$dbh[dbh2014$tag==1668] <- 68
+dbh2014$dbh[dbh2014$tag==1669] <- 49.2
+dbh2014$dbh[dbh2014$tag==1670] <- 56.1
+dbh2014$dbh[dbh2014$tag==1671] <- 51.2
+dbh2014$dbh[dbh2014$tag==1672] <- 66.9
+dbh2014$year <- 2014
+
+tmp1 <- droplevels(unique(dbh_t1$plotid))
+tmp2 <- droplevels(unique(dbh2014$plotid))
+setdiff(tmp1,tmp2)# reduced to 7 missing, 3 lost "late" in study
+# filter out plots from 2005 data that aren't in 2014 data
+dbh_t1 <- filter(dbh_t1, plotid != "BUSH01", plotid != "MCNEIL01",
+                 plotid != "MCNEIL03", plotid != "PONTI01",
+                 plotid != "SUMTV02", plotid != "SWEET01",
+                 plotid != "VOTRU01")
+
+dbhs <- rbind(dbh_t1, dbh2014)
 str(dbhs)
-unique(dbhs$plotid)# 195 plots still revisited in 2014
+unique(dbhs$plotid)
+dbhs <- droplevels(dbhs)
 summary(dbhs)
-dbhs$year1 <- 2005
+dbhs <- filter(dbhs, status == "Alive" | status == "Dead")
+write.csv(dbhs, "analysis/data/tag-dbh_0514-corrected.csv", row.names = F)
 
 par(mfrow=c(2,1))
-boxplot(dbh1 ~ species, data = dbhs, main = "DBHs at Plot Establishment")
-boxplot(dbh2 ~ species, data = dbhs, main = "DBHs in 2014")
-dbhs %>% group_by(plotid, species) %>% 
-      summarise(avg_dbh1 = mean(dbh1, na.rm = T), 
-                avg_dbh2 = mean(dbh2, na.rm = T),
-                tot_dbh1 = sum(dbh1, na.rm = T),
-                tot_dbh2 = sum(dbh2, na.rm = T))
+boxplot(dbh ~ year, 
+        data = dbhs %>% filter(species == "UMCA", status == "Alive"), 
+        main = "Live UMCA DBHs")
+boxplot(dbh ~ year, 
+        data = dbhs %>% filter(species == "UMCA", status == "Dead"), 
+        main = "Dead UMCA DBHs")
+
+
+basal_abund <- dbhs %>% 
+      #filter(status == "Alive") %>% 
+      group_by(plotid, species, year, status) %>% 
+      summarise(avg_ba_m2 = mean(pi*dbh^2/40000, na.rm = T), 
+                tot_ba_m2 = sum(pi*dbh^2/40000, na.rm = T),
+                abundance = length(dbh))
+summary(basal_abund)
+write.csv(basal_abund, "analysis/data/tag-dbh-plot.csv", row.names = F)
 
 
 ## Some plots of DBH measurements ####
