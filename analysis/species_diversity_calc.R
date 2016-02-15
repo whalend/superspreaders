@@ -86,7 +86,7 @@ sort(unique(veg_us$us_species))# 79 species
 woody_spp <- c(woody_spp, "ceanothus", "cebe", "cecu", "frla", "garrya", "gemo", "juca", "mafu", "mane", "mimulus", "pisa", "quagXquke", "qube", "qusp", "quwi", "rhamnus", "rhcr", "ribes", "rica", "risa", "roca", "rosa", "rubus", "rudi", "salix", "syal", "vacc")
 veg_sub <- filter(veg_us, veg_us$us_species %in% woody_spp)# 56 species
 veg_sub <- droplevels(veg_sub)# drop the unused levels from veg species
-write.csv(veg_sub, "analysis/data/us-veg-sub.csv")
+write.csv(veg_sub, "analysis/data/us-veg-sub.csv", row.names = F)
 
 # Calculate basic richness as number of different species in each plot each year
 us_richness <- full_join(
