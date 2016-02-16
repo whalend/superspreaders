@@ -349,6 +349,8 @@ alt_sp_2014 <- select(alt_sp_2014, -date)
 alt_sp_2005 <- select(alt_sp_2005, -date)
 
 alt_species <- rbind(alt_sp_2005, alt_sp_2014)
+sort(unique(alt_species$species))
+alt_species[alt_species=="arma"] <- "arcto"
 write.csv(alt_species, "analysis/data/alt-species-dbh-corrected.csv", row.names = F)
 ```
 
