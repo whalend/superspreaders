@@ -75,7 +75,7 @@ sort(unique(veg_us$us_species))
 # I want to match the species to those used by Sarah in her second chapter
 local_woody <- read.csv("analysis/data/presence_local_woody_n197.csv")
 summary(local_woody)
-unique(local_woody$spp.local)
+sort(unique(local_woody$spp.local))
 woody_spp <- as.character(local_woody$spp.local)
 
 sort(woody_spp) # only 29 species
@@ -86,6 +86,10 @@ sort(unique(veg_us$us_species))# 79 species
 woody_spp <- c(woody_spp, "ceanothus", "cebe", "cecu", "frla", "garrya", "gemo", "juca", "mafu", "mane", "mimulus", "pisa", "quagXquke", "qube", "qusp", "quwi", "rhamnus", "rhcr", "ribes", "rica", "risa", "roca", "rosa", "rubus", "rudi", "salix", "syal", "vacc")
 veg_sub <- filter(veg_us, veg_us$us_species %in% woody_spp)# 56 species
 veg_sub <- droplevels(veg_sub)# drop the unused levels from veg species
+sort(unique(veg_sub$us_species))
+# change all arctostaphylus identifications to the genus
+veg_sub[veg_sub=="arma"] <- "arcto"
+
 write.csv(veg_sub, "analysis/data/us-veg-sub.csv", row.names = F)
 
 # Calculate basic richness as number of different species in each plot each year
@@ -157,12 +161,12 @@ untagged_dbh_2014 <- as.tbl(untagged_dbh_2014 %>% rename(plotid = PlotID, specie
 untagged_dbh_2005$plotid <- tolower(untagged_dbh_2005$plotid)
 untagged_dbh_2014$plotid <- tolower(untagged_dbh_2014$plotid)
 
-unique(untagged_dbh_2005$species)
-unique(untagged_dbh_2014$species)
+sort(unique(untagged_dbh_2005$species))
+sort(unique(untagged_dbh_2014$species))
 untagged_dbh_2005$species <- as.character(untagged_dbh_2005$species)
 untagged_dbh_2014$species <- as.character(untagged_dbh_2014$species)
 untagged_dbh_2005[untagged_dbh_2005=="quercus sp."] <- "qusp"
-untagged_dbh_2005[untagged_dbh_2005=="arcto sp."] <- "arcto"
+untagged_dbh_2005[untagged_dbh_2005=="arcto sp." | untagged_dbh_2005=="arma"] <- "arcto"
 untagged_dbh_2005[untagged_dbh_2005=="prunus sp."] <- "prunus"
 
 untagged_dbh_2014[untagged_dbh_2014=="arcto sp."] <- "arcto"
@@ -170,8 +174,8 @@ untagged_dbh_2014[untagged_dbh_2014=="quercus sp."] <- "qusp"
 untagged_dbh_2014[untagged_dbh_2014=="unknown sp. 1"] <- "unk1"
 untagged_dbh_2014[untagged_dbh_2014=="prunus sp."] <- "prunus"
 
-unique(untagged_dbh_2005$plotid)
-unique(untagged_dbh_2014$plotid)
+unique(untagged_dbh_2005$plotid)# 173
+unique(untagged_dbh_2014$plotid)# 171
 untagged_dbh_2005 <- filter(untagged_dbh_2005, plotid != "bush01")
 untagged_dbh_2014 <- filter(untagged_dbh_2014, plotid != "bush01")
 
@@ -205,6 +209,7 @@ stems
 stems <- select(stems, -X) %>% rename(plotid = plot)
 stems$plotid <- tolower(stems$plotid)
 unique(stems$plotid)
+stem <- filter(stems, plotid != "bush01")
 unique(stems$species)
 stems$species <- tolower(stems$species)
 stems$species[stems$species == "quke x quag"] <- "quagXquke"
@@ -239,13 +244,13 @@ untagged_dbh_2005; unique(untagged_dbh_2005$species)
 
 ## 2005 data
 abund_2005 <- rbind(tagged_abund_2005, select(untagged_dbh_2005, plotid, species, live_count))
-unique(abund_2005$species)# 26 species
+sort(unique(abund_2005$species))# 25 species
 
 abund_2005_wide <- ungroup(abund_2005) %>% spread(species, live_count)
 
 ## 2014 data
 abund_2014 <- rbind(tagged_abund_2014, select(untagged_dbh_2014, plotid, species, live_count))
-unique(abund_2014$species)# 24 species
+sort(unique(abund_2014$species))# 24 species
 abund_2014_wide <- abund_2014 %>% spread(species, live_count)
 
 # Summarize into overstory species richness - number of each species in each plot for each survey
@@ -257,8 +262,7 @@ os_richness <- left_join(os_rich2005, os_rich2014, by = "plotid")
 summary(os_richness)
 filter(os_richness, is.na(os_rich14))
 # remove abandoned plots
-os_richness <- filter(os_richness, plotid != "ann28", plotid != "halow01",
-                      plotid != "sweet01")
+os_richness <- filter(os_richness, plotid != "bush01", plotid != "ann28", plotid != "halow01", plotid != "sweet01")
 # Other plots were abandoned later in the study. Overstory from 2012 data for mcneil03 may be possible.
 
 # Join overstory richness and understory richness (counts) into single data frame
@@ -349,15 +353,16 @@ us.diversity <- filter(us.diversity, plotid != "bush01", plotid != "halow01",
 
 
 # Create dataframe with overstory and understory diversity metrics
-os.us.diversity <- full_join(os.diversity, us.diversity, by = "plotid")
-os.us.diversity <- full_join(os.us.diversity, richness, by = "plotid")
+os.us.diversity <- full_join(os.diversity, richness, by = "plotid")
+os.us.diversity <- full_join(os.us.diversity, us.diversity, by = "plotid")
+
 
 summary(os.us.diversity)
 os.us.diversity$plotid <- as.factor(os.us.diversity$plotid)
 filter(os.us.diversity, is.na(H.2014))
 filter(os.us.diversity, is.na(us.H.2005))
 summary(filter(os.us.diversity, plotid == "jlsp05"))# 0 understory species in 2005
-summary(filter(os.us.diversity, is.na(us.D.2011)))# 2 plots not resampled and 2 plots (ann06 & mroth03) with 0 understory species in 2011
+summary(filter(os.us.diversity, is.na(us.D.2011)))# 2 plots not resampled (mcneil01 & sumtv02) and 2 plots (ann06 & mroth03) with 0 understory species in 2011
 
 write.csv(os.us.diversity, "analysis/data/os_us_diversity.csv", row.names = F)
 #'
