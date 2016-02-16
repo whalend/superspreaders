@@ -44,7 +44,7 @@ veg_us <- rbind(veg_us_2005, veg_us_2011)
 unique(veg_us$year)
 veg_us$year[veg_us$year < 2011] <- 2005 # Creates the two most complete veg sampling
 veg_us <- veg_us %>% rename(us_species = UnderstorySp, plotid = PlotID)
-unique(veg_us$us_species)
+sort(unique(veg_us$us_species))
 
 # Change species ID to be continuous (no spaces) for plants identified to genus
 veg_us$us_species <- as.character(veg_us$us_species)
@@ -70,6 +70,7 @@ veg_us[veg_us=="cotoneaster sp"] <- "cotoneaster"
 veg_us[veg_us=="quke x quwi"] <- "qukeXquwi"
 veg_us[veg_us=="quke x quch"] <- "qukeXquch"
 veg_us[veg_us=="rosa sp."] <- "rosa"
+veg_us[veg_us=="arma"] <- "arcto"
 sort(unique(veg_us$us_species))
 
 # I want to match the species to those used by Sarah in her second chapter
@@ -209,7 +210,7 @@ stems
 stems <- select(stems, -X) %>% rename(plotid = plot)
 stems$plotid <- tolower(stems$plotid)
 unique(stems$plotid)
-stem <- filter(stems, plotid != "bush01")
+stems <- filter(stems, plotid != "bush01")
 unique(stems$species)
 stems$species <- tolower(stems$species)
 stems$species[stems$species == "quke x quag"] <- "quagXquke"
@@ -219,7 +220,7 @@ stems <- droplevels(stems)
 summary(stems)
 
 
-live_tagged <- stems %>% filter(status == "Alive") %>% 
+live_tagged <- stems %>% filter(status == "Alive", location == "In") %>% 
       group_by(plotid, year, species) %>% 
       summarise(live_count = length(species))
 unique(live_tagged$species)
