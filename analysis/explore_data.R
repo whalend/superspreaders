@@ -304,56 +304,56 @@ stems <- as.tbl(stems)
 detach("package:lubridate", unload=TRUE)# b/c it has `union` function masking the one from `dplyr` that apparently behaves a little differently, creating a list instead of a data frame
 
 
-dbh2003 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp) %>% 
+dbh2003 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp, location) %>% 
       filter(dbh>0, year == 2003) # these 2 are the same as in 2005
 # 11 observations
 
-dbh2004 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp) %>%
+dbh2004 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp, location) %>%
       filter(dbh>0, year == 2004)
 # 3109 observations
 anti_join(dbh2003, dbh2004, by = c("plotid", "tag"))# 11 DBH observations different between 2003 and 2004
 dbh_a <- union(dbh2004, dbh2003)
 
-dbh2005 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp) %>%
+dbh2005 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp, location) %>%
       filter(dbh>0, year == 2005)
-# 704 observations
+# 702 observations
 anti_join(dbh2005, dbh_a, by = c("plotid","tag")) # this indicates that the dbh data for 2003/04 and 2005 are nearly unique, 702 new DBH values at 109 plots in 2005
 # The 'union' with the 'anti_join' selects only the new records from 2005
 dbh_a <- union(dbh_a, anti_join(dbh2005, dbh_a, by = c("plotid","tag")))
 unique(dbh_a$plotid)# 204 plots on record at this point
 dbh_t1 <- dbh_a# data frame for DBH at time 1
 
-dbh2006 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp) %>%
+dbh2006 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp, location) %>%
       filter(dbh>0, year == 2006)
 anti_join(dbh2006, dbh_a, by = c("plotid","tag")) # 2004, 2005, 2006 are independent sets, 86 newly tagged DBH values in 2006
 dbh_a <- union(dbh_a, anti_join(dbh2006, dbh_a, by = c("plotid","tag")))
 
-dbh2007 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp) %>%
+dbh2007 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp, location) %>%
       filter(dbh>0, year == 2007)
 anti_join(dbh2007, dbh_a, by = c("plotid","tag")) # there is one tag with remeasured DBH in 2007 and 36 new DBH observations
 dbh_a <- union(dbh_a, anti_join(dbh2007, dbh_a, by = c("plotid","tag")))
 anyDuplicated(dbh_a$tag)# check for any repeated tags, stops at first encounter
 
-dbh2008 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp) %>%
+dbh2008 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp, location) %>%
       filter(dbh>0, year == 2008)
 anti_join(dbh2008, dbh_a, by = c("plotid","tag"))# 12 new DBH observations
 dbh_a <- union(dbh_a, anti_join(dbh2008, dbh_a, by = c("plotid","tag")))
 
-dbh2009 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp) %>%
+dbh2009 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp, location) %>%
       filter(dbh>0, year == 2009)
 anti_join(dbh2009, dbh_a, by = c("plotid","tag"))# 21 new DBH observations
 dbh_a <- union(dbh_a, anti_join(dbh2009, dbh_a, by = c("plotid","tag")))
 
-dbh2010 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp) %>%
+dbh2010 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp, location) %>%
       filter(dbh>0, year == 2010)
 anti_join(dbh2009, dbh_a, by = c("plotid","tag")) # no unique DBH values for 2010, so no new recruitment or stems entering the study, just remeasurement of 109 stems
 
-dbh2011 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp) %>%
+dbh2011 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp, location) %>%
       filter(dbh>0, year == 2011)
 anti_join(dbh2011, dbh_a, by = c("plotid","tag"))# 74 new DBH observations
 dbh_a <- union(dbh_a, anti_join(dbh2011, dbh_a, by = c("plotid","tag")))
 
-dbh2012 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp) %>%
+dbh2012 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp, location) %>%
       filter(dbh>0, year == 2012)# remeasured all stems
 anti_join(dbh2012, dbh_a, by = c("plotid","tag"))# 289 new DBH observations (maybe...)
 dbh_a <- union(dbh_a, anti_join(dbh2012, dbh_a, by = c("plotid","tag")))
@@ -373,12 +373,12 @@ anyDuplicated(dbh_a$tag)
 length(unique(dbh_a$plotid)); length(unique(dbh_t1$plotid))
 
 
-dbh2014 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp) %>%
+dbh2014 <- stems %>% select(plotid, tag, species, status, dbh, year, date, slc, canker, sod_dead, lide_lf_symp, location) %>%
       filter(dbh>0, year == 2014)
 anyDuplicated(dbh2014$tag)# 1852 duplicated tags, WTF? 
 filter(dbh2014, duplicated(tag))# nope, that's the row number
 filter(dbh2014, tag == 4194)
-# dbh2014 <- dbh2014[-1852,]
+dbh2014 <- filter(dbh2014, tag != 4194 | date != "2012-05-14")
 summary(dbh2014)
 
 anti_join(dbh2014, dbh_a, by = "tag") # this inidcates that there are 113 stems that were measured for the first time in 2014
