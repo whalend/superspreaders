@@ -2,15 +2,142 @@
 title: "Vegetation Change Assessment - SOD Plots in Sonoma County"
 author: "Whalen Dillon"
 date: "February 15, 2016"
-output: html_document
-
+output: 
+  html_document:
+    toc: true
 ---
 
 
+```{r read in data, echo=F, results='hide', message=FALSE}
+library(plyr, verbose = F); library(dplyr, verbose = F);
+library(ggplot2, verbose = F); library(tidyr, verbose = F)
+
+# Tagged Stems
+stems <- as.tbl(read.csv("analysis/data/stems_noBUSH01.csv"))
+stems
+stems$plotid <- tolower(stems$plotid)
+stems$species <- tolower(stems$species)
+
+# Overstory species data of tagged and untagged stems
+tag_dbh_plot <- as.tbl(read.csv("analysis/data/tag-dbh-plot.csv"))
+tag_dbh_plot
+tag_dbh_plot$plotid <- tolower(tag_dbh_plot$plotid)
+tag_dbh_plot$species <- tolower(tag_dbh_plot$species)
+tag_dbh_stem <- as.tbl(read.csv("analysis/data/tag-dbh_0514-corrected.csv"))
+tag_dbh_stem
+tag_dbh_stem$plotid <- tolower(tag_dbh_stem$plotid)
+tag_dbh_stem$species <- tolower(tag_dbh_stem$species)
+alt_dbh_plot <- as.tbl(read.csv("analysis/data/alt-dbh-plot.csv"))
+alt_dbh_plot
+alt_dbh_stem <- as.tbl(read.csv("analysis/data/alt-species-dbh-corrected.csv"))
+alt_dbh_stem
+
+unique(alt_dbh_plot$plotid) %in% unique(tag_dbh_plot$plotid)
+unique(alt_dbh_plot$plotid)[c(25,47,61,74,112,174,180)]
+# ann28: abandoned early b/c no hosts, remove
+# badge01: no hosts, kept in study
+# bush01, halow01, sweet01: abandoned early, remove
+# mcneil01, votru01: not sampled in 2014, remove
+alt_dbh_plot <- filter(alt_dbh_plot, plotid != "ann28", plotid != "bush01", plotid != "halow01", plotid != "sweet01", plotid != "mcneil01", plotid != "votru01")
+os_dbh_plot <- rbind(
+      select(tag_dbh_plot, plotid, species, status, year, everything()), 
+      select(alt_dbh_plot, -tot_dbh, -avg_dbh))
+sort(unique(os_dbh_plot$species))
+
+# Understory species data from microplots of veg transects
+veg_sub <- as.tbl(read.csv("analysis/data/us-veg-sub.csv"))
+veg_sub
+sort(unique(veg_sub$us_species))
+
+# Understory and overstory diversity/evenness calculations
+richness <- as.tbl(read.csv("analysis/data/os_us_diversity.csv"))
+richness
+
+# Importance Values
+imp_val_plot <- as.tbl(read.csv("analysis/data/species_dbh_impval_plot.csv"))
+imp_val_plot
+imp_val_plot <- select(imp_val_plot, -X)
+summary(imp_val_plot)
+```
 
 
 
-```{r}
+```{r number of species, echo=F}
+length(unique(os_dbh_plot$species))
+length(unique(veg_sub$us_species))
+ggplot(veg_sub %>% group_by(plotid, year, us_species), 
+       aes(us_species)) +
+      geom_bar()
+
+# Get total number of plots each understory species occurred in at least once
+ggplot(veg_sub %>% group_by(year, us_species) %>% 
+             summarise(abundance = length(plotid)), 
+       aes(us_species, abundance)) +
+      geom_bar(stat = "identity") +
+      facet_grid(year ~.)
+
+# Plot total number of plots each overstory species occurred in at least once
+ggplot(os_dbh_plot %>% filter(status == "Alive") %>% 
+             group_by(year, species) %>% 
+             summarise(abundance = length(plotid)), 
+       aes(species, abundance)) +
+      geom_bar(stat = "identity") +
+      facet_grid(year ~.)
+```
+
+```{r number of overstory species}
+# Plot total number of living stems for each overstory species by year
+ggplot(os_dbh_plot %>% filter(status == "Alive") %>% 
+             group_by(year, species), 
+       aes(species, abundance)) +
+      geom_bar(stat = "identity") +
+      facet_grid(year ~.)
+
+os_abund <- os_dbh_plot %>% 
+      filter(status == "Alive") %>%
+      group_by(year, species) %>% 
+      summarise(abundance = sum(abundance)) %>% 
+      spread(species, abundance)
+      
+
+## same as above, but filtering out the super-abundant UMCA
+ggplot(os_dbh_plot %>% filter(status == "Alive", species != "umca") %>% 
+             group_by(year, species), 
+       aes(species, abundance)) +
+      geom_bar(stat = "identity") +
+      facet_grid(year ~.)
+```
+
+
+```{r plotting, echo=F}
+ggplot(data = os_dbh_plot,
+       aes(species, tot_ba_m2, label = plotid)) +
+      geom_boxplot() +
+      facet_grid(status ~ year) +
+      #geom_text() +
+      ylab("Basal Area (m^2)")
+
+filter(dbhs, plotid == "SUGAR05", species == "QUAG")
+# new giant dead stem in 2014, was probably dead entire study period
+
+ggplot(data = basal_abund,
+       aes(species, abundance)) +
+      geom_boxplot() +
+      facet_grid(status ~ year) +
+      #geom_text() +
+      ylab("Abundance")
+
+ggplot(basal_abund %>% filter(status == "Alive"), aes(tot_ba_m2)) + 
+      geom_histogram() +
+      facet_grid(species ~ year)
+ggplot(basal_abund %>% filter(status == "Alive"), aes(avg_ba_m2)) + 
+      geom_histogram() +
+      facet_grid(species ~ year)
+ggplot(basal_abund %>% filter(status == "Alive"), aes(abundance)) + 
+      geom_histogram() +
+      facet_grid(species ~ year)
+
+
 boxplot(tot_ba_m2 ~ year, 
         data = basal_abund %>% filter(status == "Alive", species == "UMCA"),
         ylab = "m^2",
@@ -41,33 +168,5 @@ boxplot(tot_ba_m2 ~ year,
         data = basal_abund %>% filter(status == "Dead", species == "QUAG"),
         ylab = "Number of stems",
         main = "Dead QUAG Abundance")
-
-
-ggplot(data = basal_abund,
-       aes(species, tot_ba_m2, label = plotid)) +
-      geom_boxplot() +
-      facet_grid(status ~ year) +
-      geom_text() +
-      ylab("Basal Area (m^2)")
-
-filter(dbhs, plotid == "SUGAR05", species == "QUAG")
-# new giant dead stem in 2014, was probably dead entire study period
-
-ggplot(data = basal_abund,
-       aes(species, abundance)) +
-      geom_boxplot() +
-      facet_grid(status ~ year) +
-      #geom_text() +
-      ylab("Abundance")
-
-ggplot(basal_abund %>% filter(status == "Alive"), aes(tot_ba_m2)) + 
-      geom_histogram() +
-      facet_grid(species ~ year)
-ggplot(basal_abund %>% filter(status == "Alive"), aes(avg_ba_m2)) + 
-      geom_histogram() +
-      facet_grid(species ~ year)
-ggplot(basal_abund %>% filter(status == "Alive"), aes(abundance)) + 
-      geom_histogram() +
-      facet_grid(species ~ year)
 ```
 
