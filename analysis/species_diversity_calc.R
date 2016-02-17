@@ -71,23 +71,26 @@ veg_us[veg_us=="quke x quwi"] <- "qukeXquwi"
 veg_us[veg_us=="quke x quch"] <- "qukeXquch"
 veg_us[veg_us=="rosa sp."] <- "rosa"
 veg_us[veg_us=="arma"] <- "arcto"
+veg_us <- filter(veg_us, us_species != "dead wood")
 sort(unique(veg_us$us_species))
+write.csv(veg_us, "analysis/data/us-veg.csv", row.names = F)
 
 # I want to match the species to those used by Sarah in her second chapter
 local_woody <- read.csv("analysis/data/presence_local_woody_n197.csv")
 summary(local_woody)
 sort(unique(local_woody$spp.local))
 woody_spp <- as.character(local_woody$spp.local)
+woody_spp <- woody_spp[woody_spp != "arma" & woody_spp != "other"]
 
-sort(woody_spp) # only 29 species
+sort(woody_spp) # 27 species
 sort(unique(veg_us$us_species))# 79 species
 # It looks like I will want to add a few more to her list
 
 # Add other selected woody species to the list for inclusion in species richness/diversity/evenness calculations
 woody_spp <- c(woody_spp, "ceanothus", "cebe", "cecu", "frla", "garrya", "gemo", "juca", "mafu", "mane", "mimulus", "pisa", "quagXquke", "qube", "qusp", "quwi", "rhamnus", "rhcr", "ribes", "rica", "risa", "roca", "rosa", "rubus", "rudi", "salix", "syal", "vacc")
-veg_sub <- filter(veg_us, veg_us$us_species %in% woody_spp)# 56 species
+veg_sub <- filter(veg_us, veg_us$us_species %in% woody_spp)
 veg_sub <- droplevels(veg_sub)# drop the unused levels from veg species
-sort(unique(veg_sub$us_species))
+sort(unique(veg_sub$us_species))# 54
 # change all arctostaphylus identifications to the genus
 veg_sub[veg_sub=="arma"] <- "arcto"
 
@@ -95,15 +98,30 @@ write.csv(veg_sub, "analysis/data/us-veg-sub.csv", row.names = F)
 
 # Calculate basic richness as number of different species in each plot each year
 us_richness <- full_join(
+      veg_us %>% filter(year == 2005) %>% group_by(plotid) %>% 
+            summarise(us_rich05 = length(unique(us_species))),
+      veg_us %>% filter(year == 2011) %>% group_by(plotid) %>% 
+            summarise(us_rich11 = length(unique(us_species))),
+      by = "plotid")
+summary(us_richness)
+filter(us_richness, is.na(us_rich05)); filter(us_richness, is.na(us_rich11))
+us_richness <- filter(us_richness, plotid != "bush01", plotid != "halow01",
+                      plotid != "sweet01")
+us_richness$us_rich05[us_richness$plotid=="jlsp05"] <- 0
+us_richness$us_rich05[us_richness$plotid=="ann06"] <- 0
+us_richness$us_rich05[us_richness$plotid=="mroth03"] <- 0
+
+
+us_sub_richness <- full_join(
       veg_sub %>% filter(year == 2005) %>% group_by(plotid) %>% 
             summarise(us_rich05 = length(unique(us_species))),
       veg_sub %>% filter(year == 2011) %>% group_by(plotid) %>% 
             summarise(us_rich11 = length(unique(us_species))),
       by = "plotid")
-summary(us_richness)
-filter(us_richness, is.na(us_rich11))
+summary(us_sub_richness)
+filter(us_sub_richness, is.na(us_rich11)); filter(us_sub_richness, is.na(us_rich05))
 # remove plots abandoned early in study
-us_richness <- filter(us_richness, 
+us_sub_richness <- filter(us_sub_richness, 
                       plotid != "bush01", plotid != "halow01",
                       plotid != "sweet01")
 # mcneil01 was lost in 2009 (road built through plot), so NA for later years
@@ -111,43 +129,74 @@ us_richness <- filter(us_richness,
 # ann06 and mroth03 are actually zeroes for understory species in 2011
 us_richness$us_rich11[us_richness$plotid=="ann06"] <- 0
 us_richness$us_rich11[us_richness$plotid=="mroth03"] <- 0
+us_richness$us_rich11[us_richness$plotid=="jlsp05"] <- 0
 # This leaves two legitimate NAs for understory species in 2011
-
-filter(us_richness, is.na(us_rich05))# this should be zero for 2005
-us_richness$us_rich05[us_richness$plotid=="jlsp05"] <- 0
 
 
 # 2005 vegetation data proportional species coverage
-veg_us_2005_pcov <- veg_sub %>% filter(year == 2005) %>%
+us_2005_pcov <- veg_us %>% filter(year == 2005) %>%
       ungroup(.) %>% 
       select(plotid, us_species, pcov)
-veg_us_2005_pcov <- veg_us_2005_pcov %>% spread(us_species, pcov)
-summary(veg_us_2005_pcov)
-veg_us_2005_pcov[is.na(veg_us_2005_pcov)] <- 0
+us_2005_pcov <- us_2005_pcov %>% spread(us_species, pcov)
+summary(us_2005_pcov)
+us_2005_pcov[is.na(us_2005_pcov)] <- 0
+
+us_sub_2005_pcov <- veg_sub %>% filter(year == 2005) %>%
+      ungroup(.) %>% 
+      select(plotid, us_species, pcov)
+us_sub_2005_pcov <- us_sub_2005_pcov %>% spread(us_species, pcov)
+summary(us_sub_2005_pcov)
+us_sub_2005_pcov[is.na(us_sub_2005_pcov)] <- 0
+
 # 2005 vegetation data point count species coverage, proxy for abundance
-veg_us_2005_ptct <- veg_sub %>% filter(year == 2005) %>% 
+us_2005_ptct <- veg_us %>% filter(year == 2005) %>% 
       ungroup(.) %>% 
       select(plotid, us_species, ptct)
-veg_us_2005_ptct <- veg_us_2005_ptct %>% spread(us_species, ptct)
-summary(veg_us_2005_ptct)
+us_2005_ptct <- us_2005_ptct %>% spread(us_species, ptct)
+summary(us_2005_ptct)
 # assign zeroes to species with NA b/c they weren't observed in that plot
-veg_us_2005_ptct[is.na(veg_us_2005_ptct)] <- 0
+us_2005_ptct[is.na(us_2005_ptct)] <- 0
+
+us_sub_2005_ptct <- veg_sub %>% filter(year == 2005) %>% 
+      ungroup(.) %>% 
+      select(plotid, us_species, ptct)
+us_sub_2005_ptct <- us_sub_2005_ptct %>% spread(us_species, ptct)
+summary(us_sub_2005_ptct)
+# assign zeroes to species with NA b/c they weren't observed in that plot
+us_sub_2005_ptct[is.na(us_sub_2005_ptct)] <- 0
+
 
 # 2011 vegetation data proportianal species coverage
-veg_us_2011_pcov <- veg_sub %>% filter(year == 2011) %>% 
+us_2011_pcov <- veg_us %>% filter(year == 2011) %>% 
       ungroup(.) %>% 
       select(plotid, us_species, pcov)
-veg_us_2011_pcov <- veg_us_2011_pcov %>% spread(us_species, pcov)
-summary(veg_us_2011_pcov)
-veg_us_2011_pcov[is.na(veg_us_2011_pcov)] <- 0
+us_2011_pcov <- us_2011_pcov %>% spread(us_species, pcov)
+summary(us_2011_pcov)
+us_2011_pcov[is.na(us_2011_pcov)] <- 0
+
+us_sub_2011_pcov <- veg_sub %>% filter(year == 2011) %>% 
+      ungroup(.) %>% 
+      select(plotid, us_species, pcov)
+us_sub_2011_pcov <- us_sub_2011_pcov %>% spread(us_species, pcov)
+summary(us_sub_2011_pcov)
+us_sub_2011_pcov[is.na(us_sub_2011_pcov)] <- 0
+
 # 2011 vegetation data point count species coverage, proxy for abundance
-veg_us_2011_ptct <-  veg_sub %>% filter(year == 2011) %>% 
+us_2011_ptct <-  veg_us %>% filter(year == 2011) %>% 
       ungroup(.) %>% 
       select(plotid, us_species, ptct)
-veg_us_2011_ptct <- veg_us_2011_ptct %>% spread(us_species, ptct)
-summary(veg_us_2011_ptct)
+us_2011_ptct <- us_2011_ptct %>% spread(us_species, ptct)
+summary(us_2011_ptct)
 # assign zeroes to species with NA b/c they weren't observed in that plot
-veg_us_2011_ptct[is.na(veg_us_2011_ptct)] <- 0
+us_2011_ptct[is.na(us_2011_ptct)] <- 0
+
+us_sub_2011_ptct <-  veg_sub %>% filter(year == 2011) %>% 
+      ungroup(.) %>% 
+      select(plotid, us_species, ptct)
+us_sub_2011_ptct <- us_sub_2011_ptct %>% spread(us_species, ptct)
+summary(us_sub_2011_ptct)
+# assign zeroes to species with NA b/c they weren't observed in that plot
+us_sub_2011_ptct[is.na(us_sub_2011_ptct)] <- 0
 
 
 
@@ -201,26 +250,13 @@ untagged_dbh_2014 %>% group_by(plotid, year) %>% summarise(untagged_rich = lengt
 
 
 # Calculate the richness of the tagged stems ####
-stems <- as.tbl(stems)
-summary(stems)
-unique(stems$status)
-stems <- stems %>% filter(status == "Alive" | status == "Dead")# filter out missing/removed stems
-stems <- droplevels(stems)
+stems <- as.tbl(read.csv("analysis/data/tag-dbh_0514-corrected.csv"))
 stems
-stems <- select(stems, -X) %>% rename(plotid = plot)
 stems$plotid <- tolower(stems$plotid)
-unique(stems$plotid)
-stems <- filter(stems, plotid != "bush01")
-unique(stems$species)
 stems$species <- tolower(stems$species)
-stems$species[stems$species == "quke x quag"] <- "quagXquke"
-stems$species[stems$species == "unknown sp."] <- "unk1"
-stems$species[stems$species == "quag x quwi"] <- "quagXquwi"
-stems <- droplevels(stems)
-summary(stems)
 
-
-live_tagged <- stems %>% filter(status == "Alive", location == "In") %>% 
+live_tagged <- stems %>% 
+      filter(status == "Alive", location == "In", dbh >= 2.0) %>% 
       group_by(plotid, year, species) %>% 
       summarise(live_count = length(species))
 unique(live_tagged$species)
@@ -233,7 +269,7 @@ filter(untagged_dbh_2014, plotid == "ganay02")
 
 tagged_abund_2005 <- live_tagged %>% filter(year == 2005)
 tagged_abund_2005 <- ungroup(tagged_abund_2005) %>% select(-year)
-length(unique(tagged_abund_2005$plotid))# 200 plots
+length(unique(tagged_abund_2005$plotid))# 195 plots
 
 tagged_abund_2014 <- live_tagged %>% filter(year == 2014)
 tagged_abund_2014 <- ungroup(tagged_abund_2014) %>% select(-year)
@@ -272,7 +308,7 @@ summary(richness)
 filter(richness, is.na(us_rich05))
 filter(richness, is.na(us_rich11))
 filter(richness, is.na(os_rich14))
-richness <- filter(richness, plotid != "bush01")
+richness <- filter(richness, plotid != "sumtv02")
 
 
 #' ## Calculate Diversity Indices
@@ -316,30 +352,32 @@ os.diversity <- filter(os.diversity, plotid != "ann28", plotid != "bush01",
 
 # Understory Diversity - based on transect point counts ####
 ## I'm not sure it is appropriate to use Shannon's or Pielou's because these aren't true species counts, just whether or not a species was represented at least once within a microplot.
-H.2005 <- diversity(select(veg_us_2005_ptct, -plotid), index = "shannon", MARGIN = 1, base = exp(1))
+
+# Calculation with full set of understory species
+H.2005 <- diversity(select(us_2005_ptct, -plotid), index = "shannon", MARGIN = 1, base = exp(1))
 # H.2005a <- diversity(select(veg_us_2005_pcov, -plotid), index = "shannon", MARGIN = 1, base = exp(1)) # gives precisely same results
 # cor(H.2005,H.2005a)
-D.2005 <- diversity(select(veg_us_2005_ptct, -plotid), index = "simpson")
-inv.D.2005 <- diversity(select(veg_us_2005_ptct, -plotid), index = "invsimpson")
-H.2011 <- diversity(select(veg_us_2011_ptct, -plotid), index = "shannon", MARGIN = 1, base = exp(1))
-D.2011 <- diversity(select(veg_us_2011_ptct, -plotid), index = "simpson")
-inv.D.2011 <- diversity(select(veg_us_2011_ptct, -plotid), index = "invsimpson")
+D.2005 <- diversity(select(us_2005_ptct, -plotid), index = "simpson")
+inv.D.2005 <- diversity(select(us_2005_ptct, -plotid), index = "invsimpson")
+H.2011 <- diversity(select(us_2011_ptct, -plotid), index = "shannon", MARGIN = 1, base = exp(1))
+D.2011 <- diversity(select(us_2011_ptct, -plotid), index = "simpson")
+inv.D.2011 <- diversity(select(us_2011_ptct, -plotid), index = "invsimpson")
 
 # Calculate Pielou's evenness for the understory data
-us.J.2005 <- H.2005/log1p(specnumber(select(veg_us_2005_ptct, -plotid)))
-us.J.2011 <- H.2011/log1p(specnumber(select(veg_us_2011_ptct, -plotid)))
+us.J.2005 <- H.2005/log1p(specnumber(select(us_2005_ptct, -plotid)))
+us.J.2011 <- H.2011/log1p(specnumber(select(us_2011_ptct, -plotid)))
 
 # Calculate Simpson's evnenness for understory data
-us.E.2005 <- D.2005/specnumber(select(veg_us_2005_ptct, -plotid))
-us.E.inv.2005 <- inv.D.2005/specnumber(select(veg_us_2005_ptct, -plotid))
-us.E.2011 <- D.2011/specnumber(select(veg_us_2011_ptct, -plotid))
-us.E.inv.2011 <- inv.D.2011/specnumber(select(veg_us_2011_ptct, -plotid))
+us.E.2005 <- D.2005/specnumber(select(us_2005_ptct, -plotid))
+us.E.inv.2005 <- inv.D.2005/specnumber(select(us_2005_ptct, -plotid))
+us.E.2011 <- D.2011/specnumber(select(us_2011_ptct, -plotid))
+us.E.inv.2011 <- inv.D.2011/specnumber(select(us_2011_ptct, -plotid))
 
 
 # Create data frame with understory diversity metrics
-diversity.2005 <- select(veg_us_2005_ptct, plotid) %>% 
+diversity.2005 <- select(us_2005_ptct, plotid) %>% 
       mutate(us.H.2005 = H.2005, us.D.2005 = D.2005, us.inv.D.2005 = inv.D.2005, us.J.2005 = us.J.2005, us.E.2005 = us.E.2005, us.E.inv.2005 = us.E.inv.2005)
-diversity.2011 <- select(veg_us_2011_ptct, plotid) %>% 
+diversity.2011 <- select(us_2011_ptct, plotid) %>% 
       mutate(us.H.2011 = H.2011, us.D.2011 = D.2011, us.inv.D.2011 = inv.D.2011, us.J.2011 = us.J.2011, us.E.2011 = us.E.2011, us.E.inv.2011 = us.E.inv.2011)
 
 us.diversity <- full_join(diversity.2005, diversity.2011, by = "plotid")
@@ -353,7 +391,52 @@ us.diversity <- filter(us.diversity, plotid != "bush01", plotid != "halow01",
 # mcneil01 & sumtv02 were abandoned prior to the 2011 season
 
 
-# Create dataframe with overstory and understory diversity metrics
+
+# Diversity calculation with subset of understory species
+H.2005 <- diversity(select(us_sub_2005_ptct, -plotid), index = "shannon", MARGIN = 1, base = exp(1))
+# H.2005a <- diversity(select(veg_us_2005_pcov, -plotid), index = "shannon", MARGIN = 1, base = exp(1)) # gives precisely same results
+# cor(H.2005,H.2005a)
+D.2005 <- diversity(select(us_sub_2005_ptct, -plotid), index = "simpson")
+inv.D.2005 <- diversity(select(us_sub_2005_ptct, -plotid), index = "invsimpson")
+H.2011 <- diversity(select(us_sub_2011_ptct, -plotid), index = "shannon", MARGIN = 1, base = exp(1))
+D.2011 <- diversity(select(us_sub_2011_ptct, -plotid), index = "simpson")
+inv.D.2011 <- diversity(select(us_sub_2011_ptct, -plotid), index = "invsimpson")
+
+# Calculate Pielou's evenness for the understory data
+us.J.2005 <- H.2005/log1p(specnumber(select(us_sub_2005_ptct, -plotid)))
+us.J.2011 <- H.2011/log1p(specnumber(select(us_sub_2011_ptct, -plotid)))
+
+# Calculate Simpson's evnenness for understory data
+us.E.2005 <- D.2005/specnumber(select(us_sub_2005_ptct, -plotid))
+us.E.inv.2005 <- inv.D.2005/specnumber(select(us_sub_2005_ptct, -plotid))
+us.E.2011 <- D.2011/specnumber(select(us_sub_2011_ptct, -plotid))
+us.E.inv.2011 <- inv.D.2011/specnumber(select(us_sub_2011_ptct, -plotid))
+
+# Create data frame with understory diversity metrics
+diversity.2005 <- select(us_sub_2005_ptct, plotid) %>% 
+      mutate(us.H.2005 = H.2005, us.D.2005 = D.2005, us.inv.D.2005 = inv.D.2005, us.J.2005 = us.J.2005, us.E.2005 = us.E.2005, us.E.inv.2005 = us.E.inv.2005)
+diversity.2011 <- select(us_sub_2011_ptct, plotid) %>% 
+      mutate(us.H.2011 = H.2011, us.D.2011 = D.2011, us.inv.D.2011 = inv.D.2011, us.J.2011 = us.J.2011, us.E.2011 = us.E.2011, us.E.inv.2011 = us.E.inv.2011)
+
+us_sub.diversity <- full_join(diversity.2005, diversity.2011, by = "plotid")
+summary(us_sub.diversity)
+filter(us_sub.diversity, is.na(us.H.2005))# calculation with 0 richness = NAs
+filter(us_sub.diversity, is.na(us.H.2011))
+# remove abandoned plots
+us_sub.diversity <- filter(us_sub.diversity, plotid != "bush01", 
+                           plotid != "halow01", plotid != "sweet01")
+# ann06 & mroth03 had 0 for understory species richness in 2011
+# mcneil01 & sumtv02 were abandoned prior to the 2011 season
+
+summary(us.diversity)
+summary(us_sub.diversity)
+left_join(us.diversity, us_sub.diversity, by = "plotid")
+pairs(na.omit(left_join(us.diversity, us_sub.diversity, by = "plotid")) %>% select(-plotid),
+      lower.panel = panel.cor, diag.panel = panel.hist)
+## correlations between metrics calculated with different data >0.99
+
+
+# Create dataframe with overstory and understory diversity metrics ####
 os.us.diversity <- full_join(os.diversity, richness, by = "plotid")
 os.us.diversity <- full_join(os.us.diversity, us.diversity, by = "plotid")
 
