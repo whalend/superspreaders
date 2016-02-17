@@ -151,7 +151,7 @@ unique(veg_us$UnderstorySp)
 # summary(filter(veg_us, UnderstorySp == "OPEN"))
 veg_us[veg_us == -9999] <- NA
 veg_us$UnderstorySp[veg_us$UnderstorySp == "none"] <- "open"
-veg_us$UnderstorySp[veg_us$UnderstorySp == "arcto sp."] <- "arcto"
+veg_us$UnderstorySp[veg_us$UnderstorySp == "arcto sp." | veg_us$UnderstorySp == "arma"] <- "arcto"
 filter(veg_us, UnderstorySp == "vasp")
 
 unique(filter(veg_us, PlotID == "ann33", year == 2005)$UnderstorySp)
@@ -219,6 +219,8 @@ veg_us$UnderstorySp[veg_us$UnderstorySp == "rosa" | veg_us$UnderstorySp == "rosp
 veg_us$UnderstorySp[veg_us$UnderstorySp == "rubu sp."] <- "rusp"
 veg_us$UnderstorySp[veg_us$UnderstorySp == "rhsp"] <- "rhamnus sp."
 veg_us$UnderstorySp[veg_us$UnderstorySp == "garry sp."] <- "garrya sp."
+veg_us$UnderstorySp[veg_us$UnderstorySp == "rose sp."] <- "rosa sp."
+veg_us$UnderstorySp[veg_us$UnderstorySp == "ribes sp."] <- "ribes"
 
 filter(veg_us, UnderstorySp == "asca") # I suspect this was supposed to be "aeca", even thou "asca" is written on the data sheet
 filter(veg_us, PlotID == "bouv03", PtNum == 6)
@@ -240,7 +242,7 @@ veg_us_summ <- left_join(veg_us %>% filter(UnderstorySp != "", UnderstorySp != "
 veg_us_summ <- mutate(veg_us_summ, pcov = ptct/totpts)
 veg_us_summ
 summary(veg_us_summ)
-unique(veg_us_summ$UnderstorySp)
+sort(unique(veg_us_summ$UnderstorySp))
 
 veg_us_2011 <- filter(veg_us_summ, year == 2011)
 veg_us_2005 <- filter(veg_us_summ, year < 2011)
