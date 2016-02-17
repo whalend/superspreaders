@@ -450,8 +450,8 @@ boxplot(dbh ~ year,
 
 
 basal_abund <- dbhs %>% 
-      #filter(status == "Alive") %>% 
-      group_by(plotid, species, year, status) %>% 
+      filter(dbh >= 2.0) %>% 
+      group_by(plotid, species, year, status, location) %>% 
       summarise(avg_ba_m2 = mean(pi*dbh^2/40000, na.rm = T), 
                 tot_ba_m2 = sum(pi*dbh^2/40000, na.rm = T),
                 abundance = length(dbh))
