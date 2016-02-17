@@ -39,12 +39,25 @@ unique(alt_dbh_plot$plotid)[c(25,47,61,74,112,174,180)]
 # bush01, halow01, sweet01: abandoned early, remove
 # mcneil01, votru01: not sampled in 2014, remove
 alt_dbh_plot <- filter(alt_dbh_plot, plotid != "ann28", plotid != "bush01", plotid != "halow01", plotid != "sweet01", plotid != "mcneil01", plotid != "votru01")
-os_dbh_plot <- rbind(
-      select(tag_dbh_plot, plotid, species, status, year, everything()), 
+
+# Overstory species w/measured DBH rooted in the plot
+os_dbh_in_plot <- rbind(
+      tag_dbh_plot %>% filter(location == "In") %>% 
+            select(plotid, species, status, year, everything(), -location), 
       select(alt_dbh_plot, -tot_dbh, -avg_dbh))
-sort(unique(os_dbh_plot$species))
+sort(unique(os_dbh_in_plot$species))
+
+# Overstory species w/measured DBH in or overhanging the plot
+os_dbh_plot <- rbind(
+      tag_dbh_plot %>% group_by(plotid, species, status, year) %>% 
+            summarise(tot_ba_m2 = sum(tot_ba_m2), avg_ba_m2 = sum(tot_ba_m2)/sum(abundance),
+                      abundance = sum(abundance)), 
+      select(alt_dbh_plot, -tot_dbh, -avg_dbh))
 
 # Understory species data from microplots of veg transects
+veg_us <- as.tbl(read.csv("analysis/data/us-veg.csv"))
+veg_us
+sort(unique(veg_us$us_species))
 veg_sub <- as.tbl(read.csv("analysis/data/us-veg-sub.csv"))
 veg_sub
 sort(unique(veg_sub$us_species))
@@ -54,13 +67,34 @@ richness <- as.tbl(read.csv("analysis/data/os_us_diversity.csv"))
 richness
 
 # Importance Values
-imp_val_plot <- as.tbl(read.csv("analysis/data/species_dbh_impval_plot.csv"))
-imp_val_plot
-imp_val_plot <- select(imp_val_plot, -X)
-summary(imp_val_plot)
+# imp_val_plot <- as.tbl(read.csv("analysis/data/species_dbh_impval_plot.csv"))
+# imp_val_plot# importance value by plot-species-year
+# imp_val_plot <- select(imp_val_plot, -X)
+# summary(imp_val_plot)
+# arrange(select(imp_val_plot, plotid, species, year, live.ct = live_count, all.live.ct = all_live_count, live.tot.dbh = live_tot_dbh, all.live.dbh = all_live_dbh, imp.val = imp_value) %>% filter(year == 2014), plotid)
+# unique(imp_val_plot$plotid)
+
+impt_vals <- rbind(tag_dbh_stem %>% filter(location == "In") %>% 
+                         select(plotid, species, dbh, status, year), 
+                   alt_dbh_stem) %>% 
+      group_by(plotid, species, status, year) %>% 
+      summarise(sp_abund = length(species), sp_dbh = sum(dbh)) %>% 
+      group_by(plotid, status, year) %>% 
+      mutate(total_abund = sum(sp_abund), total_dbh = sum(sp_dbh), 
+                imp_val =  0.5*( (sp_abund / total_abund) + (sp_dbh / total_dbh) ) )
+summary(impt_vals)
+unique(impt_vals$plotid)
 ```
 
 
+## Visualize Species Occurrence and Abundance
+We collected data on overstory and understory woody plant species to varying degrees throughout the study period. Overstory host species were assessed every year, so recruitment of new stems or death of existing stems was recorded, however, DBH measurements were initially only recorded at the first instance of a stem entering the study. We measured the DBH of untagged stems rooted in the plot and all tagged stems again in 2012. At this time we switched from an annual to bi-annual sampling cycle and decided that each time we visited the plots we would measure the DBH of all the overstory stems. Thus, the most recent DBH measurements are from the 2014 sampling season.
+
+The understory species data was collected at two time points, 2005 and 2011. In 2005, Xnumber transects with Ynumber microplots each... Prior to doing the understory vegetation assessment in 2011 we conducted an analysis to assess the effort necessary to sufficiently collect comparable data. We repeatedly randomly sampled 50% of the entire dataset from 2005 and compared univariate statistics between this and the full dataset. Correlations were very strong (r > 0.9) and rare species were seldom missing from the smaller dataset.
+
+During the 2011 season we used five transects across each plot with 0.5m radius microplots spaced at 1.3m intervals resulting in ~60 microplots per plot (12 per transect). Baselines were run between posts placed at plot plot establishment to clearly demarcate the plot edges. In some cases the distance between baselines was slightly greater or less than 15m, resulting in more or total number of microplots. At each microplot we recorded the occurrence of woody plant species that were rooted in or overhanging the microplot, and did not meet DBH requirements. 
+
+Initially 80 "species" in the understory vegetation data set, however, this list included two unknowns and "dead wood." We grouped some species to the genus level due to low confidence in species level identification, e.g. *Arctostaphylus* and removed the "dead wood" observation, reducing this to 77 species. 
 
 ```{r number of species, echo=F}
 length(unique(os_dbh_plot$species))
