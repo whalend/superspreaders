@@ -18,19 +18,19 @@ stems$year <- as.factor(stems$year)
 
 #' Create bay laurel only data frame ####
 umca <- as.tbl(stems) %>%
-      select(plotid, cluster, tag, species, status, slc, dbh, delta_dbh, dbh2_1_ratio, year, date) %>%
+      select(plot, cluster, tag, species, status, slc, dbh, delta_dbh, dbh2_1_ratio, year, date) %>%
       filter(species == "UMCA", status == "Alive" | status == "Dead")
 summary(umca)
 umca <- droplevels(umca)
 
 #' Develop plot level summaries data frame and join to stems data frame ####
 umca <- left_join(umca, plot_umca <- umca %>%
-      select(plotid, cluster, tag, status, slc, year) %>% 
-      group_by(plotid, year) %>%
+      select(plot, cluster, tag, status, slc, year) %>% 
+      group_by(plot, year) %>%
       filter(slc != "NA" & status == "Alive") %>%
       summarise(avg_slc = mean(slc), tot_slc = sum(slc), 
                 live_dens = length(tag)), 
-      by = c("plotid", "year"))
+      by = c("plot", "year"))
 summary(umca)# One NA in the summarized leaf count variables
 filter(umca, is.na(avg_slc))
 filter(umca, plot == "YAHNG02")# Looks like leaf count probably not done/recorded
@@ -67,24 +67,24 @@ library(lme4)
 
 #' Simplest models, with only one random effect (random intercept)
 m0 <- lmer(tot_slc ~ 1 + (1 | year), data = plot_umca)
-m0a <- lmer(tot_slc ~ 1 + (1 | plotid), data = plot_umca)
+m0a <- lmer(tot_slc ~ 1 + (1 | plot), data = plot_umca)
 #' Add a second random effect where plot is nested within year
-m0b <- lmer(tot_slc ~ 1 + (1 | year) + (1 | plotid), data = plot_umca)
+m0b <- lmer(tot_slc ~ 1 + (1 | year) + (1 | plot), data = plot_umca)
  
 #' One predictor + random effect (intercept)
 m1 <- lmer(tot_slc ~ live_dens + (1 | year), data = plot_umca)
-m1a <- lmer(tot_slc ~ live_dens + (1 | plotid), data = plot_umca)
+m1a <- lmer(tot_slc ~ live_dens + (1 | plot), data = plot_umca)
 #' One predictor + 2 random effects
-m1b <- lmer(tot_slc ~ live_dens + (1 | year) + (1 | plotid), data = plot_umca)
+m1b <- lmer(tot_slc ~ live_dens + (1 | year) + (1 | plot), data = plot_umca)
 
 #' Random slope, random intercept model ####
 #' The random effects term in the random slope, random intercept model accounts for the interaction between the predictor variable(s) and group in addition to the systematic variation between groups.
 #'    - similar to linear regresstion with nominal & continuous variables, but requires a lot of parameters to be estimated if there are many groups (1 for each)
 m2 <- lmer(tot_slc ~ live_dens + (1 + live_dens | year), data = plot_umca)
-m2a <- lmer(tot_slc ~ live_dens + (1 | year) + (1 + live_dens | plotid), data = plot_umca)
+m2a <- lmer(tot_slc ~ live_dens + (1 | year) + (1 + live_dens | plot), data = plot_umca)
 #' add the second random effect
-m2b <- lmer(tot_slc ~ live_dens + (1 + live_dens | year) + (1 | plotid), data = plot_umca)
-m2c <- lmer(tot_slc ~ live_dens + (1 | year) + (1 + live_dens | plotid), data = plot_umca)
+m2b <- lmer(tot_slc ~ live_dens + (1 + live_dens | year) + (1 | plot), data = plot_umca)
+m2c <- lmer(tot_slc ~ live_dens + (1 | year) + (1 + live_dens | plot), data = plot_umca)
 
 #' Compare all models using Chi-square test of ANOVA ####
 #' Refits model(s) with maximum likelihood instead of REML
@@ -114,15 +114,15 @@ log_live_dens <- log(plot_umca$live_dens); hist(log_live_dens)
 
 #' Refit models with transformed variables ####
 m0 <- lmer(log_tot_slc ~ 1 + (1 | year), data = plot_umca)
-m0a <- lmer(log_tot_slc ~ 1 + (1 | plotid), data = plot_umca)
-m0b <- lmer(log_tot_slc ~ 1 + (1 | year) + (1 | plotid), data = plot_umca)
+m0a <- lmer(log_tot_slc ~ 1 + (1 | plot), data = plot_umca)
+m0b <- lmer(log_tot_slc ~ 1 + (1 | year) + (1 | plot), data = plot_umca)
 m1 <- lmer(log_tot_slc ~ log_live_dens + (1 | year), data = plot_umca)
-m1a <- lmer(log_tot_slc ~ log_live_dens + (1 | plotid), data = plot_umca)
-m1b <- lmer(log_tot_slc ~ log_live_dens + (1 | year) + (1 | plotid), data = plot_umca)
+m1a <- lmer(log_tot_slc ~ log_live_dens + (1 | plot), data = plot_umca)
+m1b <- lmer(log_tot_slc ~ log_live_dens + (1 | year) + (1 | plot), data = plot_umca)
 m2 <- lmer(log_tot_slc ~ log_live_dens + (1 + log_live_dens | year), data = plot_umca)
-m2a <- lmer(log_tot_slc ~ log_live_dens + (1 + log_live_dens | plotid), data = plot_umca)
-m2b <- lmer(log_tot_slc ~ log_live_dens + (1 + log_live_dens | year) + (1 | plotid), data = plot_umca)
-m2c <- lmer(log_tot_slc ~ log_live_dens + (1 | year) + (1 + log_live_dens | plotid), data = plot_umca)
+m2a <- lmer(log_tot_slc ~ log_live_dens + (1 + log_live_dens | plot), data = plot_umca)
+m2b <- lmer(log_tot_slc ~ log_live_dens + (1 + log_live_dens | year) + (1 | plot), data = plot_umca)
+m2c <- lmer(log_tot_slc ~ log_live_dens + (1 | year) + (1 + log_live_dens | plot), data = plot_umca)
 
 #models <- ls(pattern = "^m") # make vector of model object names; commented out b/c noticed that the row names are the model names of the anova
 m_anova <- anova(m0, m1, m2, m0a, m0b, m1a, m1b, m2a, m2b, m2c)
@@ -155,10 +155,10 @@ methods(class = "merMod")
 coef(m2b)
 coef(m1b)
 coef(m2c)
-#' Plot model residuals
-plot(residuals(m2b))
-plot(residuals(m1b))
-plot(residuals(m2c))
+#' Plot model residuals vs fitted values
+plot((m2b))
+plot((m1b))
+plot((m2c))
 #' Compute confidence intervals
 confint(m2b)
 confint(m1b)
