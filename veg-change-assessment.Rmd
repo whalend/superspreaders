@@ -8,10 +8,13 @@ output:
 ---
 
 
-```{r read in data, echo=F, results='hide', message=FALSE}
+## Load Packages and Data
+```{r load packages, echo=F, results='hide', message=FALSE}
 library(plyr, verbose = F); library(dplyr, verbose = F);
 library(ggplot2, verbose = F); library(tidyr, verbose = F)
+```
 
+```{r load overstory tree data, echo=F, results='hide', message=FALSE}
 # Tagged Stems
 stems <- as.tbl(read.csv("analysis/data/stems_noBUSH01.csv"))
 stems
@@ -32,6 +35,12 @@ alt_dbh_plot
 alt_dbh_stem <- as.tbl(read.csv("analysis/data/alt-species-dbh-corrected.csv"))
 alt_dbh_stem
 
+dbh_stem <- rbind(select(tag_dbh_stem, plotid, species, dbh, status, year),
+                  alt_dbh_stem)
+dbh_stem$plotid <- as.factor(dbh_stem$plotid)
+dbh_stem$status <- as.factor(dbh_stem$plotid)
+dbh_stem$year <- as.factor(dbh_stem$year)
+
 unique(alt_dbh_plot$plotid) %in% unique(tag_dbh_plot$plotid)
 unique(alt_dbh_plot$plotid)[c(25,47,61,74,112,174,180)]
 # ann28: abandoned early b/c no hosts, remove
@@ -39,6 +48,18 @@ unique(alt_dbh_plot$plotid)[c(25,47,61,74,112,174,180)]
 # bush01, halow01, sweet01: abandoned early, remove
 # mcneil01, votru01: not sampled in 2014, remove
 alt_dbh_plot <- filter(alt_dbh_plot, plotid != "ann28", plotid != "bush01", plotid != "halow01", plotid != "sweet01", plotid != "mcneil01", plotid != "votru01")
+```
+
+```{r recalculate plot data, echo=F}
+# Recalculate tag-dbh-plot to exclude new large dead quag stem in 2014 at sugar05
+filter(tag_dbh_stem, plotid == "sugar05", year == 2014)
+tag_dbh_plot <- tag_dbh_stem %>% 
+      filter(dbh >= 2.0, tag != 7794) %>% 
+      group_by(plotid, species, year, status, location) %>% 
+      summarise(avg_ba_m2 = mean(pi*dbh^2/40000, na.rm = T), 
+                tot_ba_m2 = sum(pi*dbh^2/40000, na.rm = T),
+                abundance = length(dbh))
+tag_dbh_plot <- ungroup(tag_dbh_plot)
 
 # Overstory species w/measured DBH rooted in the plot
 os_dbh_in_plot <- rbind(
@@ -53,19 +74,9 @@ os_dbh_plot <- rbind(
             summarise(tot_ba_m2 = sum(tot_ba_m2), avg_ba_m2 = sum(tot_ba_m2)/sum(abundance),
                       abundance = sum(abundance)), 
       select(alt_dbh_plot, -tot_dbh, -avg_dbh))
+```
 
-# Understory species data from microplots of veg transects
-veg_us <- as.tbl(read.csv("analysis/data/us-veg.csv"))
-veg_us
-sort(unique(veg_us$us_species))
-veg_sub <- as.tbl(read.csv("analysis/data/us-veg-sub.csv"))
-veg_sub
-sort(unique(veg_sub$us_species))
-
-# Understory and overstory diversity/evenness calculations
-richness <- as.tbl(read.csv("analysis/data/os_us_diversity.csv"))
-richness
-
+```{r recalculate importance values, echo=F}
 # Importance Values
 # imp_val_plot <- as.tbl(read.csv("analysis/data/species_dbh_impval_plot.csv"))
 # imp_val_plot# importance value by plot-species-year
@@ -74,77 +85,295 @@ richness
 # arrange(select(imp_val_plot, plotid, species, year, live.ct = live_count, all.live.ct = all_live_count, live.tot.dbh = live_tot_dbh, all.live.dbh = all_live_dbh, imp.val = imp_value) %>% filter(year == 2014), plotid)
 # unique(imp_val_plot$plotid)
 
-impt_vals <- rbind(tag_dbh_stem %>% filter(location == "In") %>% 
+impt_vals <- rbind(tag_dbh_stem %>% filter(location == "In", dbh >= 2.0) %>% 
                          select(plotid, species, dbh, status, year), 
                    alt_dbh_stem) %>% 
       group_by(plotid, species, status, year) %>% 
-      summarise(sp_abund = length(species), sp_dbh = sum(dbh)) %>% 
+      summarise(sp_abund = length(species), 
+                sp_basal_area = sum(sum(pi*dbh^2/40000, na.rm = T))) %>% 
       group_by(plotid, status, year) %>% 
-      mutate(total_abund = sum(sp_abund), total_dbh = sum(sp_dbh), 
-                imp_val =  0.5*( (sp_abund / total_abund) + (sp_dbh / total_dbh) ) )
+      mutate(total_abund = sum(sp_abund), 
+             total_basal_area = sum(sp_basal_area), 
+             imp_val =  
+                   0.5 * ( (sp_abund / total_abund) + 
+                                 (sp_basal_area / total_basal_area) ) )
 summary(impt_vals)
+impt_vals$plotid <- as.factor(impt_vals$plotid)
+impt_vals$species <- as.factor(impt_vals$species)
+impt_vals$year <- as.factor(impt_vals$year)
 unique(impt_vals$plotid)
+```
+
+```{r load understory veg data, echo=F, results='hide', message=FALSE}
+# Understory species data from microplots of veg transects
+veg_us <- as.tbl(read.csv("analysis/data/us-veg.csv"))
+veg_us
+sort(unique(veg_us$us_species))
+veg_sub <- as.tbl(read.csv("analysis/data/us-veg-sub.csv"))
+veg_sub
+sort(unique(veg_sub$us_species))
+```
+
+```{r load diversity metrics os and us}
+# Understory and overstory diversity/evenness metrics
+## These are based on the full set of understory species (n=77) and "overstory" species with DBH >= 2.0cm (tagged hosts) or DBH >= 5.0cm (untagged stems).
+richness <- as.tbl(read.csv("analysis/data/os_us_diversity.csv"))
+richness
 ```
 
 
 ## Visualize Species Occurrence and Abundance
-We collected data on overstory and understory woody plant species to varying degrees throughout the study period. Overstory host species were assessed every year, so recruitment of new stems or death of existing stems was recorded, however, DBH measurements were initially only recorded at the first instance of a stem entering the study. We measured the DBH of untagged stems rooted in the plot and all tagged stems again in 2012. At this time we switched from an annual to bi-annual sampling cycle and decided that each time we visited the plots we would measure the DBH of all the overstory stems. Thus, the most recent DBH measurements are from the 2014 sampling season.
+We collected data on overstory and understory woody plant species to varying degrees throughout the study period. Overstory host species were assessed every year, so recruitment of new stems or death of existing stems was recorded, however, DBH measurements were initially only recorded at the first instance of a tagged host stem entering the study (DBH ≥ 2.0cm). We measured the DBH of untagged stems rooted in the plot and all tagged stems again in 2012. At this time we switched from an annual to bi-annual sampling cycle and decided that each time we visited the plots we would measure the DBH of all the overstory stems. Thus, the most recent DBH measurements are from the 2014 sampling season.
 
 The understory species data was collected at two time points, 2005 and 2011. In 2005, Xnumber transects with Ynumber microplots each... Prior to doing the understory vegetation assessment in 2011 we conducted an analysis to assess the effort necessary to sufficiently collect comparable data. We repeatedly randomly sampled 50% of the entire dataset from 2005 and compared univariate statistics between this and the full dataset. Correlations were very strong (r > 0.9) and rare species were seldom missing from the smaller dataset.
 
 During the 2011 season we used five transects across each plot with 0.5m radius microplots spaced at 1.3m intervals resulting in ~60 microplots per plot (12 per transect). Baselines were run between posts placed at plot plot establishment to clearly demarcate the plot edges. In some cases the distance between baselines was slightly greater or less than 15m, resulting in more or total number of microplots. At each microplot we recorded the occurrence of woody plant species that were rooted in or overhanging the microplot, and did not meet DBH requirements. 
 
-Initially 80 "species" in the understory vegetation data set, however, this list included two unknowns and "dead wood." We grouped some species to the genus level due to low confidence in species level identification, e.g. *Arctostaphylus* and removed the "dead wood" observation, reducing this to 77 species. 
+Initially there were 80 "species" in the understory vegetation data set as exported from the database, however, this list included two "unknowns" and "dead wood." We grouped some species to the genus level due to low confidence in species level identification, e.g. *Arctostaphylus* and removed the "dead wood" observation, reducing this to `r length(sort(unique(veg_us$us_species)))`. 
 
-```{r number of species, echo=F}
-length(unique(os_dbh_plot$species))
-length(unique(veg_sub$us_species))
-ggplot(veg_sub %>% group_by(plotid, year, us_species), 
-       aes(us_species)) +
-      geom_bar()
+### Understory Species
+```{r number of understory species, echo=F}
+length(sort(unique(veg_us$us_species)))
+length(sort(unique(veg_sub$us_species)))
 
-# Get total number of plots each understory species occurred in at least once
-ggplot(veg_sub %>% group_by(year, us_species) %>% 
-             summarise(abundance = length(plotid)), 
-       aes(us_species, abundance)) +
+# Total number of plots each understory species occurred in at least once
+ggplot(veg_us %>% group_by(year, us_species) %>% 
+             summarise(occurrence = length(plotid)), 
+       aes(us_species, occurrence, label = occurrence)) +
       geom_bar(stat = "identity") +
-      facet_grid(year ~.)
-
-# Plot total number of plots each overstory species occurred in at least once
-ggplot(os_dbh_plot %>% filter(status == "Alive") %>% 
-             group_by(year, species) %>% 
-             summarise(abundance = length(plotid)), 
-       aes(species, abundance)) +
+      geom_text(nudge_y = 3) +
+      facet_grid(year ~ .) +
+      ylab("# of plots") +
+      ggtitle("Understory Species Occurrence (all species)")
+ggplot(veg_us %>% group_by(year, us_species) %>% 
+             summarise(occurrence = length(plotid)) %>% 
+             filter(occurrence > 1), 
+       aes(us_species, occurrence, label = occurrence)) +
       geom_bar(stat = "identity") +
-      facet_grid(year ~.)
+      geom_text(nudge_y = 3) +
+      facet_grid(year ~ .) +
+      ylab("# of plots") +
+      ggtitle("Understory Species Occurrence (2+ plots)")
+length(
+      unique(
+            (veg_us %>% group_by(year, us_species) %>% 
+             summarise(abundance = length(plotid)) %>% 
+             filter(abundance > 1))$us_species
+             )
+       )
 ```
 
-```{r number of overstory species}
-# Plot total number of living stems for each overstory species by year
-ggplot(os_dbh_plot %>% filter(status == "Alive") %>% 
-             group_by(year, species), 
-       aes(species, abundance)) +
-      geom_bar(stat = "identity") +
-      facet_grid(year ~.)
+### Overstory Species
+```{r number of overstory species rooted in the plot}
+length(sort(unique(os_dbh_in_plot$species)))
+summary(os_dbh_in_plot)
+filter(os_dbh_in_plot, plotid == "sugar05")# dropped large, long-dead QUAG first recorded in 2014
 
-os_abund <- os_dbh_plot %>% 
-      filter(status == "Alive") %>%
-      group_by(year, species) %>% 
-      summarise(abundance = sum(abundance)) %>% 
-      spread(species, abundance)
-      
+# Total number of plots each overstory species occurred in at least once based on stems rooted in the plot
+ggplot(os_dbh_in_plot %>% 
+             filter(species != "unk1", species != "unknown sp.") %>% 
+             group_by(year, species, status) %>% 
+             summarise(occurrence = length(plotid)), 
+       aes(species, occurrence, label = occurrence)) +
+      geom_bar(stat = "identity") +
+      geom_text(nudge_y = 3) +
+      facet_grid(status ~ year) +
+      ylab("# of plots") +
+      ggtitle("Overstory Species Occurrence")
+
+# Total number of living stems for each overstory species by year across all plots
+ggplot(os_dbh_in_plot %>%
+             filter(species != "unk1", species != "unknown sp.") %>% 
+             group_by(year, species, status) %>% 
+             summarise(abundance = sum(abundance)), 
+       aes(species, abundance, label = abundance)) +
+      geom_bar(stat = "identity") +
+      facet_grid(status ~ year) +
+      ylab("abundance") +
+      ggtitle("Overstory Species Abundance") +
+      geom_text(aes(vjust = 0), nudge_y = 10)
 
 ## same as above, but filtering out the super-abundant UMCA
-ggplot(os_dbh_plot %>% filter(status == "Alive", species != "umca") %>% 
-             group_by(year, species), 
-       aes(species, abundance)) +
+ggplot(os_dbh_in_plot %>% 
+             filter(species != "umca", species != "unk1", 
+                    species != "unknown sp.") %>% 
+             group_by(year, species, status) %>% 
+             summarise(abundance = sum(abundance)), 
+       aes(species, abundance, label = abundance)) +
       geom_bar(stat = "identity") +
-      facet_grid(year ~.)
+      facet_grid(status ~ year) +
+      ylab("abundance") +
+      ggtitle("Overstory Species Abundance (minus UMCA)") +
+      geom_text(aes(vjust = 0), nudge_y = 6)
+
+
+# Total numbers only for tagged host species. I think for 'Dead' status it is probably only fair to look at tagged host species because I don't think the dead stems of untagged species were frequently recorded earlier in the study.
+## abundance
+ggplot(os_dbh_in_plot %>% 
+             filter(species == "lide" | species == "quag" | species == "quch" |
+                          species == "quke" | species == "quag x quwi" | 
+                          species == "quke x quag" | species == "umca") %>%
+             group_by(species, status, year) %>% 
+             summarise(abundance = sum(abundance)),
+       aes(species, abundance, label = abundance)) +
+      geom_bar(stat = "identity") +
+      facet_grid(status ~ year) +
+      ylab("abundance") +
+      ggtitle("Tagged Overstory Species Abundance") +
+      geom_text(aes(vjust = 0), nudge_y = 6)
+
+qusp_dbh_plot <- tag_dbh_stem %>% 
+      filter(species == "quke" | species == "quag" | species == "quch") %>%
+            group_by(plotid, species, status, year, sod_dead) %>% 
+            summarise(avg_ba_m2 = mean(pi*dbh^2/40000, na.rm = T), 
+                tot_ba_m2 = sum(pi*dbh^2/40000, na.rm = T),
+                abundance = length(dbh))
+ggplot(qusp_dbh_plot, aes(species, abundance, label = abundance)) +
+      geom_bar(stat = "identity") +
+      facet_grid(sod_dead ~ year) +
+      ylab("abundance") +
+      ggtitle("Quercus Species SOD Killed and Living Abundance") #+
+      geom_text(nudge_y = 6)
+```
+
+#### Total basal area of tagged species rooted in the plot
+```{r basal area tagged species}
+ggplot(os_dbh_in_plot %>% 
+             filter(species == "lide" | species == "quag" | species == "quch" |
+                          species == "quke" | species == "quag x quwi" | 
+                          species == "quke x quag" | species == "umca") %>%
+             group_by(species, status, year) %>% 
+             summarise(basal_area = round(sum(tot_ba_m2), digits = 4)),
+       aes(species, basal_area, label = basal_area)) +
+      geom_bar(stat = "identity") +
+      facet_grid(status ~ year) +
+      ylab("basal area (m^2)") +
+      ggtitle("Tagged Overstory Species Basal Area") +
+      geom_text(aes(vjust = 0), nudge_y = 3)
+
+# boxplot of total basal area for tagged species
+ggplot(os_dbh_in_plot %>% 
+             filter(species == "lide" | species == "quag" | species == "quch" |
+                          species == "quke" | species == "quag x quwi" | 
+                          species == "quke x quag" | species == "umca"),
+       aes(species, tot_ba_m2, label = plotid)) +
+      geom_boxplot() +
+      facet_grid(status ~ year) +
+      ylab("basal area (m^2)") +
+      ggtitle("Tagged Overstory Species Basal Area") +
+      geom_text(nudge_y = .2)
+
+# Sudden oak death mortality for QUAG, QUKE, QUCH
+tag_dbh_stem$sod_dead[tag_dbh_stem$sod_dead==0] <- "alive"
+tag_dbh_stem$sod_dead[tag_dbh_stem$sod_dead==1] <- "killed"
+summary(tag_dbh_stem %>% 
+      filter(species == "quke" | species == "quag" | species == "quch"))
+qusp_dbh_plot <- tag_dbh_stem %>% 
+      filter(species == "quke" | species == "quag" | species == "quch") %>%
+            group_by(plotid, species, status, year, sod_dead) %>% 
+            summarise(avg_ba_m2 = mean(pi*dbh^2/40000, na.rm = T), 
+                tot_ba_m2 = sum(pi*dbh^2/40000, na.rm = T),
+                abundance = length(dbh))
+
+ggplot(qusp_dbh_plot, aes(species, abundance, label = plotid)) +
+      geom_boxplot() +
+      facet_grid(sod_dead ~ year) +
+      ylab("# of stems") +
+      ggtitle("SOD Killed and Living Abundances (QUAG, QUKE, QUCH") #+
+      geom_text(nudge_y = .2)
+
+ggplot(qusp_dbh_plot, aes(species, tot_ba_m2, label = plotid)) +
+      geom_boxplot() +
+      facet_grid(sod_dead ~ year) +
+      ylab("basal area (m^2)") +
+      ggtitle("SOD Killed and Living Basal Area (QUAG, QUKE, QUCH") +
+      geom_text(nudge_y = .2)
+```
+
+#### Species Importance Values
+```{r importance values}
+impt_vals <- ungroup(impt_vals)
+unique(impt_vals$species)
+
+ggplot(impt_vals %>% 
+             filter(species == "lide" | species == "quag" | species == "quch" |
+                          species == "quke" | species == "quag x quwi" | 
+                          species == "quke x quag" | species == "umca"),
+       aes(species, imp_val, label = plotid)) +
+      geom_boxplot() +
+      facet_grid(status ~ year) +
+      ylab("importance value") +
+      ggtitle("Tagged Overstory Species Importance Value") #+
+      geom_text(nudge_y = .2)
 ```
 
 
+#### Species Richness
+```{r diversity plots}
+shannons_os <- richness %>% gather(key = year, value = diversity, -plotid) %>% 
+      filter(year == "H.2005" | year == "H.2014")
+shannons_os$year <- as.factor(ifelse(shannons_os$year == "H.2005", 2005, 2014))
+summary(shannons_os)
+pielous_os <- richness %>% gather(key = year, value = evenness, -plotid) %>% 
+      filter(year == "J.2005" | year == "J.2014")
+pielous_os$year <- as.factor(ifelse(pielous_os$year == "J.2005", 2005, 2014))
+
+ggplot(shannons_os, aes(year, diversity, label = plotid)) +
+      geom_boxplot() +
+      # facet_grid(status ~ year) +
+      ylab("Shannon's Diversity Index") +
+      ggtitle("Overstory Species Diversity") #+
+      geom_text(nudge_y = .2)
+      
+ggplot(pielous_os, aes(year, evenness, label = plotid)) +
+      geom_boxplot() +
+      # facet_grid(status ~ year) +
+      ylab("Pielou's Evenness Index") +
+      ggtitle("Overstory Species Evenness") #+
+      geom_text(nudge_y = .2)
+```
+No difference in diversity across the entire plot network. No difference in average evenness, but evenness does appear to decrease for a subset of plots? Or, these plots are simply identified as outliers in 2014, but not in 2005. I am going to look more closely at those plots with an evenness index < 0.25 in the next chunk.
+
+```{r evenness less than 0.25}
+filter(pielous_os, evenness < 0.25, year == 2005)
+filter(pielous_os, evenness < 0.25, year == 2014)
+
+# plots that only occur in the 2005 data
+anti_join(filter(pielous_os, evenness < 0.25, year == 2005),
+          filter(pielous_os, evenness < 0.25, year == 2014),
+          by = "plotid")
+filter(pielous_os, plotid == "votru01", year == 2014)# plot decommisioned in 2011
+filter(pielous_os, plotid == "cook02", year == 2014)# suspicious change in evenness, 0 to 0.34
+filter(pielous_os, plotid == "backm03", year == 2014)# evenness increased from 0.19 to 0.33
+filter(pielous_os, plotid == "athea02", year == 2014)# suspicious change in evenness, 0 to 0.62
+
+# plots that only occur in the 2014 data
+anti_join(filter(pielous_os, evenness < 0.25, year == 2014),
+          filter(pielous_os, evenness < 0.25, year == 2005),
+          by = "plotid")
+filter(pielous_os, plotid == "pfend02", year == 2005)# decrease from 0.43 to 0.23
+filter(pielous_os, plotid == "jroth03", year == 2005)# decrease from 0.57 to 0
+filter(pielous_os, plotid == "jlsp05", year == 2005)# decrease from 0.43 to 0
+filter(pielous_os, plotid == "hood02", year == 2005)# decrease from 0.30 to 0.25
+filter(pielous_os, plotid == "ann22", year == 2005)# decrease from 0.46 to 0
+```
+
+The large changes toward or away from zero values for evenness are suspicious, and warrant investigating the original data. It seems unlikely that we would go from a single overstory species to multiple overstory species, and vice-versa, from multiple overstory species to a single overstory species.
+
+```{r stems in low evenness plots}
+summary(dbh_stem)
+unique(filter(dbh_stem, plotid == "ann01")$species)
+## plot dominated by umca, psme also present
+unique(filter(dbh_stem, plotid == "ann01", year == 2005)$species)
+## only umca in 2005
+filter(dbh_stem, plotid == "ann01", year == 2014, species == "psme")
+## single very large psme recorded in 2014, so it should have been recorded at some point earlier; first obs 2012, so made linear estimate for 2005 based on these two points and added to database.
+```
+
+
+#### Other Plots
 ```{r plotting, echo=F}
-ggplot(data = os_dbh_plot,
+ggplot(data = os_dbh_in_plot,
        aes(species, tot_ba_m2, label = plotid)) +
       geom_boxplot() +
       facet_grid(status ~ year) +
@@ -154,39 +383,39 @@ ggplot(data = os_dbh_plot,
 filter(dbhs, plotid == "SUGAR05", species == "QUAG")
 # new giant dead stem in 2014, was probably dead entire study period
 
-ggplot(data = basal_abund,
+ggplot(data = os_dbh_in_plot,
        aes(species, abundance)) +
       geom_boxplot() +
       facet_grid(status ~ year) +
       #geom_text() +
       ylab("Abundance")
 
-ggplot(basal_abund %>% filter(status == "Alive"), aes(tot_ba_m2)) + 
+ggplot(os_dbh_in_plot %>% filter(status == "Alive"), aes(tot_ba_m2)) + 
       geom_histogram() +
       facet_grid(species ~ year)
-ggplot(basal_abund %>% filter(status == "Alive"), aes(avg_ba_m2)) + 
+ggplot(os_dbh_in_plot %>% filter(status == "Alive"), aes(avg_ba_m2)) + 
       geom_histogram() +
       facet_grid(species ~ year)
-ggplot(basal_abund %>% filter(status == "Alive"), aes(abundance)) + 
+ggplot(os_dbh_in_plot %>% filter(status == "Alive"), aes(abundance)) + 
       geom_histogram() +
       facet_grid(species ~ year)
 
 
 boxplot(tot_ba_m2 ~ year, 
-        data = basal_abund %>% filter(status == "Alive", species == "UMCA"),
+        data = os_dbh_in_plot %>% filter(status == "Alive", species == "UMCA"),
         ylab = "m^2",
         main = "Live UMCA Basal Area")
 boxplot(tot_ba_m2 ~ year, 
-        data = basal_abund %>% filter(status == "Dead", species == "UMCA"),
+        data = os_dbh_in_plot %>% filter(status == "Dead", species == "UMCA"),
         ylab = "m^2",
         main = "Dead UMCA Basal Area")
 
 boxplot(tot_ba_m2 ~ year, 
-        data = basal_abund %>% filter(status == "Alive", species == "QUAG"),
+        data = os_dbh_in_plot %>% filter(status == "Alive", species == "QUAG"),
         ylab = "m^2",
         main = "Live QUAG Basal Area")
 boxplot(tot_ba_m2 ~ year, 
-        data = basal_abund %>% filter(status == "Dead", species == "QUAG"),
+        data = os_dbh_in_plot %>% filter(status == "Dead", species == "QUAG"),
         ylab = "m^2",
         main = "Dead QUAG Basal Area")
 
