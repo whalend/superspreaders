@@ -232,10 +232,18 @@ sem.coefs(oakplots.modlist, oakplots.sub, standardize = 'scale')
 # Path model using dry season temperature variable ####
 ## model set with sample year as random slope
 
-# I went through these with Beth on 2/18/2016 and we looked at the difficult to interpret residuals together. The patterning is likely due to the large number of 0 values for symptomatic leaf count, number of bay laurel, and number of infected oak stems. Specifically, the residuals are off from the fitted values because of the many zeroes in the data, seen especially for the values near zero.
+#' I went through these with Beth on 2/18/2016 and we looked at the difficult to interpret residuals together. The patterning is likely due to the large number of 0 values for symptomatic leaf count, number of bay laurel, and number of infected oak stems. Specifically, the residuals are off from the fitted values because of the many zeroes in the data, seen especially for the values near zero. The models seem to be properly parameterized with the available data, so Beth did not express too much concern with the residuals in the end. Sometimes funny looking residuals are just the way the data are, in this case, a lot of zero values.
+#' 
+#' Beth made a couple of suggestions
+#' 
+#'  1. Standardize the variables and rerun the models. Double check that the `scale` function does what it's supposed to do: rescale each variable to a mean of zero and variance of one. This will put the estimates into standard deviations from zero, but should not change the p-values.
+#'  2. Look at the different components of each multivariate regression model as bivariate regressions. This can help understand the contributions of each variable to the model and their relationship with the response.
+#'  3. Look up the calculation of Pearson's, and specifically how they are interpreted for a binomial model.
 
 # Pearson Residuals in Binomial Models ####
-# Pearson's residuals are reported for the binomial model, and Beth wanted me to check how these are calculated to make sure the interpretation was correct. 
+#' Pearson's residuals are reported for the binomial model, and Beth wanted me to check how these are calculated to make sure the interpretation was correct. A google search lead me here, [](http://data.princeton.edu/wws509/notes/c3s8.html), which says Pearson residuals are, "*the difference between observed and fitted values divided by an estimate of the standard deviation of the observed value*", and, "They take into account the fact that different observations have different variances, but they make no allowance for additional variation arising from estimation of the parameters, in the way studentized residuals in classical linear models do." So, they are not fully standardized residuals, but this is the common standardization for binomial models. 
+#' 
+#' For base GLM there are five types of residuals available, c("deviance", "pearson", "working","response", "partial")
 
 m1 <- lme(tot_bay.log ~ twi15m + H.2005, random = ~1|sample_year,
           data = oakplots.sub, na.action = na.omit)
