@@ -319,15 +319,15 @@ qplot(year, abs_incr_grwth, data = tagged_dbh_changes, geom = "boxplot")
 
 
 ## Compare Basal & Species Abundances ####
-par(mfrow=c(2,1))
-boxplot(dbh ~ year, 
-        data = tagged_dbh_changes %>% 
-              filter(species == "UMCA", stem_status == "Alive"), 
-        main = "Live UMCA DBHs")
-boxplot(dbh ~ year, 
-        data = tagged_dbh_changes %>% 
-              filter(species == "UMCA", stem_status == "Dead"), 
-        main = "Dead UMCA DBHs")
+# par(mfrow=c(2,1))
+# boxplot(dbh ~ year, 
+#         data = tagged_dbh_changes %>% 
+#               filter(species == "umca", stem_status == "Alive"), 
+#         main = "Live UMCA DBHs")
+# boxplot(dbh ~ year, 
+#         data = tagged_dbh_changes %>% 
+#               filter(species == "umca", stem_status == "Dead"), 
+#         main = "Dead UMCA DBHs")
 
 qplot(factor(year), dbh, data = tagged_dbh_changes, geom = "jitter", color = stem_status, facets = .~species)
 
