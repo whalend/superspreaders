@@ -65,12 +65,12 @@ untagged_stems$species <- tolower(untagged_stems$species)
 summary(untagged_stems)
 
 ## Write out raw revised data sets ####
-write.csv(tagged_stems, "analysis/data/tagged_stems.csv", row.names = F)
-write.csv(untagged_stems, "analysis/data/untagged_stems.csv", row.names = F)
+write.csv(tagged_stems, "analysis/data/tagged_stems_revised.csv", row.names = F)
+write.csv(untagged_stems, "analysis/data/untagged_stems_revised.csv", row.names = F)
 write.csv(all_stems <- rbind(
       select(tagged_stems, plotid, species, dbh, stem_status, date, year),
       untagged_stems),
-      "analysis/data/all_stems.csv", row.names = F) 
+      "analysis/data/all_stems_revised.csv", row.names = F) 
 
 ## Further exploration of revised stem data ####
 # tagged_stems <- read.csv("analysis/data/tagged_stems.csv") # Read in if necessary
@@ -97,7 +97,6 @@ length(unique(filter(tagged_stems, species == "quke x quag")$tag))# 2 stems
 
 
 ## Subset DBH data to create a data frame of remeasured tagged_stems ####
-
 dbh2003 <- tagged_stems %>% 
       select(plotid, plot_status, species:dbh, stem_status, year) %>% 
       filter(dbh >= 2.0, year == 2003)
@@ -121,7 +120,7 @@ anti_join(dbh2005, dbh_a, by = "tag")# this indicates that 2 stems were measured
 dbh_a <- union(dbh_a, anti_join(dbh2005, dbh_a, by = "tag"))
 # I think that this is the complete set of stems that makes up the "plot-establishment" data set. 
 dbh_establishment <- dbh_a
-write.csv(dbh_establishment, "analysis/data/tagged-stems-2003_2005.csv")
+write.csv(dbh_establishment, "analysis/data/tagged-stems-2003_2005.csv", row.names = F)
 
 
 dbh2006 <- tagged_stems %>% 
@@ -199,7 +198,20 @@ filter(tagged_stems, is.na(dbh_entry), initial_dbh>2)
 tagged_stems_corrected <- filter(tagged_stems, is.na(dbh_entry)==F)
 
 
-## Explore DBH data: negative change in DBH ####
+## Examine untagged stems data ####
+summary(untagged_stems)
+length(unique(untagged_stems$plotid))# 185 plots with untagged stems recorded
+length(unique(tagged_stems_corrected$plotid))# 203 plots
+unique(untagged_stems$plotid) %in% unique(tagged_stems_corrected$plotid)
+# there are three plots in the untagged stems data that aren't in the corrected tagged stems data
+unique(untagged_stems$plotid)[c(28,163,170)]
+# badge01 does not have any tagged hosts; ann28 and halow01 were abandoned in 2003/2004
+# remove the abandoned plots, retain badge01
+untagged_stems <- filter(untagged_stems, plotid != "ann28", plotid != "halow01")
+write.csv(untagged_stems, "analysis/data/untagged_stems_corrected.csv", row.names = F)
+
+
+## Explore DBH data ####
 library(ggplot2)
 # Scatterplot of first dbh measurement (y-axis) against year
 qplot(year, dbh_entry, data = dbh_a, geom="jitter", color = stem_status)
@@ -207,8 +219,6 @@ qplot(year, dbh_entry, data = dbh_a, geom="jitter", color = stem_status)
 
 # Dotplot of most recent dbh measurement
 qplot(stem_status, dbh, data = dbh2014, geom = "jitter", color = stem_status)
-
-
 
 ## Match plots between establishment and 2014 remeasurement ####
 unique(dbh_establishment$year)
@@ -248,8 +258,15 @@ names(mroth_tmp)
 mroth_tmp <- select(mroth_tmp, plotid, plot_status, cluster, species, tag, location, dbh, initial_dbh, stem_status, sod_killed:date, year, dbh_entry)
 tagged_stems <- rbind(tagged_stems, mroth_tmp)
 tagged_stems_corrected <- rbind(tagged_stems_corrected, mroth_tmp)
-write.csv(tagged_stems_corrected, "analysis/data/tagged-stems-corrected.csv")
+rm(mroth_tmp); rm(mroth_tmp1)
+write.csv(tagged_stems_corrected, "analysis/data/tagged-stems-corrected.csv", row.names = F)
 
+# revise all_stems dataframe with corrected tagged and untagged stems
+all_stems_corrected <- rbind(
+      select(tagged_stems_corrected, plotid, species, dbh, stem_status, date, year),
+      untagged_stems)
+summary(all_stems_corrected)
+write.csv(all_stems_corrected, "analysis/data/all_stems_corrected.csv", row.names = F)
 
 # Reassess the plots not in 2014 data
 tmp1 <- droplevels(unique(dbh_establishment$plotid))
@@ -263,32 +280,125 @@ dbh_establishment <- filter(dbh_establishment, plotid != "bush01",
                             plotid != "ponti01", plotid != "sumtv02", 
                             plotid != "sweet01", plotid != "votru01")
 
-## Concatenate establishment and 2014 remeasurement dataframes ####
+## Combine establishment and 2014 remeasurement tagged stems dataframes ####
 tagged_dbh_changes <- rbind(dbh_establishment, dbh2014)
 summary(tagged_dbh_changes)
 tagged_dbh_changes <- select(tagged_dbh_changes, -plot_status)
 tagged_dbh_changes$species <- as.factor(tagged_dbh_changes$species)
+tagged_dbh_changes$year <- as.factor(tagged_dbh_changes$year)
+
+tagged_dbh_changes <- left_join(tagged_dbh_changes,
+      as.tbl(tagged_dbh_changes %>% filter(year == 2005) %>% 
+                   rename(dbh1 = dbh) %>% 
+                   select(plotid, tag, dbh1)))
+tagged_dbh_changes <- left_join(tagged_dbh_changes,
+      as.tbl(tagged_dbh_changes %>% filter(year == 2014) %>% 
+                   rename(dbh2 = dbh) %>% 
+                   select(plotid, tag, dbh2)))
+tagged_dbh_changes <- tagged_dbh_changes %>% 
+      mutate(delta_dbh = dbh2 - dbh1, abs_incr_grwth = dbh2/dbh1, 
+             inst_grwth_rate = log(dbh2/dbh1) / (2014 - 2005))
+summary(tagged_dbh_changes)
 
 # export to data file
 write.csv(tagged_dbh_changes, "analysis/data/tag-dbh_0514-corrected.csv", row.names = F)
 
-# Compare Basal & Species Abundances ####
+## Exploratory plots of tagged stem DBH changes ####
+qplot(delta_dbh, dbh1, data = tagged_dbh_changes %>% 
+            group_by(plotid, tag, species, year) %>% 
+            filter(year == 2014),
+      color = stem_status, facets = species ~.)
+filter(tagged_dbh_changes, delta_dbh < -15, year == 2014, stem_status == "Alive", location == "In")
+
+qplot(year, abs_incr_grwth, data = tagged_dbh_changes, geom = "boxplot")
+
+## Compare Basal & Species Abundances ####
 par(mfrow=c(2,1))
 boxplot(dbh ~ year, 
-        data = dbhs %>% filter(species == "UMCA", status == "Alive"), 
+        data = tagged_dbh_changes %>% 
+              filter(species == "UMCA", stem_status == "Alive"), 
         main = "Live UMCA DBHs")
 boxplot(dbh ~ year, 
-        data = dbhs %>% filter(species == "UMCA", status == "Dead"), 
+        data = tagged_dbh_changes %>% 
+              filter(species == "UMCA", stem_status == "Dead"), 
         main = "Dead UMCA DBHs")
 
-qplot(factor(year), dbh, data = dbh_changes, geom = "jitter", color = stem_status, facets = .~species)
+qplot(factor(year), dbh, data = tagged_dbh_changes, geom = "jitter", color = stem_status, facets = .~species)
 
-basal_abund <- dbhs %>% 
-      #filter(status == "Alive") %>% 
-      group_by(plotid, species, year, status) %>% 
-      summarise(avg_ba_m2 = mean(pi*dbh^2/40000, na.rm = T), 
-                tot_ba_m2 = sum(pi*dbh^2/40000, na.rm = T),
-                abundance = length(dbh))
-summary(basal_abund)
-write.csv(basal_abund, "analysis/data/tag-dbh-plot.csv", row.names = F)
+# basal_abund <- dbhs %>% 
+#       #filter(status == "Alive") %>% 
+#       group_by(plotid, species, year, status) %>% 
+#       summarise(avg_ba_m2 = mean(pi*dbh^2/40000, na.rm = T), 
+#                 tot_ba_m2 = sum(pi*dbh^2/40000, na.rm = T),
+#                 abundance = length(dbh))
+# summary(basal_abund)
+# write.csv(basal_abund, "analysis/data/tag-dbh-plot.csv", row.names = F)
+
+
+## Assess untagged stems data ####
+summary(untagged_stems)
+unique(untagged_stems$year)# 5 unique years
+# I need to figure out if things might be duplicated between the years
+tmp03 <- filter(untagged_stems, year == 2003)
+tmp04 <- filter(untagged_stems, year == 2004)
+tmp05 <- filter(untagged_stems, year == 2005)
+
+unique(tmp03$plotid) %in% unique(tmp04$plotid)
+unique(tmp03$plotid)[c(28:30)]
+filter(tmp03, plotid == "ganay02"); filter(tmp04, plotid == "ganay02")
+filter(untagged_stems, year == 2012, plotid == "ganay02")
+# this would support keeping 2004 data, removing 2003 data
+untagged_stems <- filter(untagged_stems, year != 2003 | plotid != "ganay02")
+
+filter(tmp03, plotid == "lins01"); filter(tmp04, plotid == "lins01")
+filter(untagged_stems, year == 2012, plotid == "lins01")
+# the 2003 and 2004 data appears to be unique, so leave alone for now
+
+filter(tmp03, plotid == "mitsu02"); filter(tmp04, plotid == "mitsu02")
+filter(untagged_stems, year == 2012, plotid == "mitsu02")
+# little difference between 2003 and 2004; keep 2004 data
+untagged_stems <- filter(untagged_stems, year != 2003 | plotid != "mitsu02")
+
+rm(tmp03)
+
+# set all 2003 year to 2004
+untagged_stems$year[untagged_stems$year == 2003] <- 2004
+tmp04 <- filter(untagged_stems, year == 2004)
+
+# compare 2005 plot coverage to 2004/2003 plot coverage
+unique(tmp05$plotid) %in% unique(tmp04$plotid)# two duplicates
+unique(tmp05$plotid)[c(25,26)]
+filter(tmp04, plotid == "cook02"); filter(tmp05, plotid == "cook02")
+filter(untagged_stems, year == 2014, plotid == "cook02")
+# assume the 2004 data is correct for this plot
+untagged_stems <- filter(untagged_stems, year != 2005 | plotid != "cook02")
+
+filter(tmp04, plotid == "jlsp08"); filter(tmp05, plotid == "jlsp08")
+filter(untagged_stems, year == 2014, plotid == "jlsp08")
+# did we miss a bunch of SESE in 2012 & 2014??? I'm dropping those from the 2004 data
+untagged_stems <- filter(untagged_stems, year != 2005 | plotid != "jlsp08")
+untagged_stems <- filter(untagged_stems, year != 2004 | plotid != "jlsp08"|
+                         species != "sese")
+rm(tmp04); rm(tmp05)
+
+#set all 2004 year to 2005
+untagged_stems$year[untagged_stems$year == 2004] <- 2005
+
+# compare 2012 plot coverage to 2014 plot coverage
+tmp12 <- filter(untagged_stems, year == 2012)
+tmp14 <- filter(untagged_stems, year == 2014)
+unique(tmp12$plotid) %in% unique(tmp14$plotid)
+unique(tmp12$plotid)[c(4,12,13,20,21,52,53,58,111,114)]
+# 10 plots not in the 2014 data that should be, i.e. none of these were abandoned/decommissioned and should have been visited in 2014
+tmp12 <- filter(tmp12, plotid == "arbit01" | plotid == "lins01" |
+                      plotid == "lupin01" | plotid == "mitsu02" |
+                      plotid == "skile01" | plotid == "spaul01" |
+                      plotid == "ann09" | plotid == "ganay02" |
+                      plotid == "halow02")
+untagged_stems <- filter(untagged_stems, year != 2012)
+untagged_stems <- rbind(untagged_stems, tmp12)
+untagged_stems$year[untagged_stems$year == 2012] <- 2014
+write.csv(untagged_stems, "analysis/data/untagged-stems_0514-corrected.csv", row.names = F)
+
+
 
