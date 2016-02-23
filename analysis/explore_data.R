@@ -56,7 +56,7 @@ str(stems)
 write.csv(stems,"analysis/data/all_stems.csv") # Write the revised stem data to CSV
 
 #### Further exploration of revised stem data ####
-stems <- read.csv("analysis/data/all_stems.csv") # Read in if necessary
+# stems <- read.csv("analysis/data/all_stems.csv") # Read in if necessary
 str(stems)
 summary(stems)
 summary(stems$species) # 5 host species listed, so this appears legit
@@ -215,7 +215,7 @@ stems %>% select(plot, cluster, tag, species, delta_dbh, year, year_dbh1, status
 # I changed values for 6 of 18 stems
 
 
-#### Create a plot-level data frame of infection status ####
+## Create a plot-level data frame of infection status ####
 stems <- read.csv("analysis/data/all_stems_corrected.csv")
 library(dplyr)
 
@@ -260,8 +260,8 @@ tmp <- plot_qusp %>%
       dcast(year + plot ~ species, value.var = "infected_oak_ct")
 head(tmp)
 
-# Checking large positive DBH changes ####
-## So at this point I think I have corrected all the negative dbh change values that I legitimately could in the database. I have gone back and exported the query again and use this file below, and then recycling code from the beginning of this document.
+## Checking large positive DBH changes ####
+# So at this point I think I have corrected all the negative dbh change values that I legitimately could in the database. I have gone back and exported the query again and use this file below, and then recycling code from the beginning of this document.
 stems <- read.csv("analysis/data/Stem_Summary_negDBH_corrected_201402.csv")
 summary(stems)
 str(stems)
