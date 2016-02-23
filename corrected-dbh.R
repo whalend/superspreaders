@@ -208,7 +208,9 @@ unique(untagged_stems$plotid)[c(28,163,170)]
 # badge01 does not have any tagged hosts; ann28 and halow01 were abandoned in 2003/2004
 # remove the abandoned plots, retain badge01
 untagged_stems <- filter(untagged_stems, plotid != "ann28", plotid != "halow01")
+
 write.csv(untagged_stems, "analysis/data/untagged_stems_corrected.csv", row.names = F)
+
 
 
 ## Explore DBH data ####
@@ -259,6 +261,7 @@ mroth_tmp <- select(mroth_tmp, plotid, plot_status, cluster, species, tag, locat
 tagged_stems <- rbind(tagged_stems, mroth_tmp)
 tagged_stems_corrected <- rbind(tagged_stems_corrected, mroth_tmp)
 rm(mroth_tmp); rm(mroth_tmp1)
+
 write.csv(tagged_stems_corrected, "analysis/data/tagged-stems-corrected.csv", row.names = F)
 
 # revise all_stems dataframe with corrected tagged and untagged stems
@@ -266,7 +269,9 @@ all_stems_corrected <- rbind(
       select(tagged_stems_corrected, plotid, species, dbh, stem_status, date, year),
       untagged_stems)
 summary(all_stems_corrected)
+
 write.csv(all_stems_corrected, "analysis/data/all_stems_corrected.csv", row.names = F)
+
 
 # Reassess the plots not in 2014 data
 tmp1 <- droplevels(unique(dbh_establishment$plotid))
@@ -311,6 +316,7 @@ qplot(delta_dbh, dbh1, data = tagged_dbh_changes %>%
 filter(tagged_dbh_changes, delta_dbh < -15, year == 2014, stem_status == "Alive", location == "In")
 
 qplot(year, abs_incr_grwth, data = tagged_dbh_changes, geom = "boxplot")
+
 
 ## Compare Basal & Species Abundances ####
 par(mfrow=c(2,1))
@@ -398,7 +404,9 @@ tmp12 <- filter(tmp12, plotid == "arbit01" | plotid == "lins01" |
 untagged_stems <- filter(untagged_stems, year != 2012)
 untagged_stems <- rbind(untagged_stems, tmp12)
 untagged_stems$year[untagged_stems$year == 2012] <- 2014
+
 write.csv(untagged_stems, "analysis/data/untagged-stems_0514-corrected.csv", row.names = F)
+
 
 
 
