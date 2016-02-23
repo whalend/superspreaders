@@ -391,73 +391,6 @@ no2014 <- anti_join(dbh_a, dbh2014, by = "tag")# this indicates that there were 
 
 summary(no2014); unique(no2014$plotid)# 73 plots; for proper comparison, whether using 2012 or 2014 data, I need to limit the set to plots that were in the establishment and final sampling.
 
-# Compare Basal & Species Abundances ####
-head(dbh_t1)
-dbh_t1 <- select(dbh_t1, -date) %>% arrange(plotid)
-dbh_t1$year <- 2005# change all to last sampling season included
-dbh_t1 <- droplevels(dbh_t1)
-head(dbh2014)
-dbh2014 <- select(dbh2014, -date) %>% arrange(plotid)
-dbh2014 <- droplevels(dbh2014)
-
-# Match plots between establishment and 2014 remeasurement
-length(unique(dbh_t1$plotid))# 204 plots
-length(unique(dbh2014$plotid))# 195 plots
-tmp1 <- droplevels(unique(dbh_t1$plotid))
-tmp2 <- droplevels(unique(dbh2014$plotid))
-setdiff(tmp1,tmp2)# identify plots not in 2014 data, note that one is SUGAR02
-filter(dbh_t1, plotid == "SUGAR02" | plotid == "SUGAR30")
-# change SUGAR02 to SUGAR30 for early data
-dbh_t1$plotid[dbh_t1$plotid == "SUGAR02"] <- "SUGAR30"
-
-tmp1 <- droplevels(unique(dbh_t1$plotid))
-tmp2 <- droplevels(unique(dbh2014$plotid))
-setdiff(tmp1,tmp2)
-dbh2014 <- rbind(dbh2014, select(dbh2012, -date) %>% 
-                       filter(plotid == "MROTH03"))
-# enter 2014 DBH values from database
-dbh2014$dbh[dbh2014$tag==1668] <- 68
-dbh2014$dbh[dbh2014$tag==1669] <- 49.2
-dbh2014$dbh[dbh2014$tag==1670] <- 56.1
-dbh2014$dbh[dbh2014$tag==1671] <- 51.2
-dbh2014$dbh[dbh2014$tag==1672] <- 66.9
-dbh2014$year <- 2014
-
-tmp1 <- droplevels(unique(dbh_t1$plotid))
-tmp2 <- droplevels(unique(dbh2014$plotid))
-setdiff(tmp1,tmp2)# reduced to 7 missing, 3 lost "late" in study
-# filter out plots from 2005 data that aren't in 2014 data
-dbh_t1 <- filter(dbh_t1, plotid != "BUSH01", plotid != "MCNEIL01",
-                 plotid != "MCNEIL03", plotid != "PONTI01",
-                 plotid != "SUMTV02", plotid != "SWEET01",
-                 plotid != "VOTRU01")
-
-dbhs <- rbind(dbh_t1, dbh2014)
-str(dbhs)
-unique(dbhs$plotid)
-dbhs <- droplevels(dbhs)
-summary(dbhs)
-dbhs <- filter(dbhs, status == "Alive" | status == "Dead")
-write.csv(dbhs, "analysis/data/tag-dbh_0514-corrected.csv", row.names = F)
-
-par(mfrow=c(2,1))
-boxplot(dbh ~ year, 
-        data = dbhs %>% filter(species == "UMCA", status == "Alive"), 
-        main = "Live UMCA DBHs")
-boxplot(dbh ~ year, 
-        data = dbhs %>% filter(species == "UMCA", status == "Dead"), 
-        main = "Dead UMCA DBHs")
-
-
-basal_abund <- dbhs %>% 
-      #filter(status == "Alive") %>% 
-      group_by(plotid, species, year, status) %>% 
-      summarise(avg_ba_m2 = mean(pi*dbh^2/40000, na.rm = T), 
-                tot_ba_m2 = sum(pi*dbh^2/40000, na.rm = T),
-                abundance = length(dbh))
-summary(basal_abund)
-write.csv(basal_abund, "analysis/data/tag-dbh-plot.csv", row.names = F)
-
 
 ## Some plots of DBH measurements ####
 library(ggplot2)
@@ -480,7 +413,7 @@ sum(dbh$delta_dbh, na.rm=T)
 # filter(dbh, delta_dbh < -20)
 
 
-#### Check the positive DBH change outliers of stems remeasured in 2014 ####
+## Check the positive DBH change outliers of stems remeasured in 2014 ####
 dbh <- read.csv("analysis/data/dbh_2014_remeasures.csv")
 summary(dbh)
 library(ggplot2)
@@ -505,7 +438,7 @@ qplot(delta_dbh, dbh1, data = stems %>% select(plotid, cluster, tag, species, de
       color = status)
 # A visual check shows that there are a handful of stems with growth > 20cm
 
-#### Suggestions from Margaret about exploring DBH changes ####
+# Suggestions from Margaret about exploring DBH changes ####
 # I emailed Richard and Margaret about thresholds for where I should really look more closely at the measurements. Richard noted that there isn't much out there on growth rates for these species. I did find something done for tree species of the Northeastern U.S. <http://www.fs.fed.us/ne/newtown_square/publications/research_papers/pdfs/scanned/OCR/ne_rp649.pdf>
 
 # Margaret suggested a few things, including other ways of looking at the data:
