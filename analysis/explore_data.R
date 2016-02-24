@@ -608,7 +608,7 @@ summarise(bay_laurel %>% filter(year == 2005), mdoy = max(doy))
 filter(bay_laurel, year == 2005, doy == 146)
 
 
-###### These may be useful functions for reference #### 
+## These may be useful functions for reference #### 
 matplot(cbind(avg_rain_year,avg_slc_year),type="b")
 matplot(cbind(rainy_days,avg_slc_year),type="b")
 
