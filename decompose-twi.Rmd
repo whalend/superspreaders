@@ -1,0 +1,119 @@
+---
+title: "Decomposing TWI Influence"
+author: "Whalen Dillon"
+date: "February 23, 2016"
+output: html_document
+---
+
+
+## Plot Contributing Area vs. Slope
+This is a suggestion from Ryan to plot the contributing area vs. the slope for each of the plots in order to tease out how either influences infection and hosts. Decomposing TWI to determine which factor has a greater influence on disease dynamics. 
+```{r decomposing TWI influence}
+library(ggplot2)
+# par(mfrow = c(3,1))
+names(plots_env)
+summary(plots_env)
+## 'facc_ws15m' is the estimate from the 'r.watershed' function in GRASS GIS
+
+# Plot estimates from two different functions agains each other.
+qplot(flowacc15m, facc_ws15m, data = plots_env) #+
+      geom_text(aes(label = plotid))
+cor(plots_env$flowacc15m, plots_env$facc_ws15m)
+## There are 9 plots that really stand out from the others.
+## The r.watershed calculation provides similar, but generally smaller values.
+qplot(flowacc15m, facc_ws15m, data = filter(plots_env, flowacc15m > 300),
+      main = "'High' Flow Accumulation Value Plots") +
+      geom_text(aes(label = plotid))
+qplot(flowacc15m, facc_ws15m, data = filter(plots_env, flowacc15m < 300),
+      main = "'Low' Flow Accumulation Value Plots") +
+      geom_text(aes(label = plotid))
+## Much of the variability between the two estimates stems from a few plots.
+
+# Plot flow accumulation vs. slope
+qplot(slope15m, flowacc15m, data = plots_env) #+
+      geom_text(aes(label = plotid))
+## Can't see much pattern (if there is any) because of a few big values
+      cor(plots_env$slope15m, plots_env$flowacc15m)
+      ## negative, but weak
+
+qplot(slope15m, flowacc15m, data = filter(plots_env, flowacc15m < 300), 
+      main = "Flow Accumulation <300") #+
+      geom_text(aes(label = plotid))
+## Generally, a shallower slope means higher flow accumulation, but it's not a strong pattern
+      
+qplot(slope15m, flowacc15m, data = filter(plots_env, flowacc15m > 300), 
+      main = "Flow Accumulation >300 ") #+
+      geom_text(aes(label = plotid))
+## The set of high flow accumulation plots shows an opposite general trend in the relationship between flow accumulation and slope. It's a small sample size, which leads me to consider the general trend from the large sample size being closer to the real relationship.
+      
+
+qplot(slope15m, facc_ws15m, data = plots_env)
+cor(plots_env$slope15m, plots_env$facc_ws15m)
+## weakly negative correlation between slope and flow accumulation
+
+qplot(slope15m, facc_ws15m, data = filter(plots_env, facc_ws15m < 300), 
+      main = "Flow Accumulation (r.watershed) <300") #+
+      geom_text(aes(label = plotid))
+qplot(slope15m, facc_ws15m, data = filter(plots_env, facc_ws15m > 300), 
+      main = "Flow Accumulation (r.watershed) >300") #+
+      geom_text(aes(label = plotid))
+
+qplot(slope15m, facc_ws15m, data = filter(plots_env, facc_ws15m > 50 & facc_ws15m < 200), 
+      main = "facc 50 - 200") +
+      geom_text(aes(label = plotid))
+qplot(slope15m, facc_ws15m, data = filter(plots_env, facc_ws15m > 200 & facc_ws15m < 1000), 
+      main = "facc 200 - 1000") +
+      geom_text(aes(label = plotid))
+qplot(slope15m, facc_ws15m, data = filter(plots_env, facc_ws15m > 1000), 
+      main = "facc >1000") +
+      geom_text(aes(label = plotid))
+
+# pairs(select(plots_env, -plotid, -starts_with("rain")), 
+#       lower.panel = panel.cor, diag.panel = panel.hist)
+# pairs(select(plots_env, -plotid, -starts_with("rain")) %>% 
+#             filter(flowacc15m < 5), 
+#       lower.panel = panel.cor, diag.panel = panel.hist,
+#       main = "Flow accumualtion < 5")
+# pairs(select(plots_env, -plotid, -starts_with("rain")) %>% 
+#             filter(flowacc15m > 100 & flowacc15m < 1000), 
+#       lower.panel = panel.cor, diag.panel = panel.hist,
+#       main = "Flow accumulation 100-1000")
+# pairs(select(plots_env, -plotid, -starts_with("rain")) %>% 
+#             filter(flowacc15m > 1000), 
+#       lower.panel = panel.cor, diag.panel = panel.hist,
+#       main = "Flow accumulation > 1000")
+
+plot(flowacc15m ~ slope15m, data = filter(plots_env, flowacc15m > 300))
+pairs(select(plots_env, flowacc15m, slope15m) %>% filter(flowacc15m > 300), 
+      lower.panel = panel.cor, diag.panel = panel.hist)
+
+library(manipulate)
+manipulate(
+      qplot(slope15m, flowacc15m, data = plots_env,
+           axes = axes,
+           cex = cex
+           #pch = if(pch) 19 else 1
+           ),
+      axes = checkbox(TRUE, "Show axes"),
+      cex = slider(0, 5, initial = 1, step = 0.1, label = "Point size"),
+      pch = button("Fill points")
+)
+
+dataplot <- function(dat){
+      name <- sys.call()[[2]]
+      vars <- as.list(names(dat))
+      e <- new.env()
+      e$data <- name
+      manipulate(
+            {
+                  form = as.formula(paste(y,x, sep = "~"))
+                  plot(form, data = dat, main = as.character(name), las = 1)
+                  e$form <- form
+            },
+            x = do.call(picker, c(vars, initial = vars[1])),
+            y = do.call(picker, c(vars, initial = vars[2]))
+      )
+      invisible(e)
+}
+f <- dataplot(plots_env)
+```
