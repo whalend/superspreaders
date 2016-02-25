@@ -6,14 +6,8 @@ output: html_document
 ---
 
 ## Background/Question/Methods
-Variation in disease transmission is caused by heterogeneity of individuals, species, and landscapes across space and time. Becoming knowledgeable of the dynamic relationships among these factors is key for understanding and successfully managing any disease.  
+Variation in disease transmission is caused by heterogeneity of individuals, species, and landscapes across space and time. Multi-host disease systems are often characterized by pathogen spillover due to differences between host-pathogen interactions among the various hosts. Sudden oak death is a multi-host forest disease characterized by pathogen spillover, where a single host species (California bay laurel) amplifies the pathogen, which spills over to infect nearby oak trees. We applied a path analysis to analyze the direct and indirect effects of diversity, topography, and interannual climate variability on pathogen spillover for sudden oak death. The path analysis is a set of hypothesis built on findings from experiments and observations of the disease. We applied the path analysis framework to 10 years of data from a network of disease-monitoring plots distributed across a 275-km2 area in southeastern Sonoma County, California. During each year, we measured temperature, rainfall, pathogen load, and oak infection, while plant community diversity was measured once at each plot in this low-turnover landscape.
 
-can be especially challenging for multihost disease systems due to challenges of spatial and temporal scale.  are frequently characterized by pathogen spillover, where a single amplifying host species drives disease transmission. 
-
-This is the case of the forest disease sudden oak death, where pathogen amplification on the highly competent alternate host species California bay laurel leads to spillover and infection of nearby oak trees. 
-
-When these hosts aggregate under environmental conditions favorable to the pathogen disease transmission may be amplified.
 
 ## Results/Conclusions
-
 Results from our path model of disease observations aggregated to the plot level revealed that diversity moderated pathogen spillover through a relatively strong direct negative effect on oak infection. Potential inoculum load had a direct positive effect on oak infection moderated by temperature and topography. Temperature and rainfall had relatively weaker influences compared to diversity and inoculum load in the context of pathogen spillover. Although diversity also had a positive effect on inoculum load, its negative effect on oak infection is consistent with the dilution effect found in other studies. Topography also had substantial influence on diversity and inoculum load, where higher values of the wetness index tended to have lower values of diversity, but higher inoculum load. This is consistent with areas where moisture is likely to accumulate and persist providing a more favorable environment for *P. ramorum* sporulation.
