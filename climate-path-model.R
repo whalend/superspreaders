@@ -111,25 +111,26 @@ pairs(select(oakplots.sub, -plotid), lower.panel = panel.cor, diag.panel = panel
 oakplots.sub$oak.inf <- cbind(oakplots.sub$inf_oak_ct, oakplots.sub$uninf_oak_ct)
 summary(filter(oak_sod, is.na(tot_lfct)))# lfct NAs are 0 bay plots
 oakplots.sub$tot_lfct[is.na(oakplots.sub$tot_lfct)] <- 0
-oakplots.sub$avg_lfct[is.na(oakplots.sub$avg_lfct)] <- 0
+# oakplots.sub$avg_lfct[is.na(oakplots.sub$avg_lfct)] <- 0
 
 oakplots.sub$rain_tot_v.cm <- oakplots.sub$rain_tot_v/10
-oakplots.sub$rain_tot_2d.cm <- oakplots.sub$rain_tot_2d/10
+# oakplots.sub$rain_tot_2d.cm <- oakplots.sub$rain_tot_2d/10
 # oakplots.sub$rain_tot_3d.cm <- oakplots.sub$rain_tot_3d/10
 
 oakplots.sub$dys_14_20_rs <- oakplots.sub$hrs_14_20_rs/24
-oakplots.sub$dys_blw10_rs <- oakplots.sub$hrs_blw10rs/24
-oakplots.sub$dys_abv25_rs <- oakplots.sub$hrs_abv25rs/24
+# oakplots.sub$dys_blw10_rs <- oakplots.sub$hrs_blw10rs/24
+# oakplots.sub$dys_abv25_rs <- oakplots.sub$hrs_abv25rs/24
 # oakplots.sub$tot_lfct.10 <- oakplots.sub$tot_lfct/10
 oakplots.sub$tot_lfct.100 <- oakplots.sub$tot_lfct/100
 oakplots.sub$tot_lfct.log <- log1p(oakplots.sub$tot_lfct)
 oakplots.sub$tot_bay.log <- log1p(oakplots.sub$tot_bay)
+oakplots.sub$twi15m.log <- log(oakplots.sub$twi15m)
 # oakplots.sub$avg_lfct.log <- log1p(oakplots.sub$avg_lfct)
 # oakplots.sub$sample_year <- as.factor(oakplots.sub$sample_year)
 
 ## rough path-model 1, how does this work ####
 oakplots.modlist <- list(
-      lme(tot_bay.log ~ twi15m + H.2005, random = 1|sample_year/plotid, 
+      lme(tot_bay.log ~ twi15m + H.2005, random = ~1|sample_year/plotid, 
             data = oakplots.sub, na.action = na.omit),
       
       lme(H.2005 ~ twi15m, random = ~1|sample_year/plotid, data = oakplots.sub,
@@ -212,6 +213,7 @@ pairs(na.omit(select(oakplots.sub, inf_oak_ct, tot_bay, tot_bay.log, tot_lfct.lo
 #'
 #'
 #' Change temperature variable to average for the rainy season, the leaf count variable to average for the plot, and the
+#' 
 #+ path model using rainy season average #### 
 oakplots.modlist <- list(
 #       glmer(tot_bay ~ twi15m + H.2005 + (1|sample_year) + (1|plotid), 
@@ -226,11 +228,11 @@ oakplots.modlist <- list(
       lme(avg_tmax_rs ~ tot_bay.log + twi15m, random = ~1|sample_year/plotid,
           data = oakplots.sub, na.action = na.omit),
       
-      lme(avg_lfct.log ~ tot_bay.log + avg_tmax_rs + rain_tot_2d.cm + twi15m + H.2005,
+      lme(tot_lfct.log ~ tot_bay.log + avg_tmax_rs + rain_tot_v.cm + twi15m + H.2005,
           random = ~1|sample_year/plotid, data = oakplots.sub,
           na.action = na.omit),
       
-      glmer(oak.inf ~ avg_lfct.log + avg_tmax_rs + rain_tot_2d.cm + H.2005 + (1|sample_year) + (1|plotid),
+      glmer(oak.inf ~ tot_lfct.log + avg_tmax_rs + rain_tot_v.cm + H.2005 + (1|sample_year) + (1|plotid),
             data = oakplots.sub, family = binomial(link = "logit"), 
             na.action = na.omit)
 )
@@ -260,16 +262,19 @@ sem.coefs(oakplots.modlist, oakplots.sub, standardize = 'scale')
 
 
 # pairs plot of data for the model
-oakplots.sub2 <- select(oakplots.sub, plotid:inf_oak_ct, infected_bay_ct:twi15m, avg_tmax_ds:us.H.2005, rain_tot_v:oak.inf, tot_bay.log:tot_lfct.log)
+names(oakplots.sub)
+
+oakplots.sub2 <- select(oakplots.sub, plotid:inf_oak_ct, infected_bay_ct:twi15m, avg_tmax_ds:us.H.2005, rain_tot_v:rain_tot_v.cm, tot_lfct.log:twi15m.log)
 pairs(select(oakplots.sub2, -c(plotid:inf_oak_ct), -oak.inf),
       lower.panel = panel.cor, diag.panel = panel.hist)
 
 # scale variables
 names(oakplots.sub2)
+
 ## untransformed and scaled
-oakplots.sub2$inf_bay_ct.scl <- scale((oakplots.sub2$infected_bay_ct))
-oakplots.sub2$tot_bay_ct.scl <- scale((oakplots.sub2$tot_bay))
-oakplots.sub2$tot_slc.scl <- scale((oakplots.sub2$tot_lfct))
+oakplots.sub2$inf_bay.scl <- scale((oakplots.sub2$infected_bay_ct))
+oakplots.sub2$tot_bay.scl <- scale((oakplots.sub2$tot_bay))
+oakplots.sub2$tot_lfct.scl <- scale((oakplots.sub2$tot_lfct))
 oakplots.sub2$twi15m.scl <- scale((oakplots.sub2$twi15m))
 oakplots.sub2$avg_tmax_ds.scl <- scale(oakplots.sub2$avg_tmax_ds)
 oakplots.sub2$shannons2005.scl <- scale(oakplots.sub2$H.2005)
@@ -279,50 +284,77 @@ oakplots.sub2$rain_days.scl <- scale(oakplots.sub2$rain_days_v)
 oakplots.sub2$avgtmax_wet.scl <- scale(oakplots.sub2$avgtmax_wet)
 
 ## transformed and scaled
-oakplots.sub2$inf_bay_ct.log.scl <- scale(log1p(oakplots.sub2$infected_bay_ct))
-oakplots.sub2$tot_bay_ct.log.scl <- scale(log1p(oakplots.sub2$tot_bay))
-oakplots.sub2$tot_slc.log.scl <- scale(log1p(oakplots.sub2$tot_lfct))
-oakplots.sub2$twi15m.log.scl <- scale(log1p(oakplots.sub2$twi15m))
+oakplots.sub2$tot_bay.log.scl <- scale(oakplots.sub2$tot_bay.log)
+oakplots.sub2$tot_lfct.log.scl <- scale(oakplots.sub2$tot_lfct.log)
+oakplots.sub2$twi15m.log.scl <- scale(oakplots.sub2$twi15m.log)
+
+names(oakplots.sub2)
+pairs(select(oakplots.sub2, ends_with("scl")),
+      lower.panel = panel.cor, diag.panel = panel.hist,
+      main = "Scaled and/or Transformed Variables")
 
 
-
-m1 <- lme(tot_bay_ct.log.scl ~ twi15m.log.scl + shannons2005.scl, 
-          random = ~1|sample_year,
-          data = oakplots.sub2, na.action = na.omit)
+m1 <- lme(tot_bay.log ~ twi15m, 
+             random = ~1|sample_year,
+             data = oakplots.sub2, na.action = na.omit)
 summary(m1)
 plot(m1, main = "Total # Bay Laurel ~ TWI + Diveristy Residuals")
 
-m1a <- lme(tot_bay_ct.scl ~ twi15m.scl + shannons2005.scl, 
-          random = ~1|sample_year,
-          data = oakplots.sub2, na.action = na.omit)
+m1a <- lme(tot_bay.log ~ twi15m.log, 
+           random = ~1|sample_year,
+           data = oakplots.sub2, na.action = na.omit)
 summary(m1a)
 plot(m1a, main = "Total # Bay Laurel ~ TWI Residuals")
 
-m2 <- lme(shannons2005.scl ~ twi15m.log.scl, 
+m1scl <- lme(tot_bay.log.scl ~ twi15m.scl, 
+          random = ~1|sample_year,
+          data = oakplots.sub2, na.action = na.omit)
+summary(m1scl)
+plot(m1scl, main = "Total # Bay Laurel ~ TWI + Diveristy Residuals")
+
+m1scl.a <- lme(tot_bay.log.scl ~ twi15m.log.scl, 
+             random = ~1|sample_year,
+             data = oakplots.sub2, na.action = na.omit)
+summary(m1scl.a)
+plot(m1scl.a, main = "Total # Bay Laurel ~ TWI + Diveristy Residuals")
+m1 <- m1scl.a
+
+
+
+m2 <- lme(H.2005 ~ twi15m.log.scl, 
           random = ~1|sample_year, data = oakplots.sub2,
           na.action = na.omit)
 summary(m2)
 plot(m2, main = "Diversity ~ TWI Residuals")
 
-m3 <- lme(avg_tmax_ds.scl ~ tot_bay_ct.log.scl + twi15m.log.scl, 
-          random = ~1|sample_year,
-          data = oakplots.sub2, na.action = na.omit)
+m2scl <- lme(shannons2005.scl ~ twi15m.log.scl, 
+          random = ~1|sample_year, data = oakplots.sub2,
+          na.action = na.omit)
+summary(m2scl)
+plot(m2scl, main = "Diversity ~ TWI Residuals")
+m2 <- m2scl
+
+
+m3 <- lme(avg_tmax_ds.scl ~ tot_bay.log.scl + twi15m.log.scl, 
+             random = ~1|sample_year,
+             data = oakplots.sub2, na.action = na.omit)
 summary(m3)
 plot(m3)
+
 # m3a <- lmer(avg_tmax_ds ~ tot_bay.log + twi15m + (1|sample_year),
 #             data = oakplots.sub, na.action = na.omit)
 # summary(m3a); AIC(m3a)
 # plot(m3a)
 
-m4 <- lme(tot_slc.log.scl ~ tot_bay_ct.log.scl + avg_tmax_ds.scl + rain_days.scl + twi15m.log.scl + shannons2005.scl, 
+m4 <- lme(tot_lfct.log.scl ~ tot_bay.log.scl + avg_tmax_ds.scl + rain_days.scl + twi15m.log.scl + shannons2005.scl, 
           random = ~1|sample_year, data = oakplots.sub2, 
           na.action = na.omit)
 plot(m4)
 summary(m4)
 E2 <- resid(m4, type = "normalized")# equivalent of "standardized" in plot
-# F2 <- fitted(m4)
-# plot(F2, E2)
-plot(E2 ~ tot_bay_ct.log.scl, data = oakplots.sub2, ylab = "resids", xlab = "total # bay laurel")# this seems the most likely source of the pattern
+F2 <- fitted(m4)
+plot(F2, E2)
+plot(E2 ~ tot_bay.log.scl, data = oakplots.sub2, ylab = "resids", xlab = "total # bay laurel")# this seems the most likely source of the pattern
 plot(E2 ~ avg_tmax_ds.scl, data = oakplots.sub2, ylab = "resids", xlab = "temp")
 plot(E2 ~ rain_days.scl, data = oakplots.sub2, ylab = "resids", xlab = "rain")
 plot(E2 ~ twi15m.log.scl, data = oakplots.sub2, ylab = "resids", xlab = "twi")
@@ -330,14 +362,14 @@ plot(E2 ~ shannons2005.scl, data = oakplots.sub2, ylab = "resids", xlab = "Shann
 boxplot(E2 ~ sample_year, data = oakplots.sub2, ylab = "resids", xlab = "year")
 ## These plots indicate that the trend in the residuals is not a result of the predictors, at least none of them are contributing the substantial amount abserved.
 
-m4a <- lme(tot_slc.log.scl ~ tot_bay_ct.log.scl + avg_tmax_ds.scl + rain_days.scl + twi15m.log.scl + shannons2005.scl, 
+m4a <- lme(tot_lfct.log.scl ~ tot_bay.log.scl + avg_tmax_ds.scl + rain_days.scl + twi15m.log.scl + shannons2005.scl, 
            random = ~1|sample_year/plotid, data = oakplots.sub2, 
           na.action = na.omit)
 # I believe this is allowing the intercept to vary among groups within sample year
 plot(m4a)
 summary(m4a)
 
-m4b <- lmer(tot_slc.log.scl ~ tot_bay_ct.log.scl + avg_tmax_ds.scl + rain_days.scl + twi15m.log.scl + shannons2005.scl + (1|sample_year) + (1|plotid), 
+m4b <- lmer(tot_lfct.log.scl ~ tot_bay.log.scl + avg_tmax_ds.scl + rain_days.scl + twi15m.log.scl + shannons2005.scl + (1|sample_year) + (1|plotid), 
             data = oakplots.sub2)
 # this formulation is allowing the intercept to vary among each group
 summary(m4b)
@@ -345,7 +377,7 @@ plot(m4b)
 image(getME(m4b, name = "L"))
 image((getME(m4b, name = "A")))
 
-m5 <- glmer(oak.inf ~ tot_slc.log.scl + avg_tmax_ds.scl + rain_days.scl + shannons2005.scl + (1|sample_year),
+m5 <- glmer(oak.inf ~ tot_lfct.log.scl + avg_tmax_ds.scl + rain_days.scl + shannons2005.scl + (1|sample_year),
             data = oakplots.sub2, family = binomial(link = "logit"), 
             na.action = na.omit)
 summary(m5)
