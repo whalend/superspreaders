@@ -16,30 +16,35 @@ library(ggplot2, verbose = F); library(tidyr, verbose = F)
 
 ```{r load overstory tree data, echo=F, results='hide', message=FALSE}
 # Tagged Stems
-stems <- as.tbl(read.csv("analysis/data/stems_noBUSH01.csv"))
-stems
-stems$plotid <- tolower(stems$plotid)
-stems$species <- tolower(stems$species)
+tagged_stems <- as.tbl(read.csv("analysis/data/tagged-stems-corrected.csv"))
+tagged_stems
+tagged_stems$plotid <- tolower(tagged_stems$plotid)
+tagged_stems$species <- tolower(tagged_stems$species)
 
 # Overstory species data of tagged and untagged stems
 tag_dbh_plot <- as.tbl(read.csv("analysis/data/tag-dbh-plot.csv"))
 tag_dbh_plot
 tag_dbh_plot$plotid <- tolower(tag_dbh_plot$plotid)
 tag_dbh_plot$species <- tolower(tag_dbh_plot$species)
+
 tag_dbh_stem <- as.tbl(read.csv("analysis/data/tag-dbh_0514-corrected.csv"))
 tag_dbh_stem
 tag_dbh_stem$plotid <- tolower(tag_dbh_stem$plotid)
 tag_dbh_stem$species <- tolower(tag_dbh_stem$species)
+
 alt_dbh_plot <- as.tbl(read.csv("analysis/data/alt-dbh-plot.csv"))
 alt_dbh_plot
+
 alt_dbh_stem <- as.tbl(read.csv("analysis/data/alt-species-dbh-corrected.csv"))
 alt_dbh_stem
 
-dbh_stem <- rbind(select(tag_dbh_stem, plotid, species, dbh, status, year),
-                  alt_dbh_stem)
-dbh_stem$plotid <- as.factor(dbh_stem$plotid)
-dbh_stem$status <- as.factor(dbh_stem$plotid)
-dbh_stem$year <- as.factor(dbh_stem$year)
+all_stems <- as.tbl(read.csv("analysis/data/all_stems_corrected.csv"))
+summary(all_stems)
+      # rbind(select(tag_dbh_stem, plotid, species, dbh, status, year),
+      #             alt_dbh_stem)
+all_stems$plotid <- as.factor(all_stems$plotid)
+all_stems$status <- as.factor(all_stems$plotid)
+all_stems$year <- as.factor(all_stems$year)
 
 unique(alt_dbh_plot$plotid) %in% unique(tag_dbh_plot$plotid)
 unique(alt_dbh_plot$plotid)[c(25,47,61,74,112,174,180)]
