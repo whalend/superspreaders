@@ -38,9 +38,7 @@ stems <- read.csv("analysis/data/tagged-stems-corrected.csv")
 veg_us_2005 <- read.csv("analysis/data/understory_veg_2005.csv")
 veg_us_2011 <- read.csv("analysis/data/understory_veg_2011.csv")
 
-# Untagged dbh data
-untagged_dbh_2005 <- read.csv("analysis/data/untagged_dbh2005_summary.csv")
-untagged_dbh_2014 <- read.csv("analysis/data/untagged_dbh2014_summary.csv")
+# Canopy cover from densiometer readings
 canopy_cover <- read.csv("analysis/data/plot_canopy_cover_dens.csv")
 ```
 ```{r load physical data, echo=FALSE, message=F}
@@ -542,10 +540,57 @@ summary(oak_sod)
 oak_sod <- select(oak_sod, -rain_days_2d, -rain_days_3d, -rain_days_r)
 pairs(select(oak_sod, elev_m, starts_with("hrs"), starts_with("avg_t"), contains("rain_tot")), lower.panel = panel.cor, diag.panel = panel.hist, main = "Oak-SOD Rainfall & Temperature Data")
 
-pairs(na.omit(select(oak_sod, c(3:4,7:8,9:10), H.2005, H.2014)),
+filter(oak_sod, is.na(elevation))
+oak_sod <- filter(oak_sod, plotid != "ponti01", plotid != "sweet01")
+filter(oak_sod, is.na(hrs_14_20_rs))
+oak_sod <- filter(oak_sod, plotid != "bush01")
+filter(oak_sod, is.na(H.2005))$plotid
+oak_sod <- filter(oak_sod, plotid != "mcneil03", plotid != "sumtv02",
+                  plotid != "votru01")
+filter(oak_sod, is.na(hrs_abv25rs))# I believe these locations actually did not have any temperatures above 25 C during the rainy season
+oak_sod$hrs_abv25rs[is.na(oak_sod$hrs_abv25rs)] <- 0
+
+length(unique(oak_sod$plotid))# 164 plots remaining
+
+
+pairs(na.omit(select(oak_sod, c(3,4,7:10), H.2005, H.2014)),
       lower.panel = panel.cor, diag.panel = panel.hist, 
       main = "Oak-SOD Infection & Diversity Data")
 ```
+
+I'm going to add some lag variables, e.g. average rainfall for time t + t-1 or t-1 + t-2.
+```{r create lag variables}
+library(tidyr)
+summary(rain_total)
+unique(rain_total$sample_year)
+rain_lag <- as.tbl(select(rain_total, plotid, sample_year, rain_tot_v))
+rain_lag1 <- as.tbl(select(rain_total, plotid, sample_year))
+rain_lag1 <- rain_lag1 %>% 
+      mutate(sample_year_minus1 = sample_year - 1, 
+             sample_year_minus2 = sample_year - 2,
+             sample_year_minus3 = sample_year - 3) 
+rain_lag1 <- left_join(rain_lag1, rain_lag,
+                by = c("plotid", "sample_year_minus1"="sample_year")) %>%
+      rename(rain_tot_t_minus1 = rain_tot_v)
+rain_lag1 <- left_join(rain_lag1, rain_lag,
+                by = c("plotid", "sample_year_minus2"="sample_year")) %>%
+      rename(rain_tot_t_minus2 = rain_tot_v)
+rain_lag1 <- left_join(rain_lag1, rain_lag,
+                by = c("plotid", "sample_year_minus3"="sample_year")) %>%
+      rename(rain_tot_t_minus3 = rain_tot_v)
+rain_lag1 <- left_join(rain_lag1, rain_lag,
+                by = c("plotid", "sample_year"="sample_year"))
+rain_lag1 <- select(rain_lag1, plotid, sample_year, starts_with("rain"))
+
+rain_lag1 <- rain_lag1 %>% 
+      mutate(avg_rain_t_minus1 = 
+                   rowMeans(cbind(rain_tot_v, rain_tot_t_minus1)),
+             avg_rain_t_minus2 =
+                   rowMeans(cbind(rain_tot_v, rain_tot_t_minus1, rain_tot_t_minus2)),
+             avg_rain_t1t2 = rowMeans(cbind(rain_tot_t_minus1, rain_tot_t_minus2)))
+summary(rain_lag1)
+```
+
 
 ### Save path analysis data environment
 ```{r save data environment}
@@ -556,6 +601,11 @@ pairs(na.omit(select(oak_sod, c(3:4,7:8,9:10), H.2005, H.2014)),
 Updating the path analysis data with the temperature during wet days variables.
 ```{r update data}
 # load("pathmodel_data_20160112.RData")
+# Add untagged dbh data
+untagged_stems <- read.csv("analysis/data/untagged_stems_corrected.csv")
+untagged_dbh_2005 <- read.csv("analysis/data/untagged_dbh2005_summary.csv")
+untagged_dbh_2014 <- read.csv("analysis/data/untagged_dbh2014_summary.csv")
+
 wet_hrs <- read.csv("analysis/data/wet-days-temperature-variables.csv")
 save.image("~/GitHub/superspreaders/pathmodel_data.RData")
 ```
