@@ -10,7 +10,8 @@
 #+ load plot sampling data ####
 
 ## Ecological data: leaf counts, infection, at stem and plot levels
-load("~/GitHub/superspreaders/stems_plots.RData")
+# load("~/GitHub/superspreaders/stems_plots.RData")
+tagged_stems <- as.tbl(read.csv("analysis/data/tagged-stems-corrected.csv"))
 
 ## Vegetation transect data
 veg_us_2005 <- read.csv("analysis/data/understory_veg_2005.csv")
@@ -18,8 +19,13 @@ veg_us_2011 <- read.csv("analysis/data/understory_veg_2011.csv")
 canopy_cover <- read.csv("analysis/data/plot_canopy_cover_dens.csv")
 
 ## Untagged dbh data
-untagged_dbh_2005 <- read.csv("analysis/data/untagged_dbh2005_summary.csv")
-untagged_dbh_2014 <- read.csv("analysis/data/untagged_dbh2014_summary.csv")
+untagged_stems <- as.tbl(read.csv("analysis/data/untagged-stems_0514-corrected.csv"))
+untagged_dbh_2005 <- filter(untagged_stems, year == 2005)
+untagged_dbh_2014 <- filter(untagged_stems, year == 2014)
+                            
+# untagged_dbh_2005 <- read.csv("analysis/data/untagged_dbh2005_summary.csv")
+# untagged_dbh_2014 <- read.csv("analysis/data/untagged_dbh2014_summary.csv")
+
 alt05live <- read.csv("analysis/data/altsp05abund_live.csv")
 alt05dead <- read.csv("analysis/data/altsp05abund_dead.csv")
 alt14live <- read.csv("analysis/data/altsp14abund_live.csv")
@@ -109,7 +115,9 @@ us_richness <- filter(us_richness, plotid != "bush01", plotid != "halow01",
                       plotid != "sweet01")
 us_richness$us_rich05[us_richness$plotid=="jlsp05"] <- 0
 us_richness$us_rich05[us_richness$plotid=="ann06"] <- 0
+us_richness$us_rich11[us_richness$plotid=="ann06"] <- 0
 us_richness$us_rich05[us_richness$plotid=="mroth03"] <- 0
+us_richness$us_rich11[us_richness$plotid=="mroth03"] <- 0
 
 
 us_sub_richness <- full_join(
@@ -127,9 +135,9 @@ us_sub_richness <- filter(us_sub_richness,
 # mcneil01 was lost in 2009 (road built through plot), so NA for later years
 # sumtv02 was abandoned after 2008, so it should be an NA for later years
 # ann06 and mroth03 are actually zeroes for understory species in 2011
-us_richness$us_rich11[us_richness$plotid=="ann06"] <- 0
-us_richness$us_rich11[us_richness$plotid=="mroth03"] <- 0
-us_richness$us_rich11[us_richness$plotid=="jlsp05"] <- 0
+us_sub_richness$us_rich11[us_sub_richness$plotid=="ann06"] <- 0
+us_sub_richness$us_rich11[us_sub_richness$plotid=="mroth03"] <- 0
+us_sub_richness$us_rich05[us_sub_richness$plotid=="jlsp05"] <- 0
 # This leaves two legitimate NAs for understory species in 2011
 
 
@@ -206,10 +214,10 @@ us_sub_2011_ptct[is.na(us_sub_2011_ptct)] <- 0
 summary(untagged_dbh_2005)
 summary(untagged_dbh_2014)
 
-untagged_dbh_2005 <- as.tbl(untagged_dbh_2005 %>% rename(plotid = PlotID, species = Species))
-untagged_dbh_2014 <- as.tbl(untagged_dbh_2014 %>% rename(plotid = PlotID, species = Species))
-untagged_dbh_2005$plotid <- tolower(untagged_dbh_2005$plotid)
-untagged_dbh_2014$plotid <- tolower(untagged_dbh_2014$plotid)
+# untagged_dbh_2005 <- as.tbl(untagged_dbh_2005 %>% rename(plotid = PlotID, species = Species))
+# untagged_dbh_2014 <- as.tbl(untagged_dbh_2014 %>% rename(plotid = PlotID, species = Species))
+# untagged_dbh_2005$plotid <- tolower(untagged_dbh_2005$plotid)
+# untagged_dbh_2014$plotid <- tolower(untagged_dbh_2014$plotid)
 
 sort(unique(untagged_dbh_2005$species))
 sort(unique(untagged_dbh_2014$species))
@@ -224,10 +232,25 @@ untagged_dbh_2014[untagged_dbh_2014=="quercus sp."] <- "qusp"
 untagged_dbh_2014[untagged_dbh_2014=="unknown sp. 1"] <- "unk1"
 untagged_dbh_2014[untagged_dbh_2014=="prunus sp."] <- "prunus"
 
-unique(untagged_dbh_2005$plotid)# 173
-unique(untagged_dbh_2014$plotid)# 171
+unique(untagged_dbh_2005$plotid)# 172
+unique(untagged_dbh_2014$plotid)# 172
 untagged_dbh_2005 <- filter(untagged_dbh_2005, plotid != "bush01")
 untagged_dbh_2014 <- filter(untagged_dbh_2014, plotid != "bush01")
+
+untagged_dbh_2005 <- untagged_dbh_2005 %>% 
+      filter(stem_status == "Alive") %>%
+      select(-date) %>% 
+      group_by(plotid, species, year) %>% 
+      summarise(live_count = length(species),
+                live_avg_dbh = mean(dbh),
+                live_tot_dbh = sum(dbh))
+untagged_dbh_2014 <- untagged_dbh_2014 %>% 
+      filter(stem_status == "Alive") %>%
+      select(-date) %>% 
+      group_by(plotid, species, year) %>% 
+      summarise(live_count = length(species),
+                live_avg_dbh = mean(dbh),
+                live_tot_dbh = sum(dbh))
 
 #' ## Examine live and dead species abundances for 2005 & 2014
 #+ untagged abundances ####
@@ -251,15 +274,17 @@ untagged_dbh_2014 %>% group_by(plotid, year) %>% summarise(untagged_rich = lengt
 
 # Calculate the richness of the tagged stems ####
 stems <- as.tbl(read.csv("analysis/data/tag-dbh_0514-corrected.csv"))
-stems
-stems$plotid <- tolower(stems$plotid)
-stems$species <- tolower(stems$species)
+summary(stems)
+unique(live_tagged$plotid)
+# stems$plotid <- tolower(stems$plotid)
+# stems$species <- tolower(stems$species)
 
 live_tagged <- stems %>% 
-      filter(status == "Alive", location == "In", dbh >= 2.0) %>% 
+      filter(location == "In") %>% 
       group_by(plotid, year, species) %>% 
       summarise(live_count = length(species))
 unique(live_tagged$species)
+unique(live_tagged$plotid)
 summary(live_tagged)
 
 filter(live_tagged, year == 2005, plotid == "ganay02")
@@ -270,10 +295,12 @@ filter(untagged_dbh_2014, plotid == "ganay02")
 tagged_abund_2005 <- live_tagged %>% filter(year == 2005)
 tagged_abund_2005 <- ungroup(tagged_abund_2005) %>% select(-year)
 length(unique(tagged_abund_2005$plotid))# 195 plots
+summary(tagged_abund_2005)
 
 tagged_abund_2014 <- live_tagged %>% filter(year == 2014)
 tagged_abund_2014 <- ungroup(tagged_abund_2014) %>% select(-year)
 length(unique(tagged_abund_2014$plotid))# 195 plots
+summary(tagged_abund_2014)
 
 # Join tagged and untagged stems for 2005
 tagged_abund_2005; unique(tagged_abund_2005$species)
@@ -293,8 +320,15 @@ abund_2014_wide <- abund_2014 %>% spread(species, live_count)
 # Summarize into overstory species richness - number of each species in each plot for each survey
 os_rich2005 <- abund_2005 %>% group_by(plotid) %>% 
       summarise(os_rich05 = length(unique(species)))
+summary(os_rich2005)
+unique(os_rich2005$plotid)
+
+
 os_rich2014 <- abund_2014 %>% group_by(plotid) %>% 
       summarise(os_rich14 = length(unique(species)))
+summary(os_rich2014)
+unique(os_rich2014$plotid)
+
 os_richness <- left_join(os_rich2005, os_rich2014, by = "plotid")
 summary(os_richness)
 filter(os_richness, is.na(os_rich14))
@@ -307,8 +341,10 @@ richness <- full_join(os_richness, us_richness, by = c("plotid"))
 summary(richness)
 filter(richness, is.na(us_rich05))
 filter(richness, is.na(us_rich11))
+filter(richness, is.na(os_rich05))
 filter(richness, is.na(os_rich14))
-richness <- filter(richness, plotid != "sumtv02")
+richness <- filter(richness, plotid != "sumtv02", plotid != "sweet01",
+                   plotid != "mcneil01", plotid != "mcneil03")
 
 
 #' ## Calculate Diversity Indices
@@ -345,9 +381,12 @@ os.diversity <- full_join(diversity.2005, diversity.2014, by = "plotid")
 
 summary(os.diversity)
 filter(os.diversity, is.na(H.2014))
+os.diversity <- filter(os.diversity, plotid != "mcneil01", plotid != "sweet01",
+                       plotid != "votru01")
 # remove 4 early abandoned plots, keep 4 late abandoned plots
-os.diversity <- filter(os.diversity, plotid != "ann28", plotid != "bush01",
-                       plotid != "halow01", plotid != "sweet01")
+# os.diversity <- filter(os.diversity, plotid != "ann28", plotid != "bush01",
+#                        plotid != "halow01", plotid != "sweet01")
+
 
 
 # Understory Diversity - based on transect point counts ####
@@ -386,10 +425,11 @@ filter(us.diversity, is.na(us.H.2005))# calculation with 0 richness = NAs
 filter(us.diversity, is.na(us.H.2011))
 # remove abandoned plots
 us.diversity <- filter(us.diversity, plotid != "bush01", plotid != "halow01",
-                       plotid != "sweet01")
+                       plotid != "sweet01", plotid != "mcneil01", 
+                       plotid != "sumtv02")
 # ann06 & mroth03 had 0 for understory species richness in 2011
 # mcneil01 & sumtv02 were abandoned prior to the 2011 season
-
+us.diversity[is.na(us.diversity)] <- 0
 
 
 # Diversity calculation with subset of understory species
@@ -424,9 +464,12 @@ filter(us_sub.diversity, is.na(us.H.2005))# calculation with 0 richness = NAs
 filter(us_sub.diversity, is.na(us.H.2011))
 # remove abandoned plots
 us_sub.diversity <- filter(us_sub.diversity, plotid != "bush01", 
-                           plotid != "halow01", plotid != "sweet01")
+                           plotid != "halow01", plotid != "sweet01",
+                           plotid != "mcneil01", plotid != "sumtv02")
 # ann06 & mroth03 had 0 for understory species richness in 2011
 # mcneil01 & sumtv02 were abandoned prior to the 2011 season
+us_sub.diversity[is.na(us_sub.diversity)] <- 0
+
 
 summary(us.diversity)
 summary(us_sub.diversity)
@@ -443,10 +486,10 @@ os.us.diversity <- full_join(os.us.diversity, us.diversity, by = "plotid")
 
 summary(os.us.diversity)
 os.us.diversity$plotid <- as.factor(os.us.diversity$plotid)
+filter(os.us.diversity, is.na(H.2005))
 filter(os.us.diversity, is.na(H.2014))
-filter(os.us.diversity, is.na(us.H.2005))
-summary(filter(os.us.diversity, plotid == "jlsp05"))# 0 understory species in 2005
-summary(filter(os.us.diversity, is.na(us.D.2011)))# 2 plots not resampled (mcneil01 & sumtv02) and 2 plots (ann06 & mroth03) with 0 understory species in 2011
+filter(os.us.diversity, is.na(us_rich05))
+os.us.diversity <- filter(os.us.diversity, plotid != "mcneil03", plotid != "votru01")
 
 write.csv(os.us.diversity, "analysis/data/os_us_diversity.csv", row.names = F)
 #'
