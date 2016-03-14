@@ -1,0 +1,60 @@
+---
+title: "Correlation of Data Between Years - Lag Effects?"
+author: "Whalen Dillon"
+date: "February 18, 2016"
+output: html_document
+---
+
+Examine correlation of the same measurements between years to explore where a lag-effect might be at work.
+
+```{r}
+load("pathmodel_data.RData")
+library(plyr); library(dplyr); library(tidyr); library(ggplot2)
+panel.cor <- function(x, y, digits = 2, cex.cor, ...)
+{
+      usr <- par("usr"); on.exit(par(usr))
+      par(usr = c(0, 1, 0, 1))
+      # correlation coefficient
+      r <- cor(x, y)
+      txt <- format(c(r, 0.123456789), digits = digits)[1]
+      txt <- paste("r= ", txt, sep = "")
+      text(0.5, 0.6, txt)
+      
+      # p-value calculation
+      p <- cor.test(x, y)$p.value
+      txt2 <- format(c(p, 0.123456789), digits = digits)[1]
+      txt2 <- paste("p= ", txt2, sep = "")
+      if(p<0.01) txt2 <- paste("p= ", "<0.01", sep = "")
+      text(0.5, 0.4, txt2)
+}
+panel.hist <- function(x, ...)
+{
+      usr <- par("usr"); on.exit(par(usr))
+      par(usr = c(usr[1:2], 0, 1.5) )
+      h <- hist(x, plot = FALSE)
+      breaks <- h$breaks; nB <- length(breaks)
+      y <- h$counts; y <- y/max(y)
+      rect(breaks[-nB], 0, breaks[-1], y, col = "cyan", ...)
+}
+```
+
+```{r correlation between years for umca plot variables}
+summary(umca_plots)
+umca_plots$tot_lfct_log <- log1p(umca_plots$tot_lfct)
+boxplot(tot_lfct_log ~ sample_year, data = umca_plots)
+
+slc_plot_year <- umca_plots %>% 
+      select(plotid, sample_year, tot_lfct_log) %>%
+      filter(sample_year != 2003) %>% 
+      spread(., sample_year, tot_lfct_log)
+summary(slc_plot_year)
+names(slc_plot_year) <- c("plotid", "slc04","slc05","slc06","slc07","slc08","slc09","slc10","slc11","slc12","slc14")
+      
+pairs(na.omit(select(slc_plot_year, -plotid)),
+      lower.panel = panel.cor, diag.panel = panel.hist, 
+      main = "Log Total Symptomatic Leaf Count Across Years")
+
+plot(lm(slc05 ~ slc04, data = slc_plot_year))
+
+```
+
