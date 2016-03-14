@@ -39,7 +39,8 @@ veg_us_2005 <- read.csv("analysis/data/understory_veg_2005.csv")
 veg_us_2011 <- read.csv("analysis/data/understory_veg_2011.csv")
 
 # Canopy cover from densiometer readings
-canopy_cover <- read.csv("analysis/data/plot_canopy_cover_dens.csv")
+## I've decided to not use these since we have high-resolution LiDAR data of canopy density
+# canopy_cover <- read.csv("analysis/data/plot_canopy_cover_dens.csv")
 ```
 ```{r load physical data, echo=FALSE, message=F}
 # Physical environment: topography
@@ -53,30 +54,32 @@ plots_env <- select(plots_env, -cat, -X, -Y)
 plots_topo.shp <- readOGR("analysis/data/plot_gis/", "plots202_vegtopo")
 plots_vegtopo <- plots_topo.shp@data
 summary(plots_vegtopo)
-plots_vegtopo <- select(plots_vegtopo, -cat) %>% rename(lon_utm = X, lat_utm = Y)
+plots_vegtopo <- select(plots_vegtopo, -cat, -flowacc15m, -facc_ws15m, -slope15m) %>% rename(lon_utm = X, lat_utm = Y)
 ```
 ```{r load weather data, echo=FALSE}
 # Temperature: rainy season hour summaries (long format for each year)
 rs_temps <- read.csv("analysis/data/rs_select_temps.csv")
 summary(rs_temps)
-rs_temps <- select(rs_temps, -X)
+# rs_temps <- select(rs_temps, -X)
 
 summer_temps <- read.csv("analysis/data/summer_select_temps.csv")
 summary(summer_temps)
-summer_temps <- select(summer_temps, -X)
+# summer_temps <- select(summer_temps, -X)
+
+wet_hrs <- read.csv("analysis/data/wet-days-temperature-variables.csv")
 
 # Rainfall: interpolated/estimated rainfall for each season
 load("~/Documents/soco_ppt/plot_ppt_estimates.RData")
-summary(ppt_days)
-summary(ppt_total)
+rm(ppt_days)
+rm(ppt_total)
+summary(rainfall)# use newly calculated values
+rainfall$plotid <- tolower(rainfall$plotid)
 # plots_rain <- read.csv("analysis/data/plot202rain.csv")
 # summary(plots_rain)
 # plots_rain <- select(plots_rain, -cat)
 # pairs(select(plots_rain, -PLOT_ID), 
 #       lower.panel = panel.cor, 
 #       diag.panel = panel.hist)
-ppt_days@data <- rename(ppt_days@data, plotid = PLOT_ID)
-ppt_total@data <- rename(ppt_total@data, plotid = PLOT_ID)
 ```
 
 ## Join remotely sensed and derived physical data
@@ -87,86 +90,121 @@ summary(plots_env)
 plots_env$elev_m <- plots_env$elev15m * .3048
 # plots_env <- select(plots_env, -elevation, -tmi) #remove elevation, tmi from old derivation (I think a legacy 10m USGS DEM)
 plots_env$veght_m <- plots_env$veght15m * .3048
+plots_env <- select(plots_env, -elevation, -elev15m, -veght15m, -tmi) %>% 
+      rename(plotid = PLOT_ID)
+plots_env$plotid <- tolower(plots_env$plotid)
 rm(plots_vegtopo)
 ```
 
 ## Convert rain data from wide to long
 ```{r rain wide to long}
 library(tidyr)
-rain2d_total <- ppt_total@data %>% select(plotid, ends_with("2d"))
-names(rain2d_total) <- c("plotid",paste(c(2004:2012,2014), sep = ","))
-rain2d_total <- rain2d_total %>% gather(year, rain_tot_2d, -plotid)
+rain2d_rs_total <- rainfall@data %>% 
+      select(plotid, contains("rs"),  -ends_with("v"))
+names(rain2d_rs_total) <- c("plotid",paste(c(2004:2014), sep = ","))
+rain2d_rs_total <- rain2d_rs_total %>% gather(year, rain2d_total, -plotid)
 
-rain3d_total <- ppt_total@data %>% select(plotid, ends_with("3d"))
-names(rain3d_total) <- c("plotid",paste(c(2004:2012,2014), sep = ","))
-rain3d_total <- rain3d_total %>% gather(year, rain_tot_3d, -plotid)
+rain2d_ss_total <- rainfall@data %>% 
+      select(plotid, contains("ss"),  -ends_with("v"))
+names(rain2d_ss_total) <- c("plotid",paste(c(2004:2014), sep = ","))
+rain2d_ss_total <- rain2d_ss_total %>% gather(year, rain2d_total, -plotid)
 
-rain_v_total <- ppt_total@data %>% select(plotid, ends_with("v"))
-names(rain_v_total) <- c("plotid",paste(c(2004:2012,2014), sep = ","))
-rain_v_total <- rain_v_total %>% gather(year, rain_tot_v, -plotid)
+# rain3d_total <- ppt_total@data %>% select(plotid, ends_with("3d"))
+# names(rain3d_total) <- c("plotid",paste(c(2004:2012,2014), sep = ","))
+# rain3d_total <- rain3d_total %>% gather(year, rain_tot_3d, -plotid)
 
-rain_r_total <- ppt_total@data %>% select(plotid, ends_with("r"))
-names(rain_r_total) <- c("plotid",paste(c(2004:2012,2014), sep = ","))
-rain_r_total <- rain_r_total %>% gather(year, rain_tot_r, -plotid)
+rain_rs_v_total <- rainfall@data %>% 
+      select(plotid, ends_with("v")) %>% 
+      select(plotid, contains("rs")) %>%
+      select(plotid, starts_with("rain"))
+names(rain_rs_v_total) <- c("plotid",paste(c(2004:2014), sep = ","))
+rain_rs_v_total <- rain_rs_v_total %>% gather(year, rain_v_total, -plotid)
 
-rain_psm_total <- ppt_total@data %>% select(plotid, contains("sum"))
-names(rain_psm_total) <- c("plotid", paste(c(2004:2010), sep = ","))
-rain_psm_total <- rain_psm_total %>% gather(year, rain_tot_psm, -plotid)
+rain_ss_v_total <- rainfall@data %>% 
+      select(plotid, ends_with("v")) %>% 
+      select(plotid, contains("ss")) %>%
+      select(plotid, starts_with("rain"))
+names(rain_ss_v_total) <- c("plotid",paste(c(2004:2014), sep = ","))
+rain_ss_v_total <- rain_ss_v_total %>% gather(year, rain_v_total, -plotid)
 
+# rain_r_total <- ppt_total@data %>% select(plotid, ends_with("r"))
+# names(rain_r_total) <- c("plotid",paste(c(2004:2012,2014), sep = ","))
+# rain_r_total <- rain_r_total %>% gather(year, rain_tot_r, -plotid)
 
-rain2d_days <- ppt_days@data %>% select(plotid, ends_with("2d"))
-names(rain2d_days) <- c("plotid",paste(c(2004:2012,2014), sep = ","))
-rain2d_days <- rain2d_days %>% gather(year, rain_days_2d, -plotid)
-
-rain3d_days <- ppt_days@data %>% select(plotid, ends_with("3d"))
-names(rain3d_days) <- c("plotid",paste(c(2004:2012,2014), sep = ","))
-rain3d_days <- rain3d_days %>% gather(year, rain_days_3d, -plotid)
-
-rain_v_days <- ppt_days@data %>% select(plotid, ends_with("v"))
-names(rain_v_days) <- c("plotid",paste(c(2004:2012,2014), sep = ","))
-rain_v_days <- rain_v_days %>% gather(year, rain_days_v, -plotid)
-
-rain_r_days <- ppt_days@data %>% select(plotid, ends_with("r"))
-names(rain_r_days) <- c("plotid",paste(c(2004:2012,2014), sep = ","))
-rain_r_days <- rain_r_days %>% gather(year, rain_days_r, -plotid)
+# rain_psm_total <- ppt_total@data %>% select(plotid, contains("sum"))
+# names(rain_psm_total) <- c("plotid", paste(c(2004:2010), sep = ","))
+# rain_psm_total <- rain_psm_total %>% gather(year, rain_tot_psm, -plotid)
 
 
-rain_total <- left_join(rain2d_total, 
-                        left_join(rain3d_total, rain_v_total, 
-                                  by = c("plotid","year")),
-                        by = c("plotid","year"))
-rain_total <- left_join(rain_total, rain_r_total, by = c("plotid", "year"))
-rain_total <- left_join(rain_total, rain_psm_total, by = c("plotid", "year"))
-summary(rain_total)# NAs are due to current PRISM data only going through 2010
-unique(rain_total$plotid)# 202 plots
-unique(rain_total$year)# 10 sampling seasons
+# rain2d_days <- ppt_days@data %>% select(plotid, ends_with("2d"))
+# names(rain2d_days) <- c("plotid",paste(c(2004:2012,2014), sep = ","))
+# rain2d_days <- rain2d_days %>% gather(year, rain_days_2d, -plotid)
 
-rain_days <- left_join(rain2d_days,
-                       left_join(rain3d_days, rain_v_days, 
-                                 by = c("plotid", "year")),
-                       by = c("plotid", "year"))
-rain_days <- left_join(rain_days, rain_r_days, by = c("plotid", "year"))
-summary(rain_days)
-unique(rain_days$plotid)# 202 plots
-unique(rain_days$year)# 10 sampling seasons
+# rain3d_days <- ppt_days@data %>% select(plotid, ends_with("3d"))
+# names(rain3d_days) <- c("plotid",paste(c(2004:2012,2014), sep = ","))
+# rain3d_days <- rain3d_days %>% gather(year, rain_days_3d, -plotid)
 
-rm(list = ls(pattern = "^rain_v"))
-rm(list = ls(pattern = "^rain2d"))
-rm(list = ls(pattern = "^rain3d"))
-rm(list = ls(pattern = "^rain_r"))
-rm(rain_psm_total)
+rain_rs_v_days <- rainfall@data %>% 
+      select(plotid, contains("dys")) %>% 
+      select(plotid, ends_with("v")) %>% 
+      select(plotid, contains("rs"))
+names(rain_rs_v_days) <- c("plotid",paste(c(2004:2014), sep = ","))
+rain_rs_v_days <- rain_rs_v_days %>% gather(year, rain_days_v, -plotid)
 
-write.csv(rain_total, "analysis/data/rain_total_long.csv", row.names = F)
-write.csv(rain_days, "analysis/data/rain_days_long.csv", row.names = F)
+rain_ss_v_days <- rainfall@data %>% 
+      select(plotid, contains("dys")) %>% 
+      select(plotid, ends_with("v")) %>% 
+      select(plotid, contains("ss"))
+names(rain_ss_v_days) <- c("plotid",paste(c(2004:2014), sep = ","))
+rain_ss_v_days <- rain_ss_v_days %>% gather(year, rain_days_v, -plotid)
+
+# rain_r_days <- ppt_days@data %>% select(plotid, ends_with("r"))
+# names(rain_r_days) <- c("plotid",paste(c(2004:2012,2014), sep = ","))
+# rain_r_days <- rain_r_days %>% gather(year, rain_days_r, -plotid)
+
+
+rain_rs_total <- left_join(rain2d_rs_total,
+                           rain_rs_v_total,
+                           by = c("plotid","year"))
+
+rain_ss_total <- left_join(rain2d_ss_total,
+                           rain_ss_v_total,
+                           by = c("plotid","year"))
+
+# rain_total <- left_join(rain_total, rain_r_total, by = c("plotid", "year"))
+# rain_total <- left_join(rain_total, rain_psm_total, by = c("plotid", "year"))
+# summary(rain_total)# NAs are due to current PRISM data only going through 2010
+# unique(rain_total$plotid)# 202 plots
+# unique(rain_total$year)# 10 sampling seasons
+
+# rain_days <- left_join(rain2d_days,
+#                        left_join(rain3d_days, rain_v_days, 
+#                                  by = c("plotid", "year")),
+#                        by = c("plotid", "year"))
+# rain_days <- left_join(rain_days, rain_r_days, by = c("plotid", "year"))
+# summary(rain_days)
+# unique(rain_days$plotid)# 202 plots
+# unique(rain_days$year)# 10 sampling seasons
+
+# rm(list = ls(pattern = "^rain_v"))
+# rm(list = ls(pattern = "^rain2d"))
+# rm(list = ls(pattern = "^rain3d"))
+# rm(list = ls(pattern = "^rain_r"))
+# rm(rain_psm_total)
+
+write.csv(rain_rs_total, "analysis/data/rainy_season_rainfall_total_long.csv", row.names = F)
+write.csv(rain_ss_total, "analysis/data/sampling_season_rainfall_total_long.csv", row.names = F)
+write.csv(rain_rs_v_days, "analysis/data/rainy_season_wet_days_long.csv", row.names = F)
+write.csv(rain_ss_v_days, "analysis/data/sampling_season_wet_days_long.csv", row.names = F)
 ```
 
 ## Explore data for completeness and matching
 ```{r explore plot_env data, message=FALSE}
 summary(plots_env)
 str(plots_env)
-plots_env <- plots_env %>% rename(plotid = PLOT_ID)
+# plots_env <- plots_env %>% rename(plotid = PLOT_ID)
 
-write.csv(plots_env, "analysis/data/env_gis_variables.csv", row.names = F)
+# write.csv(plots_env, "analysis/data/env_gis_variables.csv", row.names = F)
 # plots_env <- read.csv("analysis/data/env_gis_variables.csv")
 ```
 
@@ -174,44 +212,31 @@ Examine temperature data, which is in long format and covers sample years 2004 t
 ```{r examine temperature & rain data}
 # Temperature Data
 summary(rs_temps)
+rs_temps$plotid <- tolower(rs_temps$plotid)
 summary(summer_temps)
+summer_temps$plotid <- tolower(summer_temps$plotid)
 
 # Rainfall Data
-summary(ppt_days)
-summary(ppt_total)
-rain_df <- merge(ppt_days@data, ppt_total@data)
-summary(rain_df)
+rainy_season_ppt <- merge(rain_rs_total, rain_rs_v_days)
+summary(rainy_season_ppt)
 
-unique(rs_temps$plotid)# 201 plots
-unique(summer_temps$plotid)# 201 plots
-unique(rain_df$plotid)# 202 plots
+length(unique(rs_temps$plotid))# 201 plots
+length(unique(summer_temps$plotid))# 201 plots
+length(unique(rainy_season_ppt$plotid))# 202 plots
 
-tempsid <- as.character(unique(rs_temps$plotid))
-rainid <- as.character(unique(rain_df$plotid))
+tempsid <- tolower(as.character(unique(rs_temps$plotid)))
+rainid <- as.character(unique(rainy_season_ppt$plotid))
 rainid %in% tempsid
 rainid[62]# BUSH01 still in the rain data
-rain_df <- filter(rain_df, plotid != "BUSH01")
+rainy_season_ppt <- filter(rainy_season_ppt, plotid != "bush01")
 
 # Temperature and rainfall data now have same number of observations
 rm(tempsid); rm(rainid)
 ```
 
-## Investigating `NAs` in the `plots_temps` data set
+## Investigating `NAs` in the temperature data set
 A number of observations for above 25 threshold have NAs. I believe that these are in fact truly zero observations. NAs occurred for the 2010, 2011, and 2014 seasons, and the only NAs in the data set are associated with the above 25 threshold. I do believe that it is possible that the temperature was never above 25 C during the wet season November - May in some years.
 ```{r investigate NAs, eval=FALSE, echo=FALSE}
-# summary(plots_env)
-# filter(plots_env, plotid == "BUSH01")
-
-# BUSH01 plot included. I think we have limited ecological data for this plot, and no microclimate data. So, I am going to exclude it from all the data sets
-# plots_env <- filter(plots_env, plotid != "BUSH01")
-stems <- as.tbl(stems)
-stems
-# stems <- select(stems, -X) 
-unique(filter(stems, plot_status == "Abandoned")$plotid)
-stems <- stems %>% filter(plotid != "bush01", plotid != "ponti01", 
-                                plotid != "sweet01")
-stems$plotid <- droplevels(stems$plotid)
-
 rs_temps %>% filter(is.na(hrs_abv25))
 # I am replacing the NAs with 0, assuming true observations, i.e. there were zero hours where temperatures were above 25C
 rs_temps[is.na(rs_temps)] <- 0
@@ -219,10 +244,17 @@ rs_temps[is.na(rs_temps)] <- 0
 
 ### Save data with BUSH01 excluded
 ```{r save data}
-write.csv(plots_env, "analysis/data/env_gis_variables.csv", row.names = F)
-write.csv(rain_df, "analysis/data/rain_data_long.csv", row.names = F)
-write.csv(rs_temps, "analysis/data/rs_temps_data.csv", row.names = F)
-write.csv(summer_temps, "analysis/data/summer_temps_data.csv", row.names = F)
+stems <- as.tbl(stems)
+stems
+# stems <- select(stems, -X) 
+# unique(filter(stems, plot_status == "Abandoned")$plotid)
+stems <- stems %>% filter(plotid != "bush01", plotid != "ponti01", 
+                                plotid != "sweet01")
+stems$plotid <- droplevels(stems$plotid)
+# write.csv(plots_env, "analysis/data/env_gis_variables.csv", row.names = F)
+# write.csv(rainy_season_ppt, "analysis/data/rain_data_long.csv", row.names = F)
+# write.csv(rs_temps, "analysis/data/rs_temps_data.csv", row.names = F)
+# write.csv(summer_temps, "analysis/data/summer_temps_data.csv", row.names = F)
 # write.csv(stems, "analysis/data/stems_noBUSH01.csv", row.names = F)
 # rm(plots_temps); rm(plots_rain)
 ```
@@ -230,10 +262,10 @@ write.csv(summer_temps, "analysis/data/summer_temps_data.csv", row.names = F)
 ## Starting Point with Revised Data: Reload data that has BUSH01 excluded
 Still need to load the .RData source at the beginning of this document, line 32.
 ```{r reload data}
-plots_env <- read.csv("analysis/data/env_gis_variables.csv")
-rain_df <- read.csv("analysis/data/rain_data_long.csv")
-rs_temps <- read.csv("analysis/data/rs_temps_data.csv")
-summer_temps <- read.csv("analysis/data/summer_temps_data.csv")
+# plots_env <- read.csv("analysis/data/env_gis_variables.csv")
+# rain_df <- read.csv("analysis/data/rain_data_long.csv")
+# rs_temps <- read.csv("analysis/data/rs_temps_data.csv")
+# summer_temps <- read.csv("analysis/data/summer_temps_data.csv")
 # stems <- read.csv("analysis/data/stems_noBUSH01.csv")
 ```
 
@@ -266,7 +298,7 @@ I can use the stem-level data to calculate plot level leaf count variables (sum,
 ```{r calculate plot level leaf counts}
 live_umca <- bay_laurel %>% filter(stem_status == "Alive")
 filter(live_umca, is.na(umca_slc))
-# Spot checking some of these shows that NAs are reasonable
+# Spot checking some of these shows that NAs are due to missing data, i.e. they should not be changed to zeroes
 umca_plots <- left_join(
       umca_plots, 
       live_umca %>% 
@@ -284,6 +316,7 @@ filter(bay_laurel, plotid == "yahng02", stem_status == "Alive")
 # I'm not sure why this wasn't excluded from the calculations with the na.rm = T option
 # I'm removing it manually from the `umca_plots` data frame
 umca_plots <- umca_plots %>% filter(avg_lfct != "NaN")
+# filter(umca_plots, plotid == "yahng02")
 summary(umca_plots)
 ```
 
@@ -334,17 +367,28 @@ filter(umca_plots, is.na(avg_tmax_rs))# NAs due to records from 2003
 ## I don't think these will end up in my analysis, but no reason to remove them at this time.
 
 # Add rainfall data to UMCA plots data frame
-summary(rain_total)
-unique(rain_total$plotid)
-rain_total$plotid <- tolower(rain_total$plotid)
-summary(rain_days)
-unique(rain_days$plotid)
-rain_days$plotid <- tolower(rain_days$plotid)
+summary(rain_rs_total)
+summary(rain_ss_total)
+# unique(rain_rs_total$plotid)
+# unique(rain_ss_total$plotid)
 
-rain_total <- rename(rain_total, sample_year = year)
-rain_total$sample_year <- as.character(rain_total$sample_year)
-rain_days <- rename(rain_days, sample_year = year)
-rain_days$sample_year <- as.character(rain_days$sample_year)
+summary(rain_rs_v_days)
+summary(rain_ss_v_days)
+# unique(rain_rs_v_days$plotid)
+# unique(rain_ss_v_days$plotid)
+
+rain_rs_total <- rename(rain_rs_total, sample_year = year,
+                        rs2d_total = rain2d_total,
+                        rs_v_total = rain_v_total)
+rain_ss_total <- rename(rain_ss_total, sample_year = year,
+                        ss2d_total = rain2d_total,
+                        ss_v_total = rain_v_total)
+rain_total <- left_join(rain_rs_total, rain_ss_total, by = c("plotid", "sample_year"))
+# rain_total$sample_year <- as.character(rain_total$sample_year)
+rain_rs_v_days <- rename(rain_rs_v_days, sample_year = year, rs_days = rain_days_v)
+rain_ss_v_days <- rename(rain_ss_v_days, sample_year = year, ss_days = rain_days_v)
+rain_days <- left_join(rain_rs_v_days, rain_ss_v_days, by = c("plotid", "sample_year"))
+# rain_days$sample_year <- as.character(rain_days$sample_year)
 
 summary(umca_plots)
 umca_plots$sample_year <- as.character(umca_plots$sample_year)
@@ -352,8 +396,8 @@ umca_plots <- left_join(umca_plots, rain_total, by = c("plotid", "sample_year"))
 umca_plots <- left_join(umca_plots, rain_days, by = c("plotid", "sample_year"))
 summary(umca_plots)
 
-filter(umca_plots, is.na(rain_tot_2d))
-# Same case of NAs in rainfall due to data from 2003
+filter(umca_plots, is.na(rs2d_total))
+# Same case of NAs in rainfall due to data sampled in 2003
 ```
 
 ## Load and Join Richness, Diversity, Evenness Data
@@ -367,22 +411,22 @@ umca_plots
 
 umca_plots <- left_join(umca_plots, os.us.diversity, by = c("plotid"))
 summary(umca_plots)
-filter(umca_plots, is.na(H.2014))$plotid
+unique(filter(umca_plots, is.na(H.2014))$plotid)
 ## NAs due to plots abandoned/lost between 2005 and 2014; 4 unique plots
 filter(umca_plots, is.na(us.H.2005))
 ## NAs due to plot having '0' for understory richness
 filter(umca_plots, is.na(us.H.2011))
 ## NAs due to 2 plots being abaondoned prior to 2011 & one plot having '0' for understory richness
 
-head(canopy_cover)
-canopy_cover <- select(canopy_cover, -X)
-canopy_cover <- rename(canopy_cover, sample_year = year)
-summary(canopy_cover)
-unique(filter(canopy_cover, sample_year == 2006)$plotid)
-canopy_cover$sample_year <- as.character(canopy_cover$sample_year)
-
-umca_plots <- left_join(umca_plots, canopy_cover, by = c("plotid", "sample_year"))
-summary(umca_plots)# NAs because canopy cover was not measured every year
+# head(canopy_cover)
+# canopy_cover <- select(canopy_cover, -X)
+# canopy_cover <- rename(canopy_cover, sample_year = year)
+# summary(canopy_cover)
+# unique(filter(canopy_cover, sample_year == 2006)$plotid)
+# canopy_cover$sample_year <- as.character(canopy_cover$sample_year)
+# 
+# umca_plots <- left_join(umca_plots, canopy_cover, by = c("plotid", "sample_year"))
+# summary(umca_plots)# NAs because canopy cover was not measured every year
 ```
 
 Make a pairs plot of the continuous variables for UMCA plots.
@@ -410,17 +454,17 @@ panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)
 
 umca_plots <- ungroup(umca_plots)
 
-pairs(select(umca_plots, candens15m, pct_cvr, veght15m), 
+pairs(select(umca_plots, candens15m, veght_m), 
       lower.panel = panel.cor, diag.panel = panel.hist, 
       main = "Canopy Data - UMCA Plots")
-cor(umca_plots$candens15m, umca_plots$pct_cvr, use = "complete.obs")
-cor(umca_plots$veght15m, umca_plots$pct_cvr, use = "complete.obs")
+# cor(umca_plots$candens15m, umca_plots$pct_cvr, use = "complete.obs")
+# cor(umca_plots$veght15m, umca_plots$pct_cvr, use = "complete.obs")
 
-pairs(na.omit(select(umca_plots, avg_lfct, tot_lfct, contains("hrs"), contains("rain_tot"), H.2005, H.2014)),
+pairs(na.omit(select(umca_plots, avg_lfct, tot_lfct, contains("hrs"), contains("_total"), H.2005, H.2014)),
       lower.panel = panel.cor, diag.panel = panel.hist, 
       main = "Leaf Count, Temperature, Rainfall, Diversity - UMCA Plots")
-## Rainfall and temperature all have fairly weak correlations (<0.36)
-## The diversity metrics are the only correlates with leaf count >0.20
+plot(umca_plots$hrs_abv25ds, log1p(umca_plots$tot_lfct))
+cor(umca_plots$hrs_abv25ds, log1p(umca_plots$tot_lfct), use = "complete")
 ```
 
 Now that I have summarized some vegetation (not species specific), environmental, and bay laurel disease data to the plot-level I want to join this and the canopy cover data to the plot-level oak infection data.
@@ -454,7 +498,7 @@ oak_sod <- rename(oak_sod, sample_year = year)
 # Add bay laurel infection data to oak plots
 names(umca_plots)
 oak_sod <- left_join(oak_sod, 
-                     select(umca_plots, plotid, sample_year, uninfected_bay_ct, infected_bay_ct, tot_bay, avg_lfct, tot_lfct), 
+                     select(umca_plots, plotid, sample_year, uninfected_bay_ct, infected_bay_ct, tot_bay, tot_lfct), 
                      by = c("plotid", "sample_year"))
 summary(oak_sod) # the NA's for the bay laurel variables are legitimately zeroes b/c there are no bay in some of these plots
 filter(oak_sod, is.na(tot_bay), sample_year != 2003)
@@ -478,8 +522,8 @@ names(oak_sod)
 os.us.diversity
 oak_sod <- left_join(oak_sod, os.us.diversity, by = c("plotid"))
 summary(oak_sod)
-filter(oak_sod, is.na(avg_tmax_rs))# NAs are plots sampled in 2003
-filter(oak_sod, is.na(H.2014))# NAs are plots lost before 2014
+summary(filter(oak_sod, is.na(avg_tmax_rs)))# NAs are plots sampled in 2003
+unique(filter(oak_sod, is.na(H.2014))$plotid)# NAs are plots lost before 2014
 summary(filter(oak_sod, is.na(us.J.2011)))# zero or missing data for understory richness
 # oak_sod <- filter(oak_sod, plotid != "duer01", plotid != "ponti01", plotid != "sweet01")
 
@@ -489,13 +533,13 @@ filter(oak_sod, is.na(avg_tmax_rs))
 # oak_sod <- filter(oak_sod, plotid != "bush01")
 summary(oak_sod)
 
-filter(oak_sod, is.na(H.2014))$plotid
-## plots that were decommissioned prior to 2014
+unique(filter(oak_sod, is.na(H.2014))$plotid)
+## plots that were decommissioned prior to 2014 sampling
 filter(oak_sod, is.na(us.H.2011))$plotid
-## plots that have legit 0 for richness or were decommissioned prior to 2011
+## plots that have legit 0 for understory richness or were decommissioned prior to 2011
 
-canopy_cover$sample_year <- as.integer(canopy_cover$sample_year)
-oak_sod <- left_join(oak_sod, canopy_cover, by = c("plotid", "sample_year"))
+# canopy_cover$sample_year <- as.integer(canopy_cover$sample_year)
+# oak_sod <- left_join(oak_sod, canopy_cover, by = c("plotid", "sample_year"))
 
 summary(rain_total)
 rain_total$sample_year <- as.integer(rain_total$sample_year)
@@ -508,10 +552,11 @@ oak_sod <- left_join(oak_sod, rain_total, by = c("plotid", "sample_year"))
 oak_sod <- left_join(oak_sod, rain_days, by = c("plotid", "sample_year"))
 summary(oak_sod)
 
-summary(filter(oak_sod, is.na(rain_tot_psm))) # all obs after 2010
-summary(filter(oak_sod, is.na(us.J.2011)))
-filter(oak_sod, is.na(us.J.2011))$plotid# ann06, mroth03, sumtv02
+# summary(filter(oak_sod, is.na(rain_tot_psm))) # all obs after 2010
+# summary(filter(oak_sod, is.na(us.J.2011)))
+unique(filter(oak_sod, is.na(us.J.2011))$plotid)# ann06, mroth03, sumtv02
 # ann06 & mroth03 are legitimate zeroes for understory richness in 2011
+# i must have excluded mcneil03 from the diversity calculations
 # sumtv02 was abandoned after 2008, so it should be an NA for later years
 
 
@@ -536,59 +581,333 @@ Now to do a pairs plot of the variables from the `oak_sod` data frame.
 class(oak_sod)
 oak_sod <- ungroup(oak_sod)
 summary(oak_sod)
+unique(filter(oak_sod, is.na(tot_lfct))$plotid)
+filter(oak_sod, plotid == "belta07")[c(1,2,5,8,9)]# no bay in plot 2004-14
+oak_sod$tot_lfct[oak_sod$plotid == "belta07" & is.na(oak_sod$tot_lfct)] <- 0
+filter(oak_sod, plotid == "ann23")[c(1,2,5,8,9)]# no bay in plot 2005-06
+oak_sod$tot_lfct[oak_sod$plotid == "ann23" & is.na(oak_sod$tot_lfct)] <- 0
+filter(oak_sod, plotid == "arbit05")[c(1,2,5,8,9)]# no bay 2004-2010
+oak_sod$tot_lfct[oak_sod$plotid == "arbit05" & is.na(oak_sod$tot_lfct)] <- 0
+filter(oak_sod, plotid == "backm02")[c(1,2,5,8,9)]# no bay in plot 2004-14
+oak_sod$tot_lfct[oak_sod$plotid == "backm02" & is.na(oak_sod$tot_lfct)] <- 0
+filter(oak_sod, plotid == "belta07")[c(1,2,5,8,9)]# no bay in plot 2004-14
+oak_sod$tot_lfct[oak_sod$plotid == "belta07" & is.na(oak_sod$tot_lfct)] <- 0
+filter(oak_sod, plotid == "hallo01")[c(1,2,5,8,9)]# no bay 2004-2012
+filter(oak_sod, plotid == "jlsp06")[c(1,2,5,8,9)]# no bay 2004-14
+filter(oak_sod, plotid == "kunde03")[c(1,2,5,8,9)]# no bay 2004-14
+filter(oak_sod, plotid == "mccor02")[c(1,2,5,8,9)]# no bay 2004-14
+filter(oak_sod, plotid == "mroth03")[c(1,2,5,8,9)]# no bay 2004-14
+filter(oak_sod, plotid == "peter01")[c(1,2,5,8,9)]# no bay 2004-14
+filter(oak_sod, plotid == "petsn02")[c(1,2,5,8,9)]# no bay 2005-14
+filter(oak_sod, plotid == "pfend01")[c(1,2,5,8,9)]# no bay 2004-14
+filter(oak_sod, plotid == "phill01")[c(1,2,5,8,9)]# no bay 2004-14
+filter(oak_sod, plotid == "phill02")[c(1,2,5,8,9)]# no bay 2004-14
+filter(oak_sod, plotid == "schiek02")[c(1,2,5,8,9)]# no bay 2004-14
+filter(oak_sod, plotid == "sdc04")[c(1,2,5,8,9)]# no bay 2004-14
+filter(oak_sod, plotid == "sugar24")[c(1,2,5,8,9)]# no bay 2005-14
+filter(oak_sod, plotid == "sumtv01")[c(1,2,5,8,9)]# no bay 2004-14
+filter(oak_sod, plotid == "sumtv02")[c(1,2,5,8,9)]# no bay after 2006
+filter(oak_sod, plotid == "svrp01")[c(1,2,5,8,9)]# no bay 2005-14
+filter(oak_sod, plotid == "tell03")[c(1,2,5,8,9)]# no bay 2004-14
+filter(oak_sod, plotid == "terri03")[c(1,2,5,8,9)]# no bay 2005-2010
+filter(oak_sod, plotid == "yahng02")[c(1,2,5,8,9)]# missed bay in 2010 visit
+
+oak_sod$tot_lfct[is.na(oak_sod$tot_lfct)] <- 0
+oak_sod$tot_lfct[oak_sod$plotid == "yahng02" & oak_sod$sample_year == 2010] <- NA
+oak_sod$tot_bay[oak_sod$plotid == "yahng02" & oak_sod$sample_year == 2010] <- NA
+
 # drop rainy days interpolations, they aren't reliable; keep voronoi neighbor method
-oak_sod <- select(oak_sod, -rain_days_2d, -rain_days_3d, -rain_days_r)
-pairs(select(oak_sod, elev_m, starts_with("hrs"), starts_with("avg_t"), contains("rain_tot")), lower.panel = panel.cor, diag.panel = panel.hist, main = "Oak-SOD Rainfall & Temperature Data")
+# oak_sod <- select(oak_sod, -rain_days_2d, -rain_days_3d, -rain_days_r)
+pairs(select(oak_sod, elev_m, starts_with("hrs"), starts_with("avg_t"), contains("_total")), lower.panel = panel.cor, diag.panel = panel.hist, main = "Oak-SOD Rainfall & Temperature Data")
 
-filter(oak_sod, is.na(elevation))
-oak_sod <- filter(oak_sod, plotid != "ponti01", plotid != "sweet01")
-filter(oak_sod, is.na(hrs_14_20_rs))
-oak_sod <- filter(oak_sod, plotid != "bush01")
-filter(oak_sod, is.na(H.2005))$plotid
-oak_sod <- filter(oak_sod, plotid != "mcneil03", plotid != "sumtv02",
-                  plotid != "votru01")
-filter(oak_sod, is.na(hrs_abv25rs))# I believe these locations actually did not have any temperatures above 25 C during the rainy season
-oak_sod$hrs_abv25rs[is.na(oak_sod$hrs_abv25rs)] <- 0
+# filter(oak_sod, is.na(elev_m))
+# oak_sod <- filter(oak_sod, plotid != "ponti01", plotid != "sweet01")
+# filter(oak_sod, is.na(hrs_14_20_rs))
+# oak_sod <- filter(oak_sod, plotid != "bush01")
+unique(filter(oak_sod, is.na(H.2005))$plotid)
+## removing b/c not in the most recent data set (2014)
+# oak_sod <- filter(oak_sod, plotid != "mcneil03", plotid != "sumtv02",
+                  # plotid != "votru01")
+# filter(oak_sod, is.na(hrs_abv25rs))# I believe these locations actually did not have any temperatures above 25 C during the rainy season
+# oak_sod$hrs_abv25rs[is.na(oak_sod$hrs_abv25rs)] <- 0
 
-length(unique(oak_sod$plotid))# 164 plots remaining
+length(unique(oak_sod$plotid))# 164 plots remaining if I remove mcneil03, sumtv02, votru01
 
 
-pairs(na.omit(select(oak_sod, c(3,4,7:10), H.2005, H.2014)),
+pairs(na.omit(select(oak_sod, uninf_oak_ct:tot_oak_ct, infected_bay_ct:tot_lfct, H.2005, H.2014)),
       lower.panel = panel.cor, diag.panel = panel.hist, 
       main = "Oak-SOD Infection & Diversity Data")
 ```
 
+
+### Calculate "Lagged" Rainfall & Temperature Variables
 I'm going to add some lag variables, e.g. average rainfall for time t + t-1 or t-1 + t-2.
-```{r create lag variables}
+```{r create rainfall lag variables}
 library(tidyr)
 summary(rain_total)
 unique(rain_total$sample_year)
-rain_lag <- as.tbl(select(rain_total, plotid, sample_year, rain_tot_v))
-rain_lag1 <- as.tbl(select(rain_total, plotid, sample_year))
-rain_lag1 <- rain_lag1 %>% 
+rs2d_lag <- as.tbl(select(rain_total, plotid, sample_year, rs2d_total))
+rs2d_lag1 <- as.tbl(select(rain_total, plotid, sample_year))
+rs2d_lag1 <- rs2d_lag1 %>% 
       mutate(sample_year_minus1 = sample_year - 1, 
              sample_year_minus2 = sample_year - 2,
              sample_year_minus3 = sample_year - 3) 
-rain_lag1 <- left_join(rain_lag1, rain_lag,
+rs2d_lag1 <- left_join(rs2d_lag1, rs2d_lag,
                 by = c("plotid", "sample_year_minus1"="sample_year")) %>%
-      rename(rain_tot_t_minus1 = rain_tot_v)
-rain_lag1 <- left_join(rain_lag1, rain_lag,
+      rename(rs2d_total_t_minus1 = rs2d_total)
+rs2d_lag1 <- left_join(rs2d_lag1, rs2d_lag,
                 by = c("plotid", "sample_year_minus2"="sample_year")) %>%
-      rename(rain_tot_t_minus2 = rain_tot_v)
-rain_lag1 <- left_join(rain_lag1, rain_lag,
+      rename(rs2d_total_t_minus2 = rs2d_total)
+rs2d_lag1 <- left_join(rs2d_lag1, rs2d_lag,
                 by = c("plotid", "sample_year_minus3"="sample_year")) %>%
-      rename(rain_tot_t_minus3 = rain_tot_v)
-rain_lag1 <- left_join(rain_lag1, rain_lag,
+      rename(rs2d_total_t_minus3 = rs2d_total)
+rs2d_lag1 <- left_join(rs2d_lag1, rs2d_lag,
                 by = c("plotid", "sample_year"="sample_year"))
-rain_lag1 <- select(rain_lag1, plotid, sample_year, starts_with("rain"))
 
-rain_lag1 <- rain_lag1 %>% 
-      mutate(avg_rain_t_minus1 = 
-                   rowMeans(cbind(rain_tot_v, rain_tot_t_minus1)),
-             avg_rain_t_minus2 =
-                   rowMeans(cbind(rain_tot_v, rain_tot_t_minus1, rain_tot_t_minus2)),
-             avg_rain_t1t2 = rowMeans(cbind(rain_tot_t_minus1, rain_tot_t_minus2)))
-summary(rain_lag1)
+rs2d_lag1 <- select(rs2d_lag1, plotid, sample_year, starts_with("rs2d"))
+
+rs2d_lag1 <- rs2d_lag1 %>% 
+      mutate(avg_rs2d_t_minus1 = 
+                   rowMeans(cbind(rs2d_total, rs2d_total_t_minus1)),
+             avg_rs2d_t_minus2 =
+                   rowMeans(cbind(rs2d_total, rs2d_total_t_minus1, rs2d_total_t_minus2)),
+             avg_rs2d_t1t2 = rowMeans(cbind(rs2d_total_t_minus1, rs2d_total_t_minus2)))
+summary(rs2d_lag1)
+rm(rs2d_lag)
+```
+
+```{r create wet-hours temperature lag variables}
+summary(wet_hrs); unique(wet_hrs$sample_year)
+
+hrsblw14_wet_lag <- as.tbl(select(wet_hrs, plotid, sample_year, hrsblw14_wet))
+avgtmax_wet_lag <- as.tbl(select(wet_hrs, plotid, sample_year, avgtmax_wet))
+hrs1422_wet_lag <- as.tbl(select(wet_hrs, plotid, sample_year, hrs1422_wet))
+wet_hrs_lag <- select(wet_hrs_lag, plotid, sample_year)
+wet_hrs_lag <- wet_hrs_lag %>% 
+      mutate(sample_year_minus1 = sample_year - 1,
+             sample_year_minus2 = sample_year - 2,
+             sample_year_minus3 = sample_year - 3)
+
+## Number of wet-hours below 14 C lagged ####
+wet_hrs_lag <- left_join(wet_hrs_lag, hrsblw14_wet_lag,
+                by = c("plotid", "sample_year_minus1"="sample_year")) %>%
+      rename(hrsblw14_wet_tminus1 = hrsblw14_wet)
+wet_hrs_lag <- left_join(wet_hrs_lag, hrsblw14_wet_lag,
+                by = c("plotid", "sample_year_minus2"="sample_year")) %>%
+      rename(hrsblw14_wet_tminus2 = hrsblw14_wet)
+wet_hrs_lag <- left_join(wet_hrs_lag, hrsblw14_wet_lag,
+                by = c("plotid", "sample_year_minus3"="sample_year")) %>%
+      rename(hrsblw14_wet_tminus3 = hrsblw14_wet)
+wet_hrs_lag <- left_join(wet_hrs_lag, hrsblw14_wet_lag,
+                by = c("plotid", "sample_year"="sample_year"))
+
+## Average daily maximum temperature on wet days lagged ####
+wet_hrs_lag <- left_join(wet_hrs_lag, avgtmax_wet_lag,
+                by = c("plotid", "sample_year_minus1"="sample_year")) %>%
+      rename(avgtmax_wet_tminus1 = avgtmax_wet)
+wet_hrs_lag <- left_join(wet_hrs_lag, avgtmax_wet_lag,
+                by = c("plotid", "sample_year_minus2"="sample_year")) %>%
+      rename(avgtmax_wet_tminus2 = avgtmax_wet)
+wet_hrs_lag <- left_join(wet_hrs_lag, avgtmax_wet_lag,
+                by = c("plotid", "sample_year_minus3"="sample_year")) %>%
+      rename(avgtmax_wet_tminus3 = avgtmax_wet)
+wet_hrs_lag <- left_join(wet_hrs_lag, avgtmax_wet_lag,
+                by = c("plotid", "sample_year"="sample_year"))
+
+## Number of hours 14-22 C on wet days ####
+wet_hrs_lag <- left_join(wet_hrs_lag, hrs1422_wet_lag,
+                by = c("plotid", "sample_year_minus1"="sample_year")) %>%
+      rename(hrs1422_wet_tminus1 = hrs1422_wet)
+wet_hrs_lag <- left_join(wet_hrs_lag, hrs1422_wet_lag,
+                by = c("plotid", "sample_year_minus2"="sample_year")) %>%
+      rename(hrs1422_wet_tminus2 = hrs1422_wet)
+wet_hrs_lag <- left_join(wet_hrs_lag, hrs1422_wet_lag,
+                by = c("plotid", "sample_year_minus3"="sample_year")) %>%
+      rename(hrs1422_wet_tminus3 = hrs1422_wet)
+wet_hrs_lag <- left_join(wet_hrs_lag, hrs1422_wet_lag,
+                by = c("plotid", "sample_year"="sample_year"))
+
+## ####
+wet_hrs_lag <- select(wet_hrs_lag, plotid, sample_year, starts_with("hrs"), starts_with("avg"))
+wet_hrs_lag <- wet_hrs_lag %>% 
+      mutate(
+            avg_hrsblw14_wet_tminus1 = rowMeans(cbind(hrsblw14_wet, hrsblw14_wet_tminus1)),
+             avg_hrsblw14_wet_tminus2 = rowMeans(cbind(hrsblw14_wet, hrsblw14_wet_tminus1, hrsblw14_wet_tminus2)),
+             avg_hrsblw14_wet_tminus3 = rowMeans(cbind(hrsblw14_wet, hrsblw14_wet_tminus1, hrsblw14_wet_tminus2, hrsblw14_wet_tminus3)),
+             
+            avgtmax_wet_t_t1 = rowMeans(cbind(avgtmax_wet, avgtmax_wet_tminus1)),
+             avgtmax_wet_t_t1t2 = rowMeans(cbind(avgtmax_wet, avgtmax_wet_tminus1, avgtmax_wet_tminus2)),
+             avgtmax_wet_t1t2 = rowMeans(cbind(avgtmax_wet_tminus1, avgtmax_wet_tminus2)),
+             
+            avg_hrs1422_wet_t_t1 = rowMeans(cbind(hrs1422_wet, hrs1422_wet_tminus1)),
+             avg_hrs1422_wet_t_t1t2 = rowMeans(cbind(hrs1422_wet, hrs1422_wet_tminus1, hrs1422_wet_tminus2)),
+             avg_hrs1422_wet_t1t2 = rowMeans(cbind(hrs1422_wet_tminus1, hrs1422_wet_tminus2))
+            )
+```
+
+```{r create rainy season temperature lagged variables}
+summary(rs_temps); unique(rs_temps$sample_year)
+
+hrs1420_rs_lag <- as.tbl(select(rs_temps, plotid, sample_year, hrs_14_20_rs))
+avgtmax_rs_lag <- as.tbl(select(rs_temps, plotid, sample_year, avg_tmax_rs))
+hrsabv20_rs_lag <- as.tbl(select(rs_temps, plotid, sample_year, hrs_abv20_rs))
+hrsblw10_rs_lag <- as.tbl(select(rs_temps, plotid, sample_year, hrs_blw10rs))
+
+rs_temps_lag <- select(rs_temps, plotid, sample_year)
+rs_temps_lag <- rs_temps_lag %>% 
+      mutate(sample_year_minus1 = sample_year - 1,
+             sample_year_minus2 = sample_year - 2,
+             sample_year_minus3 = sample_year - 3)
+
+## Number of rainy season hours 14-20 C ####
+rs_temps_lag <- left_join(rs_temps_lag, hrs1420_rs_lag,
+                by = c("plotid", "sample_year_minus1"="sample_year")) %>%
+      rename(hrs1420_rs_tminus1 = hrs_14_20_rs)
+rs_temps_lag <- left_join(rs_temps_lag, hrs1420_rs_lag,
+                by = c("plotid", "sample_year_minus2"="sample_year")) %>%
+      rename(hrs1420_rs_tminus2 = hrs_14_20_rs)
+rs_temps_lag <- left_join(rs_temps_lag, hrs1420_rs_lag,
+                by = c("plotid", "sample_year_minus3"="sample_year")) %>%
+      rename(hrs1420_rs_tminus3 = hrs_14_20_rs)
+rs_temps_lag <- left_join(rs_temps_lag, hrs1420_rs_lag,
+                by = c("plotid", "sample_year"="sample_year"))
+
+## Average daily maximum temperature during rainy season lagged ####
+rs_temps_lag <- left_join(rs_temps_lag, avgtmax_rs_lag,
+                by = c("plotid", "sample_year_minus1"="sample_year")) %>%
+      rename(avgtmax_rs_tminus1 = avg_tmax_rs)
+rs_temps_lag <- left_join(rs_temps_lag, avgtmax_rs_lag,
+                by = c("plotid", "sample_year_minus2"="sample_year")) %>%
+      rename(avgtmax_rs_tminus2 = avg_tmax_rs)
+rs_temps_lag <- left_join(rs_temps_lag, avgtmax_rs_lag,
+                by = c("plotid", "sample_year_minus3"="sample_year")) %>%
+      rename(avgtmax_rs_tminus3 = avg_tmax_rs)
+rs_temps_lag <- left_join(rs_temps_lag, avgtmax_rs_lag,
+                by = c("plotid", "sample_year"="sample_year"))
+
+## Number of hours above 20 C during rainy season lagged ####
+rs_temps_lag <- left_join(rs_temps_lag, hrsabv20_rs_lag,
+                by = c("plotid", "sample_year_minus1"="sample_year")) %>%
+      rename(hrsabv20_rs_tminus1 = hrs_abv20_rs)
+rs_temps_lag <- left_join(rs_temps_lag, hrsabv20_rs_lag,
+                by = c("plotid", "sample_year_minus2"="sample_year")) %>%
+      rename(hrsabv20_rs_tminus2 = hrs_abv20_rs)
+rs_temps_lag <- left_join(rs_temps_lag, hrsabv20_rs_lag,
+                by = c("plotid", "sample_year_minus3"="sample_year")) %>%
+      rename(hrsabv20_rs_tminus3 = hrs_abv20_rs)
+rs_temps_lag <- left_join(rs_temps_lag, hrsabv20_rs_lag,
+                by = c("plotid", "sample_year"="sample_year"))
+
+## Number of hours below 10 C during rainy season lagged ####
+rs_temps_lag <- left_join(rs_temps_lag, hrsblw10_rs_lag,
+                by = c("plotid", "sample_year_minus1"="sample_year")) %>%
+      rename(hrsblw10_rs_tminus1 = hrs_blw10rs)
+rs_temps_lag <- left_join(rs_temps_lag, hrsblw10_rs_lag,
+                by = c("plotid", "sample_year_minus2"="sample_year")) %>%
+      rename(hrsblw10_rs_tminus2 = hrs_blw10rs)
+rs_temps_lag <- left_join(rs_temps_lag, hrsblw10_rs_lag,
+                by = c("plotid", "sample_year_minus3"="sample_year")) %>%
+      rename(hrsblw10_rs_tminus3 = hrs_blw10rs)
+rs_temps_lag <- left_join(rs_temps_lag, hrsblw10_rs_lag,
+                by = c("plotid", "sample_year"="sample_year"))
+
+## ####
+rs_temps_lag <- select(rs_temps_lag, plotid, sample_year, starts_with("hrs"), starts_with("avg"))
+rs_temps_lag <- rs_temps_lag %>% 
+      mutate(
+            avgtmax_rs_t_t1 = rowMeans(cbind(avg_tmax_rs, avgtmax_rs_tminus1)),
+             avgtmax_rs_t_t1t2 = rowMeans(cbind(avg_tmax_rs, avgtmax_rs_tminus1, avgtmax_rs_tminus2)),
+             avgtmax_rs_t_t1t2t3 = rowMeans(cbind(avg_tmax_rs, avgtmax_rs_tminus1, avgtmax_rs_tminus2, avgtmax_rs_tminus3)),
+             avgtmax_rs_t1t2 = rowMeans(cbind(avgtmax_rs_tminus1, avgtmax_rs_tminus2)),
+            
+            avg_hrs1420_rs_tminus1 = rowMeans(cbind(hrs_14_20_rs, hrs1420_rs_tminus1)),
+             avg_hrs1420_rs_tminus2 = rowMeans(cbind(hrs_14_20_rs, hrs1420_rs_tminus1, hrs1420_rs_tminus2)),
+             avg_hrs1420_rs_tminus3 = rowMeans(cbind(hrs_14_20_rs, hrs1420_rs_tminus1, hrs1420_rs_tminus2, hrs1420_rs_tminus3)),
+             avg_hrs1420_rs_t1t2 = rowMeans(cbind(hrs1420_rs_tminus1, hrs1420_rs_tminus2)),
+            
+            avg_hrsblw10_rs_tminus1 = rowMeans(cbind(hrs_blw10rs, hrsblw10_rs_tminus1)),
+             avg_hrsblw10_rs_tminus2 = rowMeans(cbind(hrs_blw10rs, hrsblw10_rs_tminus1, hrsblw10_rs_tminus2)),
+             avg_hrsblw10_rs_tminus3 = rowMeans(cbind(hrs_blw10rs, hrsblw10_rs_tminus1, hrsblw10_rs_tminus2, hrsblw10_rs_tminus3)),
+             avg_hrsblw10_rs_t1t2 = rowMeans(cbind(hrsblw10_rs_tminus1, hrsblw10_rs_tminus2)),
+             
+             avg_hrsabv20_rs_tminus1 = rowMeans(cbind(hrs_abv20_rs, hrsabv20_rs_tminus1)),
+             avg_hrsabv20_rs_tminus2 = rowMeans(cbind(hrs_abv20_rs, hrsabv20_rs_tminus1, hrsabv20_rs_tminus2)),
+             avg_hrsabv20_rs_tminus3 = rowMeans(cbind(hrs_abv20_rs, hrsabv20_rs_tminus1, hrsabv20_rs_tminus2, hrsabv20_rs_tminus3)),
+             avg_hrsabv20_rs_t1t2 = rowMeans(cbind(hrsabv20_rs_tminus1, hrsabv20_rs_tminus2))
+             )
+```
+
+```{r create summer season temperature lagged variables}
+summary(summer_temps); unique(summer_temps$sample_year)
+
+hrs_abv25ds_lag <- as.tbl(select(summer_temps, plotid, sample_year, hrs_abv25ds))
+avg_tmax_ds_lag <- as.tbl(select(summer_temps, plotid, sample_year, avg_tmax_ds))
+hrs_blw18ds_lag <- as.tbl(select(summer_temps, plotid, sample_year, hrs_blw18ds))
+
+summer_temps_lag <- select(rs_temps, plotid, sample_year)
+summer_temps_lag <- summer_temps_lag %>% 
+      mutate(sample_year_minus1 = sample_year - 1,
+             sample_year_minus2 = sample_year - 2,
+             sample_year_minus3 = sample_year - 3)
+
+## Number of dry-season hours above 25 C lagged ####
+summer_temps_lag <- left_join(summer_temps_lag, hrs_abv25ds_lag,
+                by = c("plotid", "sample_year_minus1"="sample_year")) %>%
+      rename(hrs_abv25ds_tminus1 = hrs_abv25ds)
+summer_temps_lag <- left_join(summer_temps_lag, hrs_abv25ds_lag,
+                by = c("plotid", "sample_year_minus2"="sample_year")) %>%
+      rename(hrs_abv25ds_tminus2 = hrs_abv25ds)
+summer_temps_lag <- left_join(summer_temps_lag, hrs_abv25ds_lag,
+                by = c("plotid", "sample_year_minus3"="sample_year")) %>%
+      rename(hrs_abv25ds_tminus3 = hrs_abv25ds)
+summer_temps_lag <- left_join(summer_temps_lag, hrs_abv25ds_lag,
+                              by = c("plotid", "sample_year"="sample_year"))
+
+## Average daily maximum temperature during dry-season lagged ####
+summer_temps_lag <- left_join(summer_temps_lag, avg_tmax_ds_lag,
+                by = c("plotid", "sample_year_minus1"="sample_year")) %>%
+      rename(avg_tmax_ds_tminus1 = avg_tmax_ds)
+summer_temps_lag <- left_join(summer_temps_lag, avg_tmax_ds_lag,
+                by = c("plotid", "sample_year_minus2"="sample_year")) %>%
+      rename(avg_tmax_ds_tminus2 = avg_tmax_ds)
+summer_temps_lag <- left_join(summer_temps_lag, avg_tmax_ds_lag,
+                by = c("plotid", "sample_year_minus3"="sample_year")) %>%
+      rename(avg_tmax_ds_tminus3 = avg_tmax_ds)
+summer_temps_lag <- left_join(summer_temps_lag, avg_tmax_ds_lag,
+                              by = c("plotid","sample_year"="sample_year"))
+
+## Number of dry-season hours below 18 C lagged ####
+summer_temps_lag <- left_join(summer_temps_lag, hrs_blw18ds_lag,
+                by = c("plotid", "sample_year_minus1"="sample_year")) %>%
+      rename(hrs_blw18ds_tminus1 = hrs_blw18ds)
+summer_temps_lag <- left_join(summer_temps_lag, hrs_blw18ds_lag,
+                by = c("plotid", "sample_year_minus2"="sample_year")) %>%
+      rename(hrs_blw18ds_tminus2 = hrs_blw18ds)
+summer_temps_lag <- left_join(summer_temps_lag, hrs_blw18ds_lag,
+                by = c("plotid", "sample_year_minus3"="sample_year")) %>%
+      rename(hrs_blw18ds_tminus3 = hrs_blw18ds)
+summer_temps_lag <- left_join(summer_temps_lag, hrs_blw18ds_lag,
+                              by = c("plotid", "sample_year"="sample_year"))
+
+## ####
+summer_temps_lag <- select(summer_temps_lag, plotid, sample_year, starts_with("hrs"), starts_with("avg"))
+summer_temps_lag <- summer_temps_lag %>% 
+      mutate(
+            avg_hrsblw18_ds_tminus1 = rowMeans(cbind(hrs_blw18ds, hrs_blw18ds_tminus1)),
+             avg_hrsblw18_ds_tminus2 = rowMeans(cbind(hrs_blw18ds, hrs_blw18ds_tminus1, hrs_blw18ds_tminus2)),
+             avg_hrsblw18_ds_tminus3 = rowMeans(cbind(hrs_blw18ds, hrs_blw18ds_tminus1, hrs_blw18ds_tminus2, hrs_blw18ds_tminus3)),
+             avg_hrsblw18_ds_t1t2 = rowMeans(cbind(hrs_blw18ds_tminus1, hrs_blw18ds_tminus2)),
+            
+            avgtmax_ds_t_t1 = rowMeans(cbind(avg_tmax_ds, avg_tmax_ds_tminus1)),
+             avgtmax_ds_t_t1t2 = rowMeans(cbind(avg_tmax_ds, avg_tmax_ds_tminus1, avg_tmax_ds_tminus2)),
+             avgtmax_ds_t_t1t2t3 = rowMeans(cbind(avg_tmax_ds, avg_tmax_ds_tminus1, avg_tmax_ds_tminus2, avg_tmax_ds_tminus3)),
+             avgtmax_ds_t1t2 = rowMeans(cbind(avg_tmax_ds_tminus1, avg_tmax_ds_tminus2)),
+            
+            avg_hrsabv25_ds_tminus1 = rowMeans(cbind(hrs_abv25ds, hrs_abv25ds_tminus1)),
+             avg_hrsabv25_ds_tminus2 = rowMeans(cbind(hrs_abv25ds, hrs_abv25ds_tminus1, hrs_abv25ds_tminus2)),
+             avg_hrsabv25_ds_tminus3 = rowMeans(cbind(hrs_abv25ds, hrs_abv25ds_tminus1, hrs_abv25ds_tminus2, hrs_abv25ds_tminus3)),
+             avg_hrsabv25_ds_t1t2 = rowMeans(cbind(hrs_abv25ds_tminus1, hrs_abv25ds_tminus2))
+            )
 ```
 
 
@@ -597,18 +916,25 @@ summary(rain_lag1)
 # save.image("~/GitHub/superspreaders/pathmodel_data_20160112.RData")
 ```
 
-### Update path analysis data
+### Update path analysis .Rdata object
 Updating the path analysis data with the temperature during wet days variables.
 ```{r update data}
-# load("pathmodel_data_20160112.RData")
+# load("~/GitHub/superspreaders/pathmodel_data.RData")
+
 # Add untagged dbh data
 untagged_stems <- read.csv("analysis/data/untagged_stems_corrected.csv")
 untagged_dbh_2005 <- read.csv("analysis/data/untagged_dbh2005_summary.csv")
 untagged_dbh_2014 <- read.csv("analysis/data/untagged_dbh2014_summary.csv")
 
-wet_hrs <- read.csv("analysis/data/wet-days-temperature-variables.csv")
+# remove unnecessary data
+rm(list = ls(pattern = "^rain_rs"))
+rm(list = ls(pattern = "^rain_ss"))
+rm(list = ls(pattern = "^rain2d"))
+rm(list = ls(pattern = "*ds_lag"))
+rm(list = ls(pattern = "*0_rs_lag")); rm(avgtmax_rs_lag)
+rm(list = ls(pattern = "*wet_lag"))
+
 save.image("~/GitHub/superspreaders/pathmodel_data.RData")
 ```
-
 
 
