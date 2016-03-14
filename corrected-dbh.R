@@ -31,6 +31,14 @@ detach("package:lubridate", unload=TRUE)
 ## Replace all `-9999` codes with NA ####
 tagged_stems[tagged_stems == -9999] <- NA
 summary(tagged_stems)
+tagged_stems[tagged_stems == -999] <- NA
+# filter(tagged_stems, is.na(year))
+# filter(tagged_stems, TagNumber == 2147)
+# filter(tagged_stems, TagNumber == 5843)
+# filter(tagged_stems, TagNumber == 5808)
+# filter(tagged_stems, TagNumber == 1374)
+# filter(tagged_stems, TagNumber == 4263)
+
 
 
 ## Rename columns using `rename` funcion from `dplyr` ####
@@ -38,8 +46,7 @@ library(plyr); library(dplyr)
 tagged_stems <- select(tagged_stems, -Date)
 names(tagged_stems) <- tolower(names(tagged_stems))
 
-tagged_stems <- rename(tagged_stems, plot_status = status,
-                       cluster = clusterid, species = speciesid,
+tagged_stems <- rename(tagged_stems, cluster = clusterid, species = speciesid,
                        tag = tagnumber, initial_dbh = dbhcm,  
                        stem_status = stemstatus, sod_killed = sod_dead, 
                        umca_slc = sympleafcount, canker = cankerpresent,
@@ -51,8 +58,10 @@ unique(tagged_stems$stem_status)
 tagged_stems$plotid <- tolower(tagged_stems$plotid)
 tagged_stems$species <- tolower(tagged_stems$species)
 tagged_stems$sod_killed <- ifelse(tagged_stems$sod_killed == 0, "No", "Yes")
+# tagged_stems$stem_status[tagged_stems$stem_status == "Nearly dead"] <- "Alive"
 tagged_stems <- droplevels(filter(tagged_stems, stem_status == "Alive" | stem_status == "Dead"))
 summary(tagged_stems)
+filter(tagged_stems, is.na(initial_dbh))# 4 stems did not have DBH measured prior to 2012
 
 
 untagged_stems <- select(untagged_stems, -Date, -TreeID, -StemID)
@@ -98,13 +107,13 @@ length(unique(filter(tagged_stems, species == "quke x quag")$tag))# 2 stems
 
 ## Subset DBH data to create a data frame of remeasured tagged_stems ####
 dbh2003 <- tagged_stems %>% 
-      select(plotid, plot_status, species:dbh, stem_status, year) %>% 
+      select(plotid:dbh, stem_status, year) %>% 
       filter(dbh >= 2.0, year == 2003)
 # 11 observations
 
 
 dbh2004 <- tagged_stems %>% 
-      select(plotid, plot_status, species:dbh, stem_status, year) %>% 
+      select(plotid:dbh, stem_status, year) %>% 
       filter(dbh >= 2.0, year == 2004)
 # 2991 observations
 anti_join(dbh2003, dbh2004, by = "tag")
@@ -113,7 +122,7 @@ dbh_a <- union(dbh2004, dbh2003)
 
 
 dbh2005 <- tagged_stems %>% 
-      select(plotid, plot_status, species:dbh, stem_status, year) %>% 
+      select(plotid:dbh, stem_status, year) %>% 
       filter(dbh >= 2.0, year == 2005)
 # 681 observations
 anti_join(dbh2005, dbh_a, by = "tag")# this indicates that 2 stems were measured again in 2005
@@ -124,14 +133,14 @@ write.csv(dbh_establishment, "analysis/data/tagged-stems-2003_2005.csv", row.nam
 
 
 dbh2006 <- tagged_stems %>% 
-      select(plotid, plot_status, species:dbh, stem_status, year) %>% 
+      select(plotid:dbh, stem_status, year) %>% 
       filter(dbh >= 2.0, year == 2006)
 anti_join(dbh2006, dbh_a, by = "tag")# 2003, 2004, 2005, 2006 are independent sets of observations, 69 new stems tagged in 2006
 dbh_a <- union(dbh_a, anti_join(dbh2006, dbh_a, by = "tag"))
 
 
 dbh2007 <- tagged_stems %>% 
-      select(plotid, plot_status, species:dbh, stem_status, year) %>% 
+      select(plotid:dbh, stem_status, year) %>% 
       filter(dbh >= 2.0, year == 2007)
 anti_join(dbh2007, dbh_a, by = "tag")# there is one tag with remeasured dbh in 2007, 34 new stems tagged in 2007
 dbh_a <- union(dbh_a, anti_join(dbh2007, dbh_a, by = "tag"))
@@ -139,46 +148,56 @@ anyDuplicated(dbh_a$tag) # check for repeated tags
 
 
 dbh2008 <- tagged_stems %>% 
-      select(plotid, plot_status, species:dbh, stem_status, year) %>% 
+      select(plotid:dbh, stem_status, year) %>% 
       filter(dbh >= 2.0, year == 2008)
 anti_join(dbh2008, dbh_a, by = "tag")# 12 new stems in 2008
 dbh_a <- union(dbh_a, anti_join(dbh2008, dbh_a, by = "tag"))
 
 
 dbh2009 <- tagged_stems %>% 
-      select(plotid, plot_status, species:dbh, stem_status, year) %>% 
+      select(plotid:dbh, stem_status, year) %>% 
       filter(dbh >= 2.0, year == 2009)
 anti_join(dbh2009, dbh_a, by = "tag")# 20 new tagged stems in 2009
 dbh_a <- union(dbh_a, anti_join(dbh2009, dbh_a, by = "tag"))
 
 
 dbh2010 <- tagged_stems %>% 
-      select(plotid, plot_status, species:dbh, stem_status, year) %>% 
+      select(plotid:dbh, stem_status, year) %>% 
       filter(dbh >= 2.0, year == 2010)
 anti_join(dbh2010, dbh_a, by = "tag")# 101 new stem entering the study
 dbh_a <- union(dbh_a, anti_join(dbh2010, dbh_a, by = "tag"))
 
 
 dbh2011 <- tagged_stems %>% 
-      select(plotid, plot_status, species:dbh, stem_status, year) %>% 
+      select(plotid:dbh, stem_status, year) %>% 
       filter(dbh >= 2.0, year == 2011)
 anti_join(dbh2011, dbh_a, by = "tag")# 74 new stems entering the study
 dbh_a <- union(dbh_a, anti_join(dbh2011, dbh_a, by = "tag"))
 
 
 dbh2012 <- tagged_stems %>% 
-      select(plotid, plot_status, species:dbh, stem_status, year) %>% 
+      select(plotid:dbh, stem_status, year) %>% 
       filter(dbh >= 2.0, year == 2012)
 anti_join(dbh2012, dbh_a, by = "tag")# remeasured 3839 of 3991 stems that were in the study at some point (may have been in abandoned/decommissioned plots) and tagged 284 new stems due to recruitment or plot quality control.
 dbh_a <- union(dbh_a, anti_join(dbh2012, dbh_a, by = "tag"))
+anyDuplicated(dbh_a$tag)
 
+# dbh_a[41,]
+# filter(dbh_a, tag == 3649)
+# dbh_a[dbh_a$tag == 3649 & dbh_a$year == 2012,]
+# dbh_a[dbh_a$tag == 3649 & dbh_a$dbh == 6.2,]
+# dbh_a <- dbh_a[-40,]
+# tagged_stems[tagged_stems$tag == 3649 & tagged_stems$year == 2012,]
+# tagged_stems$year[tagged_stems$tag == 3649 & tagged_stems$umca_slc == 42] <- 2014 
 
 dbh2014 <- tagged_stems %>% 
-      select(plotid, plot_status, species:dbh, stem_status, year) %>% 
+      select(plotid:dbh, stem_status, year) %>% 
       filter(dbh >= 2.0, year == 2014)
-anti_join(dbh2014, dbh_a, by = "tag") # this inidcates that there are 126 stems that were measured and tagged for the first time in 2014.
+anyDuplicated(dbh2014$tag)
+
+anti_join(dbh2014, dbh_a, by = "tag") # this inidcates that there are 122 stems that were measured and tagged for the first time in 2014.
 dbh_a <- union(dbh_a, anti_join(dbh2014, dbh_a, by = "tag"))
-anyDuplicated(dbh_a)
+anyDuplicated(dbh_a$tag)
 # At this point the 'dbh_a' dataframe should be a record of the first season each tagged stem was measured during the study period. In theory, these things happened at the same time (tagging and measuring DBH).
 summary(dbh_a)
 
@@ -212,7 +231,6 @@ untagged_stems <- filter(untagged_stems, plotid != "ann28", plotid != "halow01")
 write.csv(untagged_stems, "analysis/data/untagged_stems_corrected.csv", row.names = F)
 
 
-
 ## Explore DBH data ####
 library(ggplot2)
 # Scatterplot of first dbh measurement (y-axis) against year
@@ -234,33 +252,33 @@ tmp1 <- droplevels(unique(dbh_establishment$plotid))
 dbh2014$plotid <- as.factor(dbh2014$plotid)
 tmp2 <- droplevels(unique(dbh2014$plotid))
 setdiff(tmp1,tmp2)# identify plots not in 2014 data
-# These all make sense except for mroth03. For some reason, the 2014 plot visit is not being included in the Access database query.
+# These all make sense because they were removed prior to 2014.
 
 # Add the plot and stems, and update the DBH measurements according to the values in the database
-dbh2014 <- rbind(dbh2014, dbh2012 %>% filter(plotid == "mroth03"))
-# enter 2014 DBH values from database
-dbh2014$dbh[dbh2014$tag==1668] <- 68
-dbh2014$dbh[dbh2014$tag==1669] <- 49.2
-dbh2014$dbh[dbh2014$tag==1670] <- 56.1
-dbh2014$dbh[dbh2014$tag==1671] <- 51.2
-dbh2014$dbh[dbh2014$tag==1672] <- 66.9
-dbh2014$year <- 2014
+# dbh2014 <- rbind(dbh2014, dbh2012 %>% filter(plotid == "mroth03"))
+# # enter 2014 DBH values from database
+# dbh2014$dbh[dbh2014$tag==1668] <- 68
+# dbh2014$dbh[dbh2014$tag==1669] <- 49.2
+# dbh2014$dbh[dbh2014$tag==1670] <- 56.1
+# dbh2014$dbh[dbh2014$tag==1671] <- 51.2
+# dbh2014$dbh[dbh2014$tag==1672] <- 66.9
+# dbh2014$year <- 2014
 
 # These measurements for 2014 are then also missing from the tagged_stems dataframe
-filter(dbh2014, plotid == "mroth03")
-summary(filter(tagged_stems, plotid == "mroth03") %>% 
-              select(plotid, tag, date))
-names(tagged_stems)
-names(dbh2014)
-mroth_tmp1 <- filter(tagged_stems, plotid == "mroth03", year == 2011) %>% 
-      select(-plot_status, -species, -location, -dbh, -stem_status, -year)
-mroth_tmp <- filter(dbh2014, plotid == "mroth03")
-mroth_tmp <- left_join(mroth_tmp, mroth_tmp1)
-names(mroth_tmp)
-mroth_tmp <- select(mroth_tmp, plotid, plot_status, cluster, species, tag, location, dbh, initial_dbh, stem_status, sod_killed:date, year, dbh_entry)
-tagged_stems <- rbind(tagged_stems, mroth_tmp)
-tagged_stems_corrected <- rbind(tagged_stems_corrected, mroth_tmp)
-rm(mroth_tmp); rm(mroth_tmp1)
+# filter(dbh2014, plotid == "mroth03")
+# summary(filter(tagged_stems, plotid == "mroth03") %>% 
+#               select(plotid, tag, date))
+# names(tagged_stems)
+# names(dbh2014)
+# mroth_tmp1 <- filter(tagged_stems, plotid == "mroth03", year == 2011) %>% 
+#       select(-plot_status, -species, -location, -dbh, -stem_status, -year)
+# mroth_tmp <- filter(dbh2014, plotid == "mroth03")
+# mroth_tmp <- left_join(mroth_tmp, mroth_tmp1)
+# names(mroth_tmp)
+# mroth_tmp <- select(mroth_tmp, plotid, plot_status, cluster, species, tag, location, dbh, initial_dbh, stem_status, sod_killed:date, year, dbh_entry)
+# tagged_stems <- rbind(tagged_stems, mroth_tmp)
+# tagged_stems_corrected <- rbind(tagged_stems_corrected, mroth_tmp)
+# rm(mroth_tmp); rm(mroth_tmp1)
 
 write.csv(tagged_stems_corrected, "analysis/data/tagged-stems-corrected.csv", row.names = F)
 
@@ -288,7 +306,7 @@ dbh_establishment <- filter(dbh_establishment, plotid != "bush01",
 ## Combine establishment and 2014 remeasurement tagged stems dataframes ####
 tagged_dbh_changes <- rbind(dbh_establishment, dbh2014)
 summary(tagged_dbh_changes)
-tagged_dbh_changes <- select(tagged_dbh_changes, -plot_status)
+# tagged_dbh_changes <- select(tagged_dbh_changes, -plot_status)
 tagged_dbh_changes$species <- as.factor(tagged_dbh_changes$species)
 tagged_dbh_changes$year <- as.factor(tagged_dbh_changes$year)
 
@@ -315,7 +333,9 @@ qplot(delta_dbh, dbh1, data = tagged_dbh_changes %>%
       color = stem_status, facets = species ~.)
 filter(tagged_dbh_changes, delta_dbh < -15, year == 2014, stem_status == "Alive", location == "In")
 
-qplot(year, abs_incr_grwth, data = tagged_dbh_changes, geom = "boxplot")
+qplot(year, abs_incr_grwth, 
+      data = filter(tagged_dbh_changes, stem_status == "Alive", species == "umca", abs_incr_grwth >= 1), 
+      geom = "boxplot")
 
 
 ## Compare Basal & Species Abundances ####
@@ -330,6 +350,8 @@ qplot(year, abs_incr_grwth, data = tagged_dbh_changes, geom = "boxplot")
 #         main = "Dead UMCA DBHs")
 
 qplot(factor(year), dbh, data = tagged_dbh_changes, geom = "jitter", color = stem_status, facets = .~species)
+filter(tagged_dbh_changes, species == "quag", dbh > 130)
+filter(tagged_dbh_changes, species == "umca", dbh > 130)
 
 # basal_abund <- dbhs %>% 
 #       #filter(status == "Alive") %>% 
@@ -406,7 +428,3 @@ untagged_stems <- rbind(untagged_stems, tmp12)
 untagged_stems$year[untagged_stems$year == 2012] <- 2014
 
 write.csv(untagged_stems, "analysis/data/untagged-stems_0514-corrected.csv", row.names = F)
-
-
-
-
