@@ -473,14 +473,76 @@ Now that I have summarized some vegetation (not species specific), environmental
 umca_plots
 umca_plots$sample_year <- as.integer(umca_plots$sample_year)
 plot_qusp # right now this is broken down by oak species
+
+summary(stems)
+# calculate the number of times a canker was observed on each stem
+cankers_observed <- stems %>%
+      select(plotid, year, species, tag, canker, stem_status) %>% 
+      filter(species == "quag" | species == "quke" | species == "quch" |
+                   species == "quwi", stem_status == "Alive") %>% 
+      group_by(plotid, species, tag) %>% 
+      summarise(times_canker_observed = sum(canker, na.rm = T))
+summary(cankers_observed)
+cankers_observed <- droplevels(cankers_observed)
+
+## If canker was observed at least twice for a stem then "infection confirmed"
+## This is Sarah's "twice cankered always infected rule" - more conservative
+cankers_observed$infection_confirmed_2plus <- ifelse(
+      cankers_observed$times_canker_observed >= 2, 1, 0
+)
+## If canker was observed just once then "infection confirmed"
+## This is a "once cankered always infected rule" - less conservative
+cankers_observed$infection_confirmed_1plus <- ifelse(
+      cankers_observed$times_canker_observed >= 1, 1, 0
+)
+## Both of these approaches are an effort to better represent oak infection, instead of just based on whether or not a canker was observed for a given year.
+
+stems <- left_join(stems, cankers_observed, by = c("plotid", "species", "tag"))
+
+stems <- stems %>% mutate(
+      inf_2plus = ifelse(
+            year == 2003 & canker == 1 & infection_confirmed_2plus == 1, 1, 0)
+) %>% mutate(inf_2plus = ifelse(
+      year == 2004 & canker == 1 & infection_confirmed_2plus == 1 & inf_2plus != 1, 1, 0)) %>% 
+      mutate(inf_2plus = ifelse(
+            year == 2005 & canker == 1 & infection_confirmed_2plus == 1 & inf_2plus != 1, 1, 0)) %>% 
+      mutate(inf_2plus = ifelse(
+            year == 2006 & canker == 1 & infection_confirmed_2plus == 1 & inf_2plus != 1, 1, 0)) %>% 
+      mutate(inf_2plus = ifelse(
+            year == 2007 & canker == 1 & infection_confirmed_2plus == 1 & inf_2plus != 1, 1, 0)) %>% 
+      mutate(inf_2plus = ifelse(
+            year == 2008 & canker == 1 & infection_confirmed_2plus == 1 & inf_2plus != 1, 1, 0)) %>% 
+      mutate(inf_2plus = ifelse(
+            year == 2009 & canker == 1 & infection_confirmed_2plus == 1 & inf_2plus != 1, 1, 0)) %>%
+      mutate(inf_2plus = ifelse(
+            year == 2010 & canker == 1 & infection_confirmed_2plus == 1 & inf_2plus != 1, 1, 0)) %>% 
+      mutate(inf_2plus = ifelse(
+            year == 2011 & canker == 1 & infection_confirmed_2plus == 1 & inf_2plus != 1, 1, 0)) %>% 
+      mutate(inf_2plus = ifelse(
+            year == 2012 & canker == 1 & infection_confirmed_2plus == 1 & inf_2plus != 1, 1, 0)) %>% 
+      mutate(inf_2plus = ifelse(
+            year == 2014 & canker == 1 & infection_confirmed_2plus == 1 & inf_2plus != 1, 1, 0))
+
+
+qusp_stems <- stems %>% 
+      select(plotid, year, tag, species, canker, stem_status, infection_confirmed_1plus, infection_confirmed_2plus) %>% 
+      filter(species == "quag" | species == "quke" | species == "quch" |
+                   species == "quwi", stem_status == "Alive")
+
+
 qusp4_plots <- stems %>%
-      select(plotid, date, species, canker, year, stem_status) %>%
+      select(plotid, species, canker, year, stem_status, infection_confirmed_1plus, infection_confirmed_2plus) %>%
       filter(species == "quag" | species == "quke" | species == "quch" |
                    species == "quwi", stem_status == "Alive") %>% 
       group_by(plotid, year, species) %>% 
-      summarise(uninfected_oak_ct = length(which(canker==0)), 
+      summarise(uninfected_oak_ct = length(which(canker == 0)), 
                 infected_oak_ct = length(which(canker > 0)), 
-                tot_oak = length(species))
+                tot_oak = length(species),
+                inf_oak_1plus_ct = length(which(infection_confirmed_1plus > 0)),
+                inf_oak_2plus_ct = length(which(infection_confirmed_2plus > 0)))
+summary(qusp4_plots)
+# write.csv(qusp4_plots, "analysis/data/qusp4_infections.csv", row.names = F)
+qusp4_plots <- read.csv("analysis/data/qusp4_infections.csv")
 
 # rm(plot_qusp)
 summary(qusp4_plots)
@@ -488,9 +550,12 @@ summary(qusp4_plots)
 oak_sod <- qusp4_plots %>% group_by(plotid, year) %>%
       summarise(uninf_oak_ct = sum(uninfected_oak_ct), 
                 inf_oak_ct = sum(infected_oak_ct), 
-                tot_oak_ct = sum(c(uninfected_oak_ct, infected_oak_ct)))
+                tot_oak_ct = sum(c(uninfected_oak_ct, infected_oak_ct)),
+                inf_oak_1plus_ct = sum(inf_oak_1plus_ct),
+                inf_oak_2plus_ct = sum(inf_oak_2plus_ct))
 oak_sod
 oak_sod <- rename(oak_sod, sample_year = year)
+summary(oak_sod)
 # oak_sod$plotid <- tolower(oak_sod$plotid)
 
 # unique(umca_plots$plotid) %in% unique(oak_sod$plotid)
@@ -682,7 +747,7 @@ summary(wet_hrs); unique(wet_hrs$sample_year)
 hrsblw14_wet_lag <- as.tbl(select(wet_hrs, plotid, sample_year, hrsblw14_wet))
 avgtmax_wet_lag <- as.tbl(select(wet_hrs, plotid, sample_year, avgtmax_wet))
 hrs1422_wet_lag <- as.tbl(select(wet_hrs, plotid, sample_year, hrs1422_wet))
-wet_hrs_lag <- select(wet_hrs_lag, plotid, sample_year)
+wet_hrs_lag <- select(wet_hrs, plotid, sample_year)
 wet_hrs_lag <- wet_hrs_lag %>% 
       mutate(sample_year_minus1 = sample_year - 1,
              sample_year_minus2 = sample_year - 2,
@@ -932,7 +997,7 @@ rm(list = ls(pattern = "^rain_ss"))
 rm(list = ls(pattern = "^rain2d"))
 rm(list = ls(pattern = "*ds_lag"))
 rm(list = ls(pattern = "*0_rs_lag")); rm(avgtmax_rs_lag)
-rm(list = ls(pattern = "*wet_lag"))
+rm(list = ls(pattern = "*wet_lag")); #rm(wet_hrs_lag1)
 
 save.image("~/GitHub/superspreaders/pathmodel_data.RData")
 ```
