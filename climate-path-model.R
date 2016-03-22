@@ -4,7 +4,7 @@
 #+ load data and packages ####
 load("pathmodel_data.RData")
 library(plyr); library(dplyr); library(nlme); library(lme4)
-library(piecewiseSEM)
+library(lavaan); library(piecewiseSEM)
 
 #+ panel functions for pairs plots
 panel.cor <- function(x, y, digits = 2, cex.cor, ...)
@@ -44,13 +44,28 @@ str(oak_sod)
 summary(wet_hrs)# since these are counts the NAs are in fact zeroes
 wet_hrs[is.na(wet_hrs)] <- 0# introduce a lot of zeroes for some columns
 oak_sod <- left_join(
-      oak_sod, select(wet_hrs, -X), by = c("plotid","sample_year"))
+      oak_sod, select(wet_hrs, -X, -hrsabv22_wet, -avgtemp_wet), by = c("plotid","sample_year"))
 oak_sod$plotid <- as.factor(oak_sod$plotid)
 
 summary(rs2d_lag1)
 oak_sod <- left_join(
       oak_sod, select(rs2d_lag1, -rs2d_total), by = c("plotid","sample_year"))
 oak_sod$plotid <- as.factor(oak_sod$plotid)
+
+summary(rs_temps_lag)
+oak_sod <- left_join(
+      oak_sod, 
+      select(rs_temps_lag, plotid, sample_year, contains("tminus"), contains("t1")), by = c("plotid","sample_year"))
+
+summary(summer_temps_lag)
+oak_sod <- left_join(
+      oak_sod,
+      select(summer_temps_lag, plotid, sample_year, contains("tminus"), contains("t1")), by = c("plotid","sample_year"))
+
+summary(wet_hrs_lag)
+oak_sod <- left_join(
+      oak_sod,
+      select(wet_hrs_lag, plotid, sample_year, contains("tminus"), contains("t1")), by = c("plotid","sample_year"))
 
 ## drop 3d, PRISM, and regression rainfall variables based on discussion with Ryan; use a simple 2d spline interpolation or the Voronoi polygon values
 # oak_sod <- select(oak_sod, -rain_tot_3d, -rain_tot_r, -rain_tot_psm)
@@ -77,9 +92,13 @@ pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, avg_lfct, umca_basa
       lower.panel = panel.cor, diag.panel = panel.hist)
 
 #+ pairs plots of oak plots data ####
-pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, avg_lfct, hrsblw14_wet, hrsblw10_wet, hrs1020_wet, hrsabv20_wet, avgtmax_wet, rs2d_total, ss2d_total, rs_days, ss_days)), 
+pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, avg_lfct, hrsblw14_wet, hrsblw10_wet, hrs1020_wet, hrsabv20_wet, avgtmax_wet, avgtmin_wet, rs2d_total, ss2d_total, rs_days, ss_days)), 
       lower.panel = panel.cor, diag.panel = panel.hist,
-      main = "Oak Plots Rainfall Variables")
+      main = "Oak Plots Current Year Rainfall Variables")
+
+pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, avg_lfct, starts_with("avg_rs2d"), contains("rs2d_t"))), 
+      lower.panel = panel.cor, diag.panel = panel.hist,
+      main = "Oak Plots Lagged Rainfall Variables")
 
 pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, avg_lfct, hrsblw14_wet, avgtmax_wet, hrs1020_wet, rs2d_total, ss2d_total, rs_days, ss_days, rs2d_total_t_minus1, avg_rs2d_t_minus1)), 
       lower.panel = panel.cor, diag.panel = panel.hist,
@@ -92,26 +111,40 @@ pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, avg_lfct, hrsblw14_
 # Wet hours below 10 is correlated with total rainfall r = 0.61 - 0.68
 # To me, this indicates the possibility of using the wet-hours count combination variable of hours below 14 C in place of rainfall. This is only weakly correlated with the average temperature variables calculated for wet days. The number of hours below 14 C on wet days definitely captures the number of rainy days, as it should (r = 0.94).
 
-pairs(na.omit(select(oak_sod, tot_bay, tot_lfct, avg_lfct, umca_basal_area, ends_with("rs"), ends_with("ds"), hrsblw14_wet, avgtmin_wet, avgtmax_wet)),
+pairs(na.omit(select(oak_sod, inf_oak_ct, tot_lfct, avg_lfct, umca_basal_area, ends_with("rs"), ends_with("ds"), hrsblw14_wet, avgtmin_wet, avgtmax_wet)),
       lower.panel = panel.cor, diag.panel = panel.hist,
-      main = "Oak Plots Temperature Variables")
+      main = "Oak Plots Current Temperature Variables")
 # Overall, correlations among variables are relatively weak with a few strong pairs. For specific pairs of variables it may be okay to use one from the dry season and one from the rainy season.
 
-pairs(select(oak_sod, ends_with("ds"), ends_with("wet")),
+pairs(na.omit(select(oak_sod, inf_oak_ct, inf_oak_2plus_ct, tot_lfct, avg_lfct, ends_with("ds"), ends_with("wet"))),
       lower.panel = panel.cor, diag.panel = panel.hist,
-      main = "Oak Plots Temperature Variables")
-# 
+      main = "Oak Plots Wet-Days & Dry Season Temperature Variables")
 
-pairs(select(oak_sod, ends_with("rs"), starts_with("rain"), ends_with("wet")),
+pairs(na.omit(select(oak_sod, inf_oak_ct, tot_lfct, ends_with("rs"), starts_with("rain"), ends_with("wet"))),
       lower.panel = panel.cor, diag.panel = panel.hist,
       main = "Oak Plots RS Temperature and Rainfall Variables")
 # For the most part rainfall and temperature variables are fairly weakly correlated. 
 # Rainy days interpolations are correlated with hours below 10, hours 14-20, and average maximum temperature
 
-pairs(select(oak_sod,  ends_with("ds"), starts_with("rain")),
+pairs(na.omit(select(oak_sod, inf_oak_ct, tot_lfct, ends_with("ds"), contains("total"))),
       lower.panel = panel.cor, diag.panel = panel.hist,
       main = "Oak Plots DS Temperature and Rainfall Variables")
 # Dry season temperature variables are only very weakly correlated with rainfall variables.
+
+## Correlations of lagged variables 
+pairs(na.omit(select(oak_sod, inf_oak_ct, inf_oak_2plus_ct, tot_lfct, contains("t1"))),
+      lower.panel = panel.cor, diag.panel = panel.hist,
+      main = "Oak Plots Average Lagged Variables")
+pairs(na.omit(select(oak_sod, inf_oak_ct, inf_oak_2plus_ct, tot_lfct, contains("tminus1"))),
+      lower.panel = panel.cor, diag.panel = panel.hist,
+      main = "Oak Plots Lagged Variables t-1")
+pairs(na.omit(select(oak_sod, inf_oak_ct, inf_oak_2plus_ct, tot_lfct, contains("tminus2"))),
+      lower.panel = panel.cor, diag.panel = panel.hist,
+      main = "Oak Plots Lagged Variables t-2")
+pairs(na.omit(select(oak_sod, inf_oak_ct, inf_oak_2plus_ct, tot_lfct, contains("rs2d"))),
+      lower.panel = panel.cor, diag.panel = panel.hist,
+      main = "Oak Plots Lagged Rainfall Variables")
+
 
 pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, umca_basal_area, H.2005, H.2014, hrsblw14_wet, hrsblw10_wet, hrs1020_wet, avgtmax_wet, avgtmin_wet, hrs_blw10rs, avg_tmax_rs, avg_tmin_rs, hrs_abv25ds, avg_tmax_ds, avg_tmin_ds, rs2d_total, ss2d_total, twi15m)),
       lower.panel = panel.cor, diag.panel = panel.hist)
@@ -130,7 +163,7 @@ pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, H.2005, H.2014, us.
 # oak_sod$oak.inf <- cbind(oak_sod$inf_oak_ct, oak_sod$uninf_oak_ct)
 
 #+ subset data frame and transform/rescale/standardize variables ####
-oakplots.sub <- select(oak_sod, plotid:inf_oak_ct, tot_bay:tot_lfct, avg_lfct, umca_basal_area, candens15m, twi15m, elev_m, veght_m, avgtmax_wet, avg_tmax_rs, avg_tmax_ds, hrs_abv25ds, hrsblw14_wet, H.2005, H.2014, J.2005, J.2014, os_rich05, os_rich14, rs2d_total, ss2d_total, rs2d_total_t_minus1:avg_rs2d_t1t2)
+oakplots.sub <- select(oak_sod, plotid:inf_oak_ct, inf_oak_2plus_ct, tot_bay, tot_lfct, avg_lfct, umca_basal_area, candens15m, twi15m, elev_m, veght_m, contains("avgtmax_wet"), contains("1422_wet"), contains("tmax_rs"), avg_tmax_ds, contains("abv25"), avg_hrsblw10_rs_tminus1, H.2005, H.2014, J.2005, J.2014, os_rich05, os_rich14, rs2d_total, ss2d_total, rs2d_total_t_minus1:avg_rs2d_t1t2)
 summary(oakplots.sub)
 
 # filter(oakplots.sub, is.na(elev_m))
@@ -156,7 +189,7 @@ oakplots.sub$avg_rs_t1t2.cm <- oakplots.sub$avg_rs2d_t1t2/10
 # oakplots.sub$rain_tot_2d.cm <- oakplots.sub$rain_tot_2d/10
 # oakplots.sub$rain_tot_3d.cm <- oakplots.sub$rain_tot_3d/10
 
-oakplots.sub$dysblw14_wet <- oakplots.sub$hrsblw14_wet/24
+# oakplots.sub$dysblw14_wet <- oakplots.sub$hrsblw14_wet/24
 oakplots.sub$dys_abv25ds <- oakplots.sub$hrs_abv25ds/24
 # oakplots.sub$dys_blw10_rs <- oakplots.sub$hrs_blw10rs/24
 # oakplots.sub$dys_abv25_rs <- oakplots.sub$hrs_abv25rs/24
@@ -167,8 +200,10 @@ oakplots.sub$tot_bay.log <- log1p(oakplots.sub$tot_bay)
 oakplots.sub$avg_lfct.log <- log1p(oakplots.sub$avg_lfct)
 oakplots.sub$umca_ba.log <- log1p(oakplots.sub$umca_basal_area)
 oakplots.sub$twi15m.log <- log(oakplots.sub$twi15m)
+oakplots.sub$avg_hrs1422_wet_t_t1.log <- log1p(oakplots.sub$avg_hrs1422_wet_t_t1)
 # oakplots.sub$avg_lfct.log <- log1p(oakplots.sub$avg_lfct)
 # oakplots.sub$sample_year <- as.factor(oakplots.sub$sample_year)
+oakplots.sub$oak.inf.2plus <- cbind(oakplots.sub$inf_oak_2plus_ct, (oak_sod$tot_oak_ct - oakplots.sub$inf_oak_2plus_ct))
 
 ## rough path-model 1, how does this work? ####
 oakplots.modlist1 <- list(
@@ -206,6 +241,7 @@ sem.model.fits(oakplots1.modlist)
                          corr.errors = c("dys_abv25ds ~~ ss2d.cm")))
 (coef.table.std <- sem.coefs(oakplots.modlist1, oakplots.sub, 
                              standardize = 'scale'))
+#'
 
 
 #+ Add indicated missing paths ####
@@ -247,6 +283,7 @@ sem.fit(oakplots.modlist2, oakplots.sub)
 sem.model.fits(oakplots.modlist2)
 #' The random effects account for the majority of the variability in all models, except for the fixed effects do a decent job for predicting the total leaf count (marginal R^2 = 0.64).
 
+
 #+ coefficients from revised model ####
 (coef.table <- sem.coefs(oakplots.modlist2, oakplots.sub))
 
@@ -264,71 +301,76 @@ pairs(na.omit(select(oakplots.sub, inf_oak_ct, tot_bay, tot_bay.log, tot_lfct.lo
 #' ## Single Season Models
 #' In this section I'm going to paramterized single season models, i.e. model each sample season separately instead of in a repeated measures/random-effect framework. I'm going to start with 2005 because I deemed that to be the sesaon when plot-establishment was completed. Something along the lines of 600+ tagged stems were added to the database that year, many more than during subsequent visits.
 #'
+
+
 #+ make dataframe for each season ####
 names(oakplots.sub)
-oakplots.2005 <- oakplots.sub %>% filter(sample_year == 2005) %>% 
-      select(plotid, oak.inf, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, dys_abv25ds, dysblw14_wet, H.2005:os_rich05, H.2014, ss2d.cm, tot_rs_tminus1.cm, tot_rs_tminus2.cm, avg_rs_tminus1.cm, avg_rs_tminus2.cm, avg_rs_t1t2.cm, twi15m, twi15m.log)
+oakplots.2005 <- (oakplots.sub %>% filter(sample_year == 2005) %>% 
+      select(plotid, oak.inf, inf_oak_ct, oak.inf.2plus, inf_oak_2plus_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, hrs1422_wet, avg_hrs1422_wet_t_t1, hrs_abv25ds, avg_hrsabv25_ds_tminus1, avg_hrsblw10_rs_tminus1, twi15m, twi15m.log))
 summary(oakplots.2005)
-pairs(select(oakplots.2005, -plotid, -oak.inf, -avg_rs_tminus2.cm, -tot_rs_tminus2.cm, -avg_rs_t1t2.cm),
+pairs(select(oakplots.2005, -plotid, -oak.inf),
       lower.panel = panel.cor, diag.panel = panel.hist,
       main = "Oak Plots Data 2005 Sample Season")
 
-oakplots.2006 <- oakplots.sub %>% filter(sample_year == 2006) %>% 
-      select(plotid, oak.inf, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, dys_abv25ds, dysblw14_wet, H.2005:os_rich05, H.2014, ss2d.cm, tot_rs_tminus1.cm, tot_rs_tminus2.cm, avg_rs_tminus1.cm, avg_rs_tminus2.cm, avg_rs_t1t2.cm, twi15m, twi15m.log)
+oakplots.2006 <- (oakplots.sub %>% filter(sample_year == 2006) %>% 
+      select(plotid, oak.inf, inf_oak_ct, oak.inf.2plus, inf_oak_2plus_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, hrs1422_wet, avg_hrs1422_wet_t_t1, hrs_abv25ds, avg_hrsabv25_ds_tminus1, avg_hrsblw10_rs_tminus1, twi15m, twi15m.log))
 pairs(select(oakplots.2006, -plotid, -oak.inf),
       lower.panel = panel.cor, diag.panel = panel.hist,
       main = "Oak Plots Data 2006 Sample Season")
 
-oakplots.2007 <- oakplots.sub %>% filter(sample_year == 2007) %>% 
-      select(plotid, oak.inf, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, dys_abv25ds, dysblw14_wet, H.2005:os_rich05, H.2014, ss2d.cm, tot_rs_tminus1.cm, tot_rs_tminus2.cm, avg_rs_tminus1.cm, avg_rs_tminus2.cm, avg_rs_t1t2.cm, twi15m, twi15m.log)
+oakplots.2007 <- (oakplots.sub %>% filter(sample_year == 2007) %>% 
+      select(plotid, oak.inf, inf_oak_ct, oak.inf.2plus, inf_oak_2plus_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, hrs1422_wet, avg_hrs1422_wet_t_t1, hrs_abv25ds, avg_hrsabv25_ds_tminus1, avg_hrsblw10_rs_tminus1, twi15m, twi15m.log))
 pairs(select(oakplots.2007, -plotid, -oak.inf),
       lower.panel = panel.cor, diag.panel = panel.hist,
       main = "Oak Plots Data 2007 Sample Season")
 
-oakplots.2008 <- oakplots.sub %>% filter(sample_year == 2008) %>% 
-      select(plotid, oak.inf, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, dys_abv25ds, dysblw14_wet, H.2005:os_rich05, H.2014, ss2d.cm,  tot_rs_tminus1.cm, tot_rs_tminus2.cm, avg_rs_tminus1.cm, avg_rs_tminus2.cm, avg_rs_t1t2.cm, twi15m, twi15m.log)
+oakplots.2008 <- (oakplots.sub %>% filter(sample_year == 2008) %>% 
+      select(plotid, oak.inf, inf_oak_ct, oak.inf.2plus, inf_oak_2plus_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, hrs1422_wet, avg_hrs1422_wet_t_t1, hrs_abv25ds, avg_hrsabv25_ds_tminus1, avg_hrsblw10_rs_tminus1, twi15m, twi15m.log))
 pairs(select(oakplots.2008, -plotid, -oak.inf),
       lower.panel = panel.cor, diag.panel = panel.hist,
       main = "Oak Plots Data 2008 Sample Season")
 
-oakplots.2009 <- oakplots.sub %>% filter(sample_year == 2009) %>% 
-      select(plotid, oak.inf, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, dys_abv25ds, dysblw14_wet, H.2005:os_rich05, H.2014, ss2d.cm, tot_rs_tminus1.cm, tot_rs_tminus2.cm, avg_rs_tminus1.cm, avg_rs_tminus2.cm, avg_rs_t1t2.cm, twi15m, twi15m.log)
+oakplots.2009 <- (oakplots.sub %>% filter(sample_year == 2009) %>% 
+      select(plotid, oak.inf, inf_oak_ct, oak.inf.2plus, inf_oak_2plus_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, hrs1422_wet, avg_hrs1422_wet_t_t1, hrs_abv25ds, avg_hrsabv25_ds_tminus1, avg_hrsblw10_rs_tminus1, twi15m, twi15m.log))
 pairs(select(oakplots.2009, -plotid, -oak.inf),
       lower.panel = panel.cor, diag.panel = panel.hist,
       main = "Oak Plots Data 2009 Sample Season")
 
-oakplots.2010 <- oakplots.sub %>% filter(sample_year == 2010) %>% 
-      select(plotid, oak.inf, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, dys_abv25ds, dysblw14_wet, H.2005:os_rich05, H.2014, ss2d.cm, tot_rs_tminus1.cm, tot_rs_tminus2.cm, avg_rs_tminus1.cm, avg_rs_tminus2.cm, avg_rs_t1t2.cm, twi15m, twi15m.log)
+oakplots.2010 <- (oakplots.sub %>% filter(sample_year == 2010) %>% 
+      select(plotid, oak.inf, inf_oak_ct, oak.inf.2plus, inf_oak_2plus_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, hrs1422_wet, avg_hrs1422_wet_t_t1, hrs_abv25ds, avg_hrsabv25_ds_tminus1, avg_hrsblw10_rs_tminus1, twi15m, twi15m.log))
 pairs(na.omit(select(oakplots.2010, -plotid, -oak.inf)),
       lower.panel = panel.cor, diag.panel = panel.hist,
       main = "Oak Plots Data 2010 Sample Season")
 
-oakplots.2011 <- oakplots.sub %>% filter(sample_year == 2011) %>% 
-      select(plotid, oak.inf, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, dys_abv25ds, dysblw14_wet, H.2005:os_rich05, H.2014, ss2d.cm, tot_rs_tminus1.cm, tot_rs_tminus2.cm, avg_rs_tminus1.cm, avg_rs_tminus2.cm, avg_rs_t1t2.cm, twi15m, twi15m.log)
+oakplots.2011 <- (oakplots.sub %>% filter(sample_year == 2011) %>% 
+      select(plotid, oak.inf, inf_oak_ct, oak.inf.2plus, inf_oak_2plus_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, hrs1422_wet, avg_hrs1422_wet_t_t1, hrs_abv25ds, avg_hrsabv25_ds_tminus1, avg_hrsblw10_rs_tminus1, twi15m, twi15m.log))
 pairs(select(oakplots.2011, -plotid, -oak.inf),
       lower.panel = panel.cor, diag.panel = panel.hist,
       main = "Oak Plots Data 2011 Sample Season")
 
-oakplots.2012 <- oakplots.sub %>% filter(sample_year == 2012) %>% 
-      select(plotid, oak.inf, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, dys_abv25ds, dysblw14_wet, H.2005:os_rich05, H.2014, ss2d.cm, tot_rs_tminus1.cm, tot_rs_tminus2.cm, avg_rs_tminus1.cm, avg_rs_tminus2.cm, avg_rs_t1t2.cm, twi15m, twi15m.log)
+oakplots.2012 <- (oakplots.sub %>% filter(sample_year == 2012) %>% 
+      select(plotid, oak.inf, inf_oak_ct, oak.inf.2plus, inf_oak_2plus_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, hrs1422_wet, avg_hrs1422_wet_t_t1, hrs_abv25ds, avg_hrsabv25_ds_tminus1, avg_hrsblw10_rs_tminus1, twi15m, twi15m.log))
 pairs(select(oakplots.2012, -plotid, -oak.inf),
       lower.panel = panel.cor, diag.panel = panel.hist,
       main = "Oak Plots Data 2012 Sample Season")
 
-oakplots.2014 <- oakplots.sub %>% filter(sample_year == 2014) %>% 
-      select(plotid, oak.inf, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, dys_abv25ds, dysblw14_wet, H.2005:os_rich05, H.2014, ss2d.cm, tot_rs_tminus1.cm, tot_rs_tminus2.cm, avg_rs_tminus1.cm, avg_rs_tminus2.cm, avg_rs_t1t2.cm, twi15m, twi15m.log)
-pairs(select(oakplots.2014, -plotid, -oak.inf),
+oakplots.2014 <- (oakplots.sub %>% filter(sample_year == 2014) %>% 
+      select(plotid, oak.inf, inf_oak_ct, oak.inf.2plus, inf_oak_2plus_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, hrs1422_wet, avg_hrs1422_wet_t_t1, hrs_abv25ds, avg_hrsabv25_ds_tminus1, avg_hrsblw10_rs_tminus1, twi15m, twi15m.log))
+pairs(select(oakplots.2014, -plotid, -oak.inf, -oak.inf.2plus),
       lower.panel = panel.cor, diag.panel = panel.hist,
       main = "Oak Plots Data 2014 Sample Season")
 #'
+
+
 #+ path model 2005 ####
 oakplots2005.modlist1 <- list(
       m1 <- lm(H.2005 ~ twi15m.log, data = oakplots.2005),
       m2 <- lm(tot_bay.log ~ twi15m.log, data = oakplots.2005),
-      m3 <- lm(tot_lfct.log ~ tot_bay.log + dys_abv25ds + twi15m.log, data = oakplots.2005),
+      m3 <- lm(tot_lfct.log ~ tot_bay.log + hrs_abv25ds + twi15m.log, data = oakplots.2005),
       m6 <- lm(candens15m ~ tot_bay.log, data = oakplots.2005),
-      m4 <- lm(dys_abv25ds ~ tot_bay.log + twi15m.log + tot_rs_tminus1.cm + candens15m, data = oakplots.2005),
-      m5 <- glm(oak.inf ~ tot_lfct.log + tot_rs_tminus1.cm + dys_abv25ds + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2005)
+      m7 <- lm(avg_hrs1422_wet_t_t1 ~ candens15m, data = oakplots.2005),
+      m4 <- lm(hrs_abv25ds ~ candens15m + twi15m.log, data = oakplots.2005),
+      m5 <- glm(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1 + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2005)
 )
 par(mfrow=c(2,2))
 plot(m1, main = "Diversity ~")
@@ -336,20 +378,22 @@ plot(m2, main = "UMCA Abundance ~")
 plot(m3, main = "Leaf Symptoms ~")
 E3 <- resid(m3)
 plot(E3 ~ tot_bay.log, data = oakplots.2005)
-plot(E3 ~ dys_abv25ds, data = oakplots.2005)
+plot(E3 ~ hrs_abv25ds, data = oakplots.2005)
 plot(E3 ~ twi15m.log, data = oakplots.2005)
 
 plot(m4, main = "Dry Season Temperature ~")
 plot(m5, main = "Disease Prevalence ~")
 plot(m6, main = "Canopy Density ~")
+plot(m7, main = "Wet-Days Temperature ~")
 
 oakplots2005.modlist2 <- list(
       m1 <- lm(H.2005 ~ twi15m.log, data = oakplots.2005),
       m2 <- lm(umca_ba.log ~ twi15m.log, data = oakplots.2005),
-      m3 <- lm(tot_lfct.log ~ umca_ba.log + dys_abv25ds + twi15m.log, data = oakplots.2005),
+      m3 <- lm(tot_lfct.log ~ umca_ba.log + hrs_abv25ds + twi15m.log, data = oakplots.2005),
       m6 <- lm(candens15m ~ umca_ba.log, data = oakplots.2005),
-      m4 <- lm(dys_abv25ds ~ candens15m + twi15m.log + tot_rs_tminus1.cm, data = oakplots.2005),
-      m5 <- glm(oak.inf ~ tot_lfct.log + tot_rs_tminus1.cm + dys_abv25ds + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2005)
+      m7 <- lm(avg_hrs1422_wet_t_t1 ~ candens15m, data = oakplots.2005),
+      m4 <- lm(hrs_abv25ds ~ candens15m + twi15m.log, data = oakplots.2005),
+      m5 <- glm(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1 + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2005)
 )
 
 par(mfrow=c(2,2))
@@ -361,13 +405,14 @@ plot(E2 ~ twi15m.log, data = oakplots.2005)
 plot(m3, main = "Leaf Symptoms ~")
 E3 <- resid(m3)
 plot(E3 ~ tot_bay.log, data = oakplots.2005)
-plot(E3 ~ dys_abv25ds, data = oakplots.2005)
+plot(E3 ~ hrs_abv25ds, data = oakplots.2005)
 plot(E3 ~ twi15m.log, data = oakplots.2005)
 ## patterns in residuals produced by zero values for bay laurel leaf counts
 
 plot(m4, main = "Dry Season Temperature ~")
 plot(m5, main = "Disease Prevalence ~")
 plot(m6, main = "Canopy Density ~")
+plot(m7, main = "Wet-Days Temperature")
 
 sem.fit(oakplots2005.modlist1, data = oakplots.2005)
 sem.fit(oakplots2005.modlist2, data = oakplots.2005)
@@ -376,8 +421,8 @@ sem.fit(oakplots2005.modlist2, data = oakplots.2005)
 #         corr.errors = "dys_abv25ds ~~ avg_rs_tminus1.cm")
 sem.model.fits(oakplots2005.modlist1)
 sem.model.fits(oakplots2005.modlist2)
-sem.coefs(oakplots2005.modlist1, oakplots.2005)
-sem.coefs(oakplots2005.modlist1, oakplots.2005, standardize = 'scale')
+(coef.table.2005 <- sem.coefs(oakplots2005.modlist1, oakplots.2005))
+(coef.table.2005.scale <- sem.coefs(oakplots2005.modlist1, oakplots.2005, standardize = 'scale'))
 sem.coefs(oakplots2005.modlist2, oakplots.2005)
 sem.coefs(oakplots2005.modlist2, oakplots.2005, standardize = 'scale')
 # sem.coefs(oakplots2005.modlist, oakplots.2005, standardize = 'scale', 
@@ -388,10 +433,11 @@ sem.coefs(oakplots2005.modlist2, oakplots.2005, standardize = 'scale')
 oakplots2006.modlist1 <- list(
       m1 <- lm(H.2005 ~ twi15m.log, data = oakplots.2006),
       m2 <- lm(tot_bay.log ~ twi15m.log, data = oakplots.2006),
-      m3 <- lm(tot_lfct.log ~ tot_bay.log + dys_abv25ds + twi15m.log, data = oakplots.2006),
+      m3 <- lm(tot_lfct.log ~ tot_bay.log + hrs_abv25ds + twi15m.log, data = oakplots.2006),
       m6 <- lm(candens15m ~ tot_bay.log, data = oakplots.2006),
-      m4 <- lm(dys_abv25ds ~ candens15m + twi15m.log + tot_rs_tminus1.cm, data = oakplots.2006),
-      m5 <- glm(oak.inf ~ tot_lfct.log + tot_rs_tminus1.cm + dys_abv25ds + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2006)
+      m7 <- lm(avg_hrs1422_wet_t_t1 ~ candens15m, data = oakplots.2006),
+      m4 <- lm(hrs_abv25ds ~ candens15m + twi15m.log, data = oakplots.2006),
+      m5 <- glm(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1 + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2006)
 )
 
 par(mfrow=c(2,2))
@@ -401,14 +447,16 @@ plot(m3, main = "Leaf Symptoms ~")
 plot(m4, main = "Dry Season Temperature ~")
 plot(m5, main = "Disease Prevalence ~")
 plot(m6, main = "Canopy Density ~")
+plot(m7, main = "Wet-Days Temperature ~")
 
 oakplots2006.modlist2 <- list(
       m1 <- lm(H.2005 ~ twi15m.log, data = oakplots.2006),
       m2 <- lm(umca_ba.log ~ twi15m.log, data = oakplots.2006),
-      m3 <- lm(tot_lfct.log ~ umca_ba.log + dys_abv25ds + twi15m.log, data = oakplots.2006),
+      m3 <- lm(tot_lfct.log ~ umca_ba.log + hrs_abv25ds + twi15m.log, data = oakplots.2006),
       m6 <- lm(candens15m ~ umca_ba.log, data = oakplots.2006),
-      m4 <- lm(dys_abv25ds ~ candens15m + twi15m.log + tot_rs_tminus1.cm, data = oakplots.2006),
-      m5 <- glm(oak.inf ~ tot_lfct.log + tot_rs_tminus1.cm + dys_abv25ds + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2006)
+      m7 <- lm(avg_hrs1422_wet_t_t1 ~ candens15m, data = oakplots.2006),
+      m4 <- lm(hrs_abv25ds ~ candens15m + twi15m.log, data = oakplots.2006),
+      m5 <- glm(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1 + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2006)
 )
 
 par(mfrow=c(2,2))
@@ -418,6 +466,7 @@ plot(m3, main = "Leaf Symptoms ~")
 plot(m4, main = "Dry Season Temperature ~")
 plot(m5, main = "Disease Prevalence ~")
 plot(m6, main = "Canopy Density ~")
+plot(m7, main = "Wet-Days Temperature ~")
 
 
 sem.model.fits(oakplots2006.modlist1)
@@ -426,8 +475,8 @@ sem.model.fits(oakplots2006.modlist2)
 sem.fit(oakplots2006.modlist1, data = oakplots.2006)
 sem.fit(oakplots2006.modlist2, data = oakplots.2006)
 
-sem.coefs(oakplots2006.modlist1, data = oakplots.2006)
-sem.coefs(oakplots2006.modlist1, data = oakplots.2006, standardize = 'scale')
+(coef.table.2006 <- sem.coefs(oakplots2006.modlist1, data = oakplots.2006))
+(coef.table.2006.scale <- sem.coefs(oakplots2006.modlist1, data = oakplots.2006, standardize = 'scale'))
 sem.coefs(oakplots2006.modlist2, data = oakplots.2006)
 sem.coefs(oakplots2006.modlist2, data = oakplots.2006, standardize = 'scale')
 
@@ -441,10 +490,11 @@ sem.coefs(oakplots2006.modlist2, data = oakplots.2006, standardize = 'scale')
 oakplots2007.modlist1 <- list(
       m1 <- lm(H.2005 ~ twi15m.log, data = oakplots.2007),
       m2 <- lm(tot_bay.log ~ twi15m.log, data = oakplots.2007),
-      m3 <- lm(tot_lfct.log ~ tot_bay.log + dys_abv25ds + twi15m.log, data = oakplots.2007),
+      m3 <- lm(tot_lfct.log ~ tot_bay.log + hrs_abv25ds + twi15m.log, data = oakplots.2007),
       m6 <- lm(candens15m ~ tot_bay.log, data = oakplots.2007),
-      m4 <- lm(dys_abv25ds ~ candens15m + twi15m.log + tot_rs_tminus1.cm, data = oakplots.2007),
-      m5 <- glm(oak.inf ~ tot_lfct.log + tot_rs_tminus1.cm + dys_abv25ds + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2007)
+      m7 <- lm(avg_hrs1422_wet_t_t1 ~ candens15m, data = oakplots.2007),
+      m4 <- lm(hrs_abv25ds ~ candens15m + twi15m.log, data = oakplots.2007),
+      m5 <- glm(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1 + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2007)
 )
 
 par(mfrow=c(2,2))
@@ -455,21 +505,22 @@ E3 <- resid(m3)
 oakplots.2007[58,]# outlier with quite a few UMCA, but zero leaf count
 plot(E3 ~ tot_bay.log, data = oakplots.2007)
 # there may be something non-linear going on with bay laurel abundance
-plot(E3 ~ dys_abv25ds, data = oakplots.2007)
+plot(E3 ~ hrs_abv25ds, data = oakplots.2007)
 plot(E3 ~ twi15m.log, data = oakplots.2007)
 
 plot(m4, main = "Dry Season Temperature ~")
 plot(m5, main = "Disease Prevalence ~")
 plot(m6, main = "Canopy Density ~")
-
+plot(m7, main = "Wet-Days Temperature ~")
 
 oakplots2007.modlist2 <- list(
       m1 <- lm(H.2005 ~ twi15m.log, data = oakplots.2007),
       m2 <- lm(umca_ba.log ~ twi15m.log, data = oakplots.2007),
-      m3 <- lm(tot_lfct.log ~ umca_ba.log + dys_abv25ds + twi15m.log, data = oakplots.2007),
+      m3 <- lm(tot_lfct.log ~ umca_ba.log + hrs_abv25ds + twi15m.log, data = oakplots.2007),
       m6 <- lm(candens15m ~ umca_ba.log, data = oakplots.2007),
-      m4 <- lm(dys_abv25ds ~ candens15m + twi15m.log + tot_rs_tminus1.cm, data = oakplots.2007),
-      m5 <- glm(oak.inf ~ tot_lfct.log + tot_rs_tminus1.cm + dys_abv25ds + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2007)
+      m7 <- lm(avg_hrs1422_wet_t_t1 ~ candens15m, data = oakplots.2007),
+      m4 <- lm(hrs_abv25ds ~ candens15m + twi15m.log, data = oakplots.2007),
+      m5 <- glm(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1 + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2007)
 )
 
 par(mfrow=c(2,2))
@@ -479,13 +530,14 @@ plot(m3, main = "Leaf Symptoms ~")
 plot(m4, main = "Dry Season Temperature ~")
 plot(m5, main = "Disease Prevalence ~")
 plot(m6, main = "Canopy Density ~")
+plot(m7, main = "Wet-Days Temperature ~")
 
 
 sem.fit(oakplots2007.modlist1, oakplots.2007)
 sem.fit(oakplots2007.modlist2, oakplots.2007)
 
-sem.coefs(oakplots2007.modlist1, oakplots.2007)
-sem.coefs(oakplots2007.modlist1, oakplots.2007, standardize = 'scale')
+(coef.table.2007 <- sem.coefs(oakplots2007.modlist1, oakplots.2007))
+(coef.table.2007.scale <- sem.coefs(oakplots2007.modlist1, oakplots.2007, standardize = 'scale'))
 sem.coefs(oakplots2007.modlist2, oakplots.2007)
 sem.coefs(oakplots2007.modlist2, oakplots.2007, standardize = 'scale')
 
@@ -494,10 +546,11 @@ sem.coefs(oakplots2007.modlist2, oakplots.2007, standardize = 'scale')
 oakplots2008.modlist1 <- list(
       m1 <- lm(H.2005 ~ twi15m.log, data = oakplots.2008),
       m2 <- lm(tot_bay.log ~ twi15m.log, data = oakplots.2008),
-      m3 <- lm(tot_lfct.log ~ tot_bay.log + dys_abv25ds + twi15m.log, data = oakplots.2008),
+      m3 <- lm(tot_lfct.log ~ tot_bay.log + hrs_abv25ds + twi15m.log, data = oakplots.2008),
       m6 <- lm(candens15m ~ tot_bay.log, data = oakplots.2008),
-      m4 <- lm(dys_abv25ds ~ candens15m + twi15m.log + tot_rs_tminus1.cm, data = oakplots.2008),
-      m5 <- glm(oak.inf ~ tot_lfct.log + tot_rs_tminus1.cm + dys_abv25ds + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2008)
+      m7 <- lm(avg_hrs1422_wet_t_t1 ~ candens15m, data = oakplots.2008),
+      m4 <- lm(hrs_abv25ds ~ candens15m + twi15m.log, data = oakplots.2008),
+      m5 <- glm(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1 + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2008)
 )
 
 par(mfrow=c(2,2))
@@ -508,21 +561,23 @@ E3 <- resid(m3)
 plot(E3 ~ tot_bay.log, data = oakplots.2008)
 ## strong negative relationship between UMCA abundance & residuals
 ## perhaps due to zero values
-plot(E3 ~ dys_abv25ds, data = oakplots.2008)
+plot(E3 ~ hrs_abv25ds, data = oakplots.2008)
 plot(E3 ~ twi15m.log, data = oakplots.2008)
 
 plot(m4, main = "Dry Season Temperature ~")
 plot(m5, main = "Disease Prevalence ~")
 plot(m6, main = "Canopy Density ~")
+plot(m7, main = "Wet-Days Temperature ~")
 
 
 oakplots2008.modlist2 <- list(
       m1 <- lm(H.2005 ~ twi15m.log, data = oakplots.2008),
       m2 <- lm(umca_ba.log ~ twi15m.log, data = oakplots.2008),
-      m3 <- lm(tot_lfct.log ~ umca_ba.log + dys_abv25ds + twi15m.log, data = oakplots.2008),
+      m3 <- lm(tot_lfct.log ~ umca_ba.log + hrs_abv25ds + twi15m.log, data = oakplots.2008),
       m6 <- lm(candens15m ~ umca_ba.log, data = oakplots.2008),
-      m4 <- lm(dys_abv25ds ~ candens15m + twi15m.log + tot_rs_tminus1.cm, data = oakplots.2008),
-      m5 <- glm(oak.inf ~ tot_lfct.log + tot_rs_tminus1.cm + dys_abv25ds + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2008)
+      m7 <- lm(avg_hrs1422_wet_t_t1 ~ candens15m, data = oakplots.2008),
+      m4 <- lm(hrs_abv25ds ~ candens15m + twi15m.log, data = oakplots.2008),
+      m5 <- glm(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1 + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2008)
 )
 
 par(mfrow=c(2,2))
@@ -532,13 +587,14 @@ plot(m3, main = "Leaf Symptoms ~")
 plot(m4, main = "Dry Season Temperature ~")
 plot(m5, main = "Disease Prevalence ~")
 plot(m6, main = "Canopy Density ~")
+plot(m7, main = "Wet-Days Temperature ~")
 
 
 sem.fit(oakplots2008.modlist1, oakplots.2008)
 sem.fit(oakplots2008.modlist2, oakplots.2008)
 
-sem.coefs(oakplots2008.modlist1, oakplots.2008)
-sem.coefs(oakplots2008.modlist1, oakplots.2008, standardize = 'scale')
+(coef.table.2008 <- sem.coefs(oakplots2008.modlist1, oakplots.2008))
+(coef.table.2008.scale <- sem.coefs(oakplots2008.modlist1, oakplots.2008, standardize = 'scale'))
 sem.coefs(oakplots2008.modlist2, oakplots.2008)
 sem.coefs(oakplots2008.modlist2, oakplots.2008, standardize = 'scale')
 
@@ -547,10 +603,11 @@ sem.coefs(oakplots2008.modlist2, oakplots.2008, standardize = 'scale')
 oakplots2009.modlist1 <- list(
       m1 <- lm(H.2005 ~ twi15m.log, data = oakplots.2009),
       m2 <- lm(tot_bay.log ~ twi15m.log, data = oakplots.2009),
-      m3 <- lm(tot_lfct.log ~ tot_bay.log + dys_abv25ds + twi15m.log, data = oakplots.2009),
+      m3 <- lm(tot_lfct.log ~ tot_bay.log + hrs_abv25ds + twi15m.log, data = oakplots.2009),
       m6 <- lm(candens15m ~ tot_bay.log, data = oakplots.2009),
-      m4 <- lm(dys_abv25ds ~ candens15m + twi15m.log + tot_rs_tminus1.cm, data = oakplots.2009),
-      m5 <- glm(oak.inf ~ tot_lfct.log + tot_rs_tminus1.cm + dys_abv25ds + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2009)
+      m7 <- lm(avg_hrs1422_wet_t_t1 ~ candens15m, data = oakplots.2009),
+      m4 <- lm(hrs_abv25ds ~ candens15m + twi15m.log, data = oakplots.2009),
+      m5 <- glm(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1 + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2009)
 )
 
 par(mfrow=c(2,2))
@@ -562,21 +619,23 @@ plot(E3 ~ tot_bay.log, data = oakplots.2009)
 ## strong negative relationship between UMCA abundance & residuals
 ## perhaps due to the zero values
 plot(update(m3, .~., data = filter(oakplots.2009, tot_lfct.log > 0)))
-plot(E3 ~ dys_abv25ds, data = oakplots.2009)
+plot(E3 ~ hrs_abv25ds, data = oakplots.2009)
 plot(E3 ~ twi15m.log, data = oakplots.2009)
 
 plot(m4, main = "Dry Season Temperature ~")
 plot(m5, main = "Disease Prevalence ~")
 plot(m6, main = "Canopy Density ~")
+plot(m7, main = "Wet-Days Temperature ~")
 
 
 oakplots2009.modlist2 <- list(
       m1 <- lm(H.2005 ~ twi15m.log, data = oakplots.2009),
       m2 <- lm(umca_ba.log ~ twi15m.log, data = oakplots.2009),
-      m3 <- lm(tot_lfct.log ~ umca_ba.log + dys_abv25ds + twi15m.log, data = oakplots.2009),
+      m3 <- lm(tot_lfct.log ~ umca_ba.log + hrs_abv25ds + twi15m.log, data = oakplots.2009),
       m6 <- lm(candens15m ~ umca_ba.log, data = oakplots.2009),
-      m4 <- lm(dys_abv25ds ~ candens15m + twi15m.log + tot_rs_tminus1.cm, data = oakplots.2009),
-      m5 <- glm(oak.inf ~ tot_lfct.log + tot_rs_tminus1.cm + dys_abv25ds + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2009)
+      m7 <- lm(avg_hrs1422_wet_t_t1 ~ candens15m, data = oakplots.2009),
+      m4 <- lm(hrs_abv25ds ~ candens15m + twi15m.log, data = oakplots.2009),
+      m5 <- glm(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1 + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2009)
 )
 
 par(mfrow=c(2,2))
@@ -586,6 +645,7 @@ plot(m3, main = "Leaf Symptoms ~")
 plot(m4, main = "Dry Season Temperature ~")
 plot(m5, main = "Disease Prevalence ~")
 plot(m6, main = "Canopy Density ~")
+plot(m7, main = "Wet-Days Temperature ~")
 
 
 sem.fit(oakplots2009.modlist1, oakplots.2009)
@@ -601,10 +661,11 @@ sem.coefs(oakplots2009.modlist2, oakplots.2009, standardize = 'scale')
 oakplots2010.modlist1 <- list(
       m1 <- lm(H.2005 ~ twi15m.log, data = oakplots.2010),
       m2 <- lm(tot_bay.log ~ twi15m.log, data = oakplots.2010),
-      m3 <- lm(tot_lfct.log ~ tot_bay.log + dys_abv25ds + twi15m.log, data = oakplots.2010),
+      m3 <- lm(tot_lfct.log ~ tot_bay.log + hrs_abv25ds + twi15m.log, data = oakplots.2010),
       m6 <- lm(candens15m ~ tot_bay.log, data = oakplots.2010),
-      m4 <- lm(dys_abv25ds ~ candens15m + twi15m.log + tot_rs_tminus1.cm, data = oakplots.2010),
-      m5 <- glm(oak.inf ~ tot_lfct.log + tot_rs_tminus1.cm + dys_abv25ds + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2010)
+      m7 <- lm(avg_hrs1422_wet_t_t1 ~ candens15m, data = oakplots.2010),
+      m4 <- lm(hrs_abv25ds ~ candens15m + twi15m.log, data = oakplots.2010),
+      m5 <- glm(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1 + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2010)
 )
 
 par(mfrow=c(2,2))
@@ -622,15 +683,16 @@ plot(E3 ~ twi15m.log, data = na.omit(oakplots.2010))
 plot(m4, main = "Dry Season Temperature ~")
 plot(m5, main = "Disease Prevalence ~")
 plot(m6, main = "Canopy Density ~")
-
+plot(m7, main = "Wet-Days Temperature ~")
 
 oakplots2010.modlist2 <- list(
       m1 <- lm(H.2005 ~ twi15m.log, data = oakplots.2010),
       m2 <- lm(umca_ba.log ~ twi15m.log, data = oakplots.2010),
-      m3 <- lm(tot_lfct.log ~ umca_ba.log + dys_abv25ds + twi15m.log, data = oakplots.2010),
+      m3 <- lm(tot_lfct.log ~ umca_ba.log + hrs_abv25ds + twi15m.log, data = oakplots.2010),
       m6 <- lm(candens15m ~ umca_ba.log, data = oakplots.2010),
-      m4 <- lm(dys_abv25ds ~ candens15m + twi15m.log + tot_rs_tminus1.cm, data = oakplots.2010),
-      m5 <- glm(oak.inf ~ tot_lfct.log + tot_rs_tminus1.cm + dys_abv25ds + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2010)
+      m7 <- lm(avg_hrs1422_wet_t_t1 ~ candens15m, data = oakplots.2010),
+      m4 <- lm(hrs_abv25ds ~ candens15m + twi15m.log, data = oakplots.2010),
+      m5 <- glm(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1 + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2010)
 )
 
 par(mfrow=c(2,2))
@@ -640,7 +702,7 @@ plot(m3, main = "Leaf Symptoms ~")
 plot(m4, main = "Dry Season Temperature ~")
 plot(m5, main = "Disease Prevalence ~")
 plot(m6, main = "Canopy Density ~")
-
+plot(m7, main = "Wet-Days Temperature ~")
 
 sem.fit(oakplots2010.modlist1, oakplots.2010)
 sem.fit(oakplots2010.modlist2, oakplots.2010)
@@ -650,14 +712,16 @@ sem.coefs(oakplots2010.modlist1, oakplots.2010, standardize = 'scale')
 sem.coefs(oakplots2010.modlist2, oakplots.2010)
 sem.coefs(oakplots2010.modlist2, oakplots.2010, standardize = 'scale')
 
+
 #+ path model 2011 ####
 oakplots2011.modlist1 <- list(
       m1 <- lm(H.2005 ~ twi15m.log, data = oakplots.2011),
       m2 <- lm(tot_bay.log ~ twi15m.log, data = oakplots.2011),
-      m3 <- lm(tot_lfct.log ~ tot_bay.log + dys_abv25ds + twi15m.log, data = oakplots.2011),
+      m3 <- lm(tot_lfct.log ~ tot_bay.log + hrs_abv25ds + twi15m.log, data = oakplots.2011),
       m6 <- lm(candens15m ~ tot_bay.log, data = oakplots.2011),
-      m4 <- lm(dys_abv25ds ~ candens15m + twi15m.log + tot_rs_tminus1.cm, data = oakplots.2011),
-      m5 <- glm(oak.inf ~ tot_lfct.log + tot_rs_tminus1.cm + dys_abv25ds + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2011)
+      m7 <- lm(avg_hrs1422_wet_t_t1 ~ candens15m, data = oakplots.2011),
+      m4 <- lm(hrs_abv25ds ~ candens15m + twi15m.log, data = oakplots.2011),
+      m5 <- glm(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1 + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2011)
 )
 
 par(mfrow=c(2,2))
@@ -675,15 +739,17 @@ plot(E3 ~ twi15m.log, data = na.omit(oakplots.2011))
 plot(m4, main = "Dry Season Temperature ~")
 plot(m5, main = "Disease Prevalence ~")
 plot(m6, main = "Canopy Density ~")
+plot(m7, main = "Wet-Days Temperature ~")
 
 
 oakplots2011.modlist2 <- list(
       m1 <- lm(H.2005 ~ twi15m.log, data = oakplots.2011),
       m2 <- lm(umca_ba.log ~ twi15m.log, data = oakplots.2011),
-      m3 <- lm(tot_lfct.log ~ umca_ba.log + dys_abv25ds + twi15m.log, data = oakplots.2011),
+      m3 <- lm(tot_lfct.log ~ umca_ba.log + hrs_abv25ds + twi15m.log, data = oakplots.2011),
       m6 <- lm(candens15m ~ umca_ba.log, data = oakplots.2011),
-      m4 <- lm(dys_abv25ds ~ candens15m + twi15m.log + tot_rs_tminus1.cm, data = oakplots.2011),
-      m5 <- glm(oak.inf ~ tot_lfct.log + tot_rs_tminus1.cm + dys_abv25ds + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2011)
+      m7 <- lm(avg_hrs1422_wet_t_t1 ~ candens15m, data = oakplots.2011),
+      m4 <- lm(hrs_abv25ds ~ candens15m + twi15m.log, data = oakplots.2011),
+      m5 <- glm(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1 + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2011)
 )
 
 par(mfrow=c(2,2))
@@ -693,6 +759,7 @@ plot(m3, main = "Leaf Symptoms ~")
 plot(m4, main = "Dry Season Temperature ~")
 plot(m5, main = "Disease Prevalence ~")
 plot(m6, main = "Canopy Density ~")
+plot(m7, main = "Wet-Days Temperature ~")
 
 
 sem.fit(oakplots2011.modlist1, oakplots.2011)
@@ -703,7 +770,124 @@ sem.coefs(oakplots2011.modlist1, oakplots.2011, standardize = 'scale')
 sem.coefs(oakplots2011.modlist2, oakplots.2011)
 sem.coefs(oakplots2011.modlist2, oakplots.2011, standardize = 'scale')
 
+
+#+ path model 2012 ####
+oakplots2012.modlist1 <- list(
+      m1 <- lm(H.2005 ~ twi15m.log, data = oakplots.2012),
+      m2 <- lm(tot_bay.log ~ twi15m.log, data = oakplots.2012),
+      m3 <- lm(tot_lfct.log ~ tot_bay.log + hrs_abv25ds + twi15m.log, data = oakplots.2012),
+      m6 <- lm(candens15m ~ tot_bay.log, data = oakplots.2012),
+      m7 <- lm(avg_hrs1422_wet_t_t1 ~ candens15m, data = oakplots.2012),
+      m4 <- lm(hrs_abv25ds ~ candens15m + twi15m.log, data = oakplots.2012),
+      m5 <- glm(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1 + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2012)
+)
+
+par(mfrow=c(2,2))
+plot(m1, main = "Diversity ~")
+plot(m2, main = "UMCA Abundance ~")
+plot(m3, main = "Leaf Symptoms ~")
+E3 <- resid(m3)
+plot(E3 ~ tot_bay.log, data = na.omit(oakplots.2012))
+## strong negative relationship between UMCA abundance & residuals
+## perhaps due to the zero values
+plot(update(m3, .~., data = filter(na.omit(oakplots.2009), tot_lfct.log > 0)))
+plot(E3 ~ dys_abv25ds, data = na.omit(oakplots.2012))
+plot(E3 ~ twi15m.log, data = na.omit(oakplots.2012))
+
+plot(m4, main = "Dry Season Temperature ~")
+plot(m5, main = "Disease Prevalence ~")
+plot(m6, main = "Canopy Density ~")
+plot(m7, main = "Wet-Days Temperature ~")
+
+
+oakplots2012.modlist2 <- list(
+      m1 <- lm(H.2005 ~ twi15m.log, data = oakplots.2012),
+      m2 <- lm(umca_ba.log ~ twi15m.log, data = oakplots.2012),
+      m3 <- lm(tot_lfct.log ~ umca_ba.log + hrs_abv25ds + twi15m.log, data = oakplots.2012),
+      m6 <- lm(candens15m ~ umca_ba.log, data = oakplots.2012),
+      m7 <- lm(avg_hrs1422_wet_t_t1 ~ candens15m, data = oakplots.2012),
+      m4 <- lm(hrs_abv25ds ~ candens15m + twi15m.log, data = oakplots.2012),
+      m5 <- glm(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1 + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2012)
+)
+
+par(mfrow=c(2,2))
+plot(m1, main = "Diversity ~")
+plot(m2, main = "UMCA Abundance ~")
+plot(m3, main = "Leaf Symptoms ~")
+plot(m4, main = "Dry Season Temperature ~")
+plot(m5, main = "Disease Prevalence ~")
+plot(m6, main = "Canopy Density ~")
+plot(m7, main = "Wet-Days Temperature ~")
+
+
+sem.fit(oakplots2012.modlist1, oakplots.2012)
+sem.fit(oakplots2012.modlist2, oakplots.2012)
+
+sem.coefs(oakplots2012.modlist1, oakplots.2012)
+sem.coefs(oakplots2012.modlist1, oakplots.2012, standardize = 'scale')
+sem.coefs(oakplots2012.modlist2, oakplots.2012)
+sem.coefs(oakplots2012.modlist2, oakplots.2012, standardize = 'scale')
+
+
+#+ path model 2014 ####
+oakplots2014.modlist1 <- list(
+      m1 <- lm(H.2005 ~ twi15m.log, data = oakplots.2014),
+      m2 <- lm(tot_bay.log ~ twi15m.log, data = oakplots.2014),
+      m3 <- lm(tot_lfct.log ~ tot_bay.log + hrs_abv25ds + twi15m.log, data = oakplots.2014),
+      m6 <- lm(candens15m ~ tot_bay.log, data = oakplots.2014),
+      m7 <- lm(avg_hrs1422_wet_t_t1 ~ candens15m, data = oakplots.2014),
+      m4 <- lm(hrs_abv25ds ~ candens15m + twi15m.log, data = oakplots.2014),
+      m5 <- glm(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1 + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2014)
+)
+
+par(mfrow=c(2,2))
+plot(m1, main = "Diversity ~")
+plot(m2, main = "UMCA Abundance ~")
+plot(m3, main = "Leaf Symptoms ~")
+E3 <- resid(m3)
+plot(E3 ~ tot_bay.log, data = na.omit(oakplots.2014))
+## strong negative relationship between UMCA abundance & residuals
+## perhaps due to the zero values
+plot(update(m3, .~., data = filter(na.omit(oakplots.2009), tot_lfct.log > 0)))
+plot(E3 ~ dys_abv25ds, data = na.omit(oakplots.2014))
+plot(E3 ~ twi15m.log, data = na.omit(oakplots.2014))
+
+plot(m4, main = "Dry Season Temperature ~")
+plot(m5, main = "Disease Prevalence ~")
+plot(m6, main = "Canopy Density ~")
+plot(m7, main = "Wet-Days Temperature ~")
+
+
+oakplots2014.modlist2 <- list(
+      m1 <- lm(H.2005 ~ twi15m.log, data = oakplots.2014),
+      m2 <- lm(umca_ba.log ~ twi15m.log, data = oakplots.2014),
+      m3 <- lm(tot_lfct.log ~ umca_ba.log + hrs_abv25ds + twi15m.log, data = oakplots.2014),
+      m6 <- lm(candens15m ~ umca_ba.log, data = oakplots.2014),
+      m7 <- lm(avg_hrs1422_wet_t_t1 ~ candens15m, data = oakplots.2014),
+      m4 <- lm(hrs_abv25ds ~ candens15m + twi15m.log, data = oakplots.2014),
+      m5 <- glm(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1 + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2014)
+)
+
+par(mfrow=c(2,2))
+plot(m1, main = "Diversity ~")
+plot(m2, main = "UMCA Abundance ~")
+plot(m3, main = "Leaf Symptoms ~")
+plot(m4, main = "Dry Season Temperature ~")
+plot(m5, main = "Disease Prevalence ~")
+plot(m6, main = "Canopy Density ~")
+plot(m7, main = "Wet-Days Temperature ~")
+
+
+sem.fit(oakplots2014.modlist1, oakplots.2014)
+sem.fit(oakplots2014.modlist2, oakplots.2014)
+
+sem.coefs(oakplots2014.modlist1, oakplots.2014)
+sem.coefs(oakplots2014.modlist1, oakplots.2014, standardize = 'scale')
+sem.coefs(oakplots2014.modlist2, oakplots.2014)
+sem.coefs(oakplots2014.modlist2, oakplots.2014, standardize = 'scale')
 #'
+
+
 #+ path model using rainy season average #### 
 oakplots.modlist <- list(
 #       glmer(tot_bay ~ twi15m + H.2005 + (1|sample_year) + (1|plotid), 
@@ -751,39 +935,43 @@ sem.coefs(oakplots.modlist, oakplots.sub, standardize = 'scale')
 #' For base GLM there are five types of residuals available, c("deviance", "pearson", "working","response", "partial")
 
 
-# pairs plot of data for the model
+#+ subset and rescale variables ####
 names(oakplots.sub)
+oakplots.sub2 <- oakplots.sub %>% 
+      select(plotid:umca_basal_area, oak.inf, tot_bay.log, umca_ba.log, tot_lfct.log, hrs_abv25ds, avg_hrs1422_wet_t_t1, avg_hrs1422_wet_t_t1.log, candens15m, H.2005, H.2014, twi15m, twi15m.log, -inf_oak_2plus_ct) %>% 
+      filter(is.na(H.2005)==F, is.na(tot_bay)==F, is.na(avg_hrs1422_wet_t_t1)==F)
+summary(oakplots.sub2)
 
-oakplots.sub2 <- select(oakplots.sub, plotid:inf_oak_ct, infected_bay_ct:twi15m, avg_tmax_ds:us.H.2005, rain_tot_v:rain_tot_v.cm, tot_lfct.log:twi15m.log)
-pairs(select(oakplots.sub2, -c(plotid:inf_oak_ct), -oak.inf),
-      lower.panel = panel.cor, diag.panel = panel.hist)
-
-# scale variables
-names(oakplots.sub2)
-
-## untransformed and scaled
-oakplots.sub2$inf_bay.scl <- scale((oakplots.sub2$infected_bay_ct))
-oakplots.sub2$tot_bay.scl <- scale((oakplots.sub2$tot_bay))
-oakplots.sub2$tot_lfct.scl <- scale((oakplots.sub2$tot_lfct))
-oakplots.sub2$twi15m.scl <- scale((oakplots.sub2$twi15m))
-oakplots.sub2$avg_tmax_ds.scl <- scale(oakplots.sub2$avg_tmax_ds)
-oakplots.sub2$shannons2005.scl <- scale(oakplots.sub2$H.2005)
-oakplots.sub2$pielous2005.scl <- scale(oakplots.sub2$J.2005)
-oakplots.sub2$rain_tot.scl <- scale(oakplots.sub2$rain_tot_v)
-oakplots.sub2$rain_days.scl <- scale(oakplots.sub2$rain_days_v)
-oakplots.sub2$avgtmax_wet.scl <- scale(oakplots.sub2$avgtmax_wet)
-
-## transformed and scaled
+## rescale variables
+# oakplots.sub2$inf_bay.scl <- scale((oakplots.sub2$infected_bay_ct))
+oakplots.sub2$tot_bay.scl <- scale(oakplots.sub2$tot_bay)
 oakplots.sub2$tot_bay.log.scl <- scale(oakplots.sub2$tot_bay.log)
+oakplots.sub2$umca_basal_area.scl <- scale(oakplots.sub2$umca_basal_area)
+oakplots.sub2$umca_ba.log.scl <- scale(oakplots.sub2$umca_ba.log)
+oakplots.sub2$tot_lfct.scl <- scale(oakplots.sub2$tot_lfct)
 oakplots.sub2$tot_lfct.log.scl <- scale(oakplots.sub2$tot_lfct.log)
+oakplots.sub2$avg_lfct.scl <- scale(oakplots.sub2$avg_lfct)
+oakplots.sub2$hrs_abv25ds.scl <- scale(oakplots.sub2$hrs_abv25ds)
+oakplots.sub2$avg_hrs1422_wet_t_t1.scl <- scale(oakplots.sub2$avg_hrs1422_wet_t_t1)
+oakplots.sub2$avg_hrs1422_wet_t_t1.scl.log <- scale(oakplots.sub2$avg_hrs1422_wet_t_t1.log)
+
+## static variables
+oakplots.sub2$candens15m.scl <- scale(oakplots.sub2$candens15m)
+oakplots.sub2$shannons2005.scl <- scale(oakplots.sub2$H.2005)
+oakplots.sub2$shannons2014.scl <- scale(oakplots.sub2$H.2014)
+oakplots.sub2$twi15m.scl <- scale(oakplots.sub2$twi15m)
 oakplots.sub2$twi15m.log.scl <- scale(oakplots.sub2$twi15m.log)
+
+summary(oakplots.sub2)
+
 
 names(oakplots.sub2)
 pairs(select(oakplots.sub2, ends_with("scl")),
       lower.panel = panel.cor, diag.panel = panel.hist,
       main = "Scaled and/or Transformed Variables")
+#'
 
-
+#+ path model pieces ####
 m1 <- lme(tot_bay.log ~ twi15m, 
              random = ~1|sample_year,
              data = oakplots.sub2, na.action = na.omit)
@@ -898,7 +1086,6 @@ plot(m5a)
 summary(oakplots.sub2)
 # lfct: 0-8.8, tmax: 19.4-31.4, rain: 199.5-1529.1, H.2005: 0-1.6
 # based on these ranges I'm supposing that the rain variable is throwing things off re: large eigenvalue
-
 ## After standardizing (scale) all the variables I no longer get an error when running this model.
 
 
@@ -919,7 +1106,6 @@ summary(oakplots.sub2)
 # 
 # image(getME(m5a, name = "L"))
 # image(getME(m5b, name = "L"))
-
 
 # Fit Path Model
 oakplots.modlist <- list(m1,m2,m3,m4,m5)
@@ -944,6 +1130,110 @@ sem.coefs(oakplots.modlist2, oakplots.sub2, standardize = "scale")
 
 coef.table <- (sem.coefs(oakplots.modlist2, oakplots.sub2))
 
+#+ revised disease prevalence repeated measures path model ####
+disease.prevalence.modlist <- list(
+      m1 <- lm(H.2005 ~ twi15m.log, data = oakplots.sub2),
+      
+      m2 <- lme(tot_bay.log ~ twi15m.log, random = ~1|sample_year, data = oakplots.sub2),
+      
+      m3 <- lme(tot_lfct.log ~ tot_bay.log + hrs_abv25ds + H.2005 + twi15m.log, random = ~1|sample_year, data = oakplots.sub2),
+      
+      m4 <- lme(hrs_abv25ds ~ avg_hrs1422_wet_t_t1.log + tot_bay.log + twi15m.log, random = ~1|sample_year, data = oakplots.sub2),
+      
+      m6 <- lme(avg_hrs1422_wet_t_t1.log ~ tot_bay.log + H.2005, random = ~1|sample_year, data = oakplots.sub2),
+      
+      m5 <- glmer(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1.log + hrs_abv25ds + tot_bay.log + H.2005 + (1|sample_year), family = binomial(link = "logit"), data = oakplots.sub2, na.action = na.omit)
+)
+
+disease.prevalence.modlist.scl <- list(
+      m1 <- lm(shannons2005.scl ~ twi15m.log.scl, data = oakplots.sub2),
+      
+      m2 <- lme(tot_bay.log.scl~ twi15m.log.scl, random = ~1|sample_year, data = oakplots.sub2),
+      
+      m3 <- lme(tot_lfct.log.scl ~ tot_bay.log.scl + hrs_abv25ds.scl + shannons2005.scl + twi15m.log.scl, random = ~1|sample_year, data = oakplots.sub2),
+      
+      m4 <- lme(hrs_abv25ds.scl ~ avg_hrs1422_wet_t_t1.scl.log + tot_bay.log.scl + twi15m.log.scl, random = ~1|sample_year, data = oakplots.sub2),
+      
+      m6 <- lme(avg_hrs1422_wet_t_t1.scl.log ~ tot_bay.log.scl + shannons2005.scl, random = ~1|sample_year, data = oakplots.sub2),
+      
+      m5 <- glmer(oak.inf ~ tot_lfct.log.scl + avg_hrs1422_wet_t_t1.scl.log + hrs_abv25ds.scl + tot_bay.log.scl + shannons2005.scl + (1|sample_year), family = binomial(link = "logit"), data = oakplots.sub2, na.action = na.omit)
+)
+
+sem.fit(disease.prevalence.modlist, oakplots.sub2)
+sem.fit(disease.prevalence.modlist.scl, oakplots.sub2
+        #corr.errors = "hrs_abv25ds.scl ~~ avg_hrs1422_wet_t_t1.scl"
+)
+
+sem.coefs(disease.prevalence.modlist, oakplots.sub2)
+sem.coefs(disease.prevalence.modlist, oakplots.sub2, standardize = "scale")
+sem.coefs(disease.prevalence.modlist.scl, oakplots.sub2)
+
+
+disease.prevalence.ws.modlist <- list(
+      m1 <- lm(H.2005 ~ twi15m.log, data = oakplots.sub2),
+      
+      m2 <- lme(tot_bay.log ~ twi15m.log, random = ~1|sample_year, data = oakplots.sub2),
+      
+      m3 <- lme(tot_lfct.log ~ tot_bay.log + H.2005 + twi15m.log, random = ~1|sample_year, data = oakplots.sub2),
+      
+      # m4 <- lme(hrs_abv25ds ~ avg_hrs1422_wet_t_t1.log + tot_bay.log + twi15m.log, random = ~1|sample_year, data = oakplots.sub2),
+      
+      m6 <- lme(avg_hrs1422_wet_t_t1.log ~ tot_bay.log + H.2005, random = ~1|sample_year, data = oakplots.sub2),
+      
+      m5 <- glmer(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1.log + tot_bay.log + H.2005 + (1|sample_year), family = binomial(link = "logit"), data = oakplots.sub2, na.action = na.omit)
+)
+sem.fit(disease.prevalence.ws.modlist, oakplots.sub2)
+sem.coefs(disease.prevalence.ws.modlist, oakplots.sub2, standardize = "scale")
+
+disease.prevalence.ws.modlist.scl <- list(
+      m1 <- lm(shannons2005.scl ~ twi15m.log.scl, data = oakplots.sub2),
+      
+      m2 <- lme(tot_bay.log.scl~ twi15m.log.scl, random = ~1|sample_year, data = oakplots.sub2),
+      
+      m3 <- lme(tot_lfct.log.scl ~ tot_bay.log.scl + shannons2005.scl + twi15m.log.scl, random = ~1|sample_year, data = oakplots.sub2),
+      
+      # m4 <- lme(hrs_abv25ds.scl ~ avg_hrs1422_wet_t_t1.scl.log + tot_bay.log.scl + twi15m.log.scl, random = ~1|sample_year, data = oakplots.sub2),
+      
+      m4 <- lme(avg_hrs1422_wet_t_t1.scl.log ~ tot_bay.log.scl + shannons2005.scl, random = ~1|sample_year, data = oakplots.sub2),
+      
+      m5 <- glmer(oak.inf ~ tot_lfct.log.scl + avg_hrs1422_wet_t_t1.scl.log +  tot_bay.log.scl + shannons2005.scl + (1|sample_year), family = binomial(link = "logit"), data = oakplots.sub2, na.action = na.omit)
+)
+
+
+disease.prevalence.ds.modlist <- list(
+      m1 <- lm(H.2005 ~ twi15m.log, data = oakplots.sub2),
+      
+      m2 <- lme(tot_bay.log~ twi15m.log, random = ~1|sample_year, data = oakplots.sub2),
+      
+      m3 <- lme(tot_lfct.log ~ tot_bay.log + hrs_abv25ds + H.2005 + twi15m.log, random = ~1|sample_year, data = oakplots.sub2),
+      
+      m4 <- lme(hrs_abv25ds ~ tot_bay.log + twi15m.log, random = ~1|sample_year, data = oakplots.sub2),
+      
+      # m6 <- lme(avg_hrs1422_wet_t_t1..log ~ tot_bay.log., random = ~1|sample_year, data = oakplots.sub2),
+      
+      m5 <- glmer(oak.inf ~ tot_lfct.log + hrs_abv25ds + tot_bay.log + H.2005 + (1|sample_year), family = binomial(link = "logit"), data = oakplots.sub2, na.action = na.omit)
+)
+sem.fit(disease.prevalence.ds.modlist, oakplots.sub2)
+sem.coefs(disease.prevalence.ds.modlist, oakplots.sub2, standardize = "none")
+
+disease.prevalence.ds.modlist.scl <- list(
+      m1 <- lm(shannons2005.scl ~ twi15m.log.scl, data = oakplots.sub2),
+      
+      m2 <- lme(tot_bay.log.scl~ twi15m.log.scl, random = ~1|sample_year, data = oakplots.sub2),
+      
+      m3 <- lme(tot_lfct.log.scl ~ tot_bay.log.scl + hrs_abv25ds.scl + shannons2005.scl + twi15m.log.scl, random = ~1|sample_year, data = oakplots.sub2),
+      
+      m4 <- lme(hrs_abv25ds.scl ~ tot_bay.log.scl + twi15m.log.scl, random = ~1|sample_year, data = oakplots.sub2),
+      
+      # m6 <- lme(avg_hrs1422_wet_t_t1.scl.log ~ tot_bay.log.scl, random = ~1|sample_year, data = oakplots.sub2),
+      
+      m5 <- glmer(oak.inf ~ tot_lfct.log.scl + hrs_abv25ds.scl + tot_bay.log.scl + shannons2005.scl + (1|sample_year), family = binomial(link = "logit"), data = oakplots.sub2, na.action = na.omit)
+)
+sem.fit(disease.prevalence.ws.modlist.scl, oakplots.sub2)
+sem.fit(disease.prevalence.ds.modlist.scl, oakplots.sub2)
+sem.coefs(disease.prevalence.ds.modlist.scl, oakplots.sub2)
+sem.coefs(disease.prevalence.ws.modlist.scl, oakplots.sub2)
+
 
 
 # Oak Stem-Level Model ####
@@ -952,26 +1242,43 @@ names(stems)
 # stems$species <- tolower(stems$species)
 
 oak_stems <- stems %>% 
-      select(plotid:stem_status, dbh, dbh1, canker, sod_dead, location, year) %>%
-      filter(status == "Alive" | status == "Dead", species != "lide", species != "unknown sp.", species != "umca")
+      select(plotid:stem_status, canker, sod_killed, dbh_entry, location, year) %>%
+      filter(stem_status == "Alive" | stem_status == "Dead", species != "lide", species != "unknown sp.", species != "umca", location == "In")
 oak_stems <- droplevels(oak_stems)
 unique(oak_stems$species)
 
 head(oak_stems,20)
 summary(oak_stems)
-tail(filter(oak_stems, is.na(dbh1)),20)#
-filter(oak_stems, location == "Out")
+tail(filter(oak_stems, is.na(initial_dbh)),20)#
+filter(oak_stems, is.na(initial_dbh))
 oak_stems$infected <- ifelse(oak_stems$canker == 0, 0, 1)
-names(oakplots.sub)
+names(oakplots.sub2)
+summary(oakplots.sub2)
 
-# join plot-level metrics to stem-level data
-oak_stems <- left_join(oak_stems, 
-                       select(oakplots.sub, plotid, sample_year, infected_bay_ct:tot_lfct, tot_bay.log, tot_lfct.log, twi15m, veght_m, avg_tmax_ds, hrs_abv20ds, avgtmin_wet, hrs1020_wet, H.2005, J.2005, os_rich05, rain_tot_v.cm),
-                       by = c("plotid", "year"="sample_year"))
-summary(oak_stems)
+# join plot-level metrics to stem-level data ####
+oak_stems2005_plus <- left_join(oak_stems, 
+                       oakplots.sub2,
+                       by = c("plotid", "year"="sample_year")) %>% 
+      filter(is.na(tot_bay)==F, year >= 2005)
+oak_stems2005_plus <- rename(oak_stems2005_plus, sample_year = year)
+summary(oak_stems2005_plus)
+# unique(filter(oak_stems2005_plus, is.na(tot_bay))$plotid)
+length(unique(oak_stems2005_plus$tag))
 
-
-
+# build SEM model pieces ####
+oak.infection.modlist.scl <- list(
+      m1 <- lme(shannons2005.scl ~ twi15m.log.scl, random = ~1|sample_year, data = oak_stems2005_plus),
+      
+      m2 <- lme(tot_bay.log.scl ~ twi15m.log.scl, random = ~1|sample_year, data = oak_stems2005_plus),
+      
+      m3 <- lmer(tot_lfct.log.scl ~ tot_bay.log.scl + hrs_abv25ds.scl + shannons2005.scl + twi15m.log.scl + (1|sample_year), data = oak_stems2005_plus),
+      
+      m4 <- lme(hrs_abv25ds.scl ~ avg_hrs1422_wet_t_t1.scl.log + tot_bay.log.scl + twi15m.log.scl, random = ~1|sample_year, data = oak_stems2005_plus),
+      
+      m6 <- lme(avg_hrs1422_wet_t_t1.scl.log ~ tot_bay.log.scl, random = ~1|sample_year, data = oak_stems2005_plus),
+      
+      m5 <- glmer(oak.inf ~ tot_lfct.log.scl + avg_hrs1422_wet_t_t1.scl.log + hrs_abv25ds.scl + tot_bay.log.scl + shannons2005.scl + (1|sample_year), family = binomial(link = "logit"), data = oak_stems2005_plus, na.action = na.omit)
+)
 
 
 
