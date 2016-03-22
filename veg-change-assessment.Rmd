@@ -230,7 +230,7 @@ ggplot(os_dbh_in_plot %>%
       theme_bw()
 
 ggplot(os_dbh_in_plot %>%
-             filter(species == "umca" | species == "quag" | species == "quga" | species == "psme" | species == "arme" | species == "quke" | species == "quch" | species == "sese") %>% 
+             filter(species == "quag" | species == "quke" | species == "quga" | species == "umca" | species == "psme" | species == "arme" |  species == "quch" | species == "sese") %>% 
              group_by(year, species, stem_status) %>% 
              summarise(tot_ba_m2 = round(sum(tot_ba_m2), 2)), 
        aes(species, tot_ba_m2, label = tot_ba_m2)) +
@@ -238,7 +238,24 @@ ggplot(os_dbh_in_plot %>%
       facet_grid(stem_status ~ year, scales = "free") +
       ylab("basal area") +
       ggtitle("Overstory Species Basal Area") +
-      geom_text(aes(vjust = 0), nudge_y = 1.5) +
+      geom_text(aes(vjust = 0), nudge_y = 1) +
+      theme_bw()
+
+qu_plot <- na.omit(left_join(select(oak_sod, plotid, sample_year),
+                     os_dbh_in_plot, 
+                     by = c("plotid","sample_year"="year")))
+summary(qu_plot)
+
+ggplot(qu_plot %>%
+             filter(species == "quag" | species == "quke" | species == "quga" | species == "umca" | species == "psme" | species == "arme" |  species == "quch") %>% 
+             group_by(sample_year, species, stem_status) %>% 
+             summarise(tot_ba_m2 = round(sum(tot_ba_m2), 2)), 
+       aes(species, tot_ba_m2, label = tot_ba_m2)) +
+      geom_bar(stat = "identity") +
+      facet_grid(stem_status ~ sample_year, scales = "free") +
+      ylab("basal area") +
+      ggtitle("Overstory Species Basal Area in Quercus Plots") +
+      geom_text(aes(vjust = 0), nudge_y = 1) +
       theme_bw()
 
 # Total numbers only for tagged host species. I think for 'Dead' status it is probably only fair to look at tagged host species because I don't think the dead stems of untagged species were frequently recorded earlier in the study.
