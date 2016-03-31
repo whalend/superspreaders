@@ -3,8 +3,8 @@
 #' 
 #+ load data and packages ####
 load("pathmodel_data.RData")
-library(plyr); library(dplyr); library(nlme); library(lme4)
-library(lavaan); library(piecewiseSEM)
+library(plyr); library(dplyr); library(lme4); library(lmerTest);
+library(lavaan); library(piecewiseSEM); library(pbkrtest)
 
 #+ panel functions for pairs plots
 panel.cor <- function(x, y, digits = 2, cex.cor, ...)
@@ -1232,20 +1232,37 @@ disease.prevalence.ws.modlist.scl <- list(
 disease.prevalence.ds.modlist <- list(
       m1 <- lm(H.2005 ~ twi15m.log, data = oakplots.sub2),
       
-      m2 <- lme(tot_bay.log~ twi15m.log, random = ~1|sample_year, data = oakplots.sub2),
+      m2 <- lmer(tot_bay.log ~ twi15m.log + (1|sample_year) + (1|plotid), data = oakplots.sub2),
       
-      m3 <- lme(tot_lfct.log ~ tot_bay.log + hrs_abv25ds + H.2005 + twi15m.log, random = ~1|sample_year, data = oakplots.sub2),
+      m3 <- lmer(tot_lfct.log ~ tot_bay.log + hrs_abv25ds + H.2005 + twi15m.log + (1|sample_year) + (1|plotid), data = oakplots.sub2),
       
-      m4 <- lme(hrs_abv25ds ~ tot_bay.log + twi15m.log, random = ~1|sample_year, data = oakplots.sub2),
+      m4 <- lmer(hrs_abv25ds ~ tot_bay.log + twi15m.log + (1|sample_year) + (1|plotid), data = oakplots.sub2),
       
       # m6 <- lme(avg_hrs1422_wet_t_t1..log ~ tot_bay.log., random = ~1|sample_year, data = oakplots.sub2),
       
-      m5 <- glmer(oak.inf ~ tot_lfct.log + hrs_abv25ds + tot_bay.log + H.2005 + (1|sample_year), family = binomial(link = "logit"), data = oakplots.sub2, na.action = na.omit)
+      m5 <- glmer(oak.inf ~ tot_lfct.log + hrs_abv25ds + H.2005 + (1|sample_year) + (1|plotid), family = binomial(link = "logit"), data = oakplots.sub2, na.action = na.omit)
 )
 sem.fit(disease.prevalence.ds.modlist, oakplots.sub2)
 sem.coefs(disease.prevalence.ds.modlist, oakplots.sub2, standardize = "none")
 
+## dry season temperature model year/plotid random effects ####
 disease.prevalence.ds.modlist.scl <- list(
+      m1 <- lm(shannons2005.scl ~ twi15m.log.scl, data = oakplots.sub2),
+      
+      m2 <- lmer(tot_bay.log.scl~ twi15m.log.scl + (1|sample_year) + (1|plotid), data = oakplots.sub2),
+      
+      m3 <- lmer(tot_lfct.log.scl ~ tot_bay.log.scl + hrs_abv25ds.scl + shannons2005.scl + twi15m.log.scl + (1|sample_year) + (1|plotid), data = oakplots.sub2),
+      
+      m4 <- lmer(hrs_abv25ds.scl ~ tot_bay.log.scl + twi15m.log.scl + (1|sample_year) + (1|plotid), data = oakplots.sub2),
+      
+      # m6 <- lme(avg_hrs1422_wet_t_t1.scl.log ~ tot_bay.log.scl, random = ~1|sample_year, data = oakplots.sub2),
+      
+      m5 <- glmer(oak.inf ~ tot_lfct.log.scl + hrs_abv25ds.scl + shannons2005.scl + (1|sample_year) + (1|plotid), family = binomial(link = "logit"), data = oakplots.sub2, na.action = na.omit)
+)
+sem.fit(disease.prevalence.ds.modlist.scl, oakplots.sub2)
+sem.coefs(disease.prevalence.ds.modlist.scl, oakplots.sub2)
+
+dp.ds.lme.modlist.scl <- list(
       m1 <- lm(shannons2005.scl ~ twi15m.log.scl, data = oakplots.sub2),
       
       m2 <- lme(tot_bay.log.scl~ twi15m.log.scl, random = ~1|sample_year/plotid, data = oakplots.sub2),
@@ -1258,8 +1275,10 @@ disease.prevalence.ds.modlist.scl <- list(
       
       m5 <- glmer(oak.inf ~ tot_lfct.log.scl + hrs_abv25ds.scl + shannons2005.scl + (1|sample_year) + (1|plotid), family = binomial(link = "logit"), data = oakplots.sub2, na.action = na.omit)
 )
+sem.fit(dp.ds.lme.modlist.scl, oakplots.sub2)
+sem.coefs(dp.ds.lme.modlist.scl, oakplots.sub2)
 
-
+## dry season temperature without bay laurel density ####
 disease.prevalence.ds.rmbay.modlist.scl <- list(
       m1 <- lm(shannons2005.scl ~ twi15m.log.scl, data = oakplots.sub2),
       
@@ -1274,7 +1293,7 @@ disease.prevalence.ds.rmbay.modlist.scl <- list(
       m5 <- glmer(oak.inf ~ tot_lfct.log.scl + hrs_abv25ds.scl + shannons2005.scl + (1|sample_year), family = binomial(link = "logit"), data = oakplots.sub2, na.action = na.omit)
 )
 
-
+## model fitting ####
 sem.fit(disease.prevalence.ws.modlist.scl, oakplots.sub2)
 sem.fit(disease.prevalence.ds.modlist.scl, oakplots.sub2)
 sem.model.fits(disease.prevalence.ds.modlist.scl)
@@ -1284,6 +1303,26 @@ sem.coefs(disease.prevalence.ds.rmbay.modlist.scl, oakplots.sub2)
 sem.coefs(disease.prevalence.ws.modlist.scl, oakplots.sub2)
 
 
+## dry season temperature with year as fixed effect ####
+oakplots.sub2$sample_year.scl <- scale(oakplots.sub2$sample_year)
+
+disease.prevalence.ds.yearfixed.modlist.scl <- list(
+      m1 <- lm(shannons2005.scl ~ twi15m.log.scl, data = oakplots.sub2),
+      
+      m2 <- lme(tot_bay.log.scl~ twi15m.log.scl + sample_year.scl, random = ~1|plotid, data = oakplots.sub2),
+      
+      m3 <- lme(tot_lfct.log.scl ~ tot_bay.log.scl + hrs_abv25ds.scl + shannons2005.scl + twi15m.log.scl  + sample_year.scl, random = ~1|plotid, data = oakplots.sub2),
+      
+      m4 <- lmer(hrs_abv25ds.scl ~ tot_bay.log.scl + twi15m.log.scl + sample_year.scl + (1|plotid), data = oakplots.sub2),
+      
+      # m6 <- lme(avg_hrs1422_wet_t_t1.scl.log ~ tot_bay.log.scl, random = ~1|sample_year, data = oakplots.sub2),
+      
+      m5 <- glmer(oak.inf ~ tot_lfct.log.scl + hrs_abv25ds.scl + shannons2005.scl + sample_year.scl + (1|plotid), family = binomial(link = "logit"), data = oakplots.sub2, na.action = na.omit)
+)
+sem.fit(disease.prevalence.ds.yearfixed.modlist.scl, oakplots.sub2)
+
+
+## dry season canopy density model ####
 disease.prevalence.ds.candens.modlist.scl <- list(
       m1 <- lm(shannons2005.scl ~ twi15m.log.scl, data = oakplots.sub2),
       
@@ -1303,6 +1342,14 @@ sem.model.fits(disease.prevalence.ds.candens.modlist.scl)
 sem.plot(disease.prevalence.ds.candens.modlist.scl, oakplots.sub2)
 sem.plot(coef.table)
 
+## simplified path model: TWI-->dry-season temp-->slc-->oak infection ####
+dp.twi.ds.slc.modlist <- list(
+      lmer(hrs_abv25ds.scl ~ twi15m.log.scl + (1|sample_year) + (1|plotid), data = oakplots.sub2),
+      lmer(tot_lfct.log.scl ~ hrs_abv25ds.scl + twi15m.log.scl + (1|sample_year) + (1|plotid), data = oakplots.sub2),
+      glmer(oak.inf ~ tot_lfct.log.scl + (1|sample_year) + (1|plotid), family = binomial(link = "logit"), data = oakplots.sub2, na.action = na.omit)
+)
+sem.fit(dp.twi.ds.slc.modlist, oakplots.sub2)
+sem.model.fits(dp.twi.ds.slc.modlist)
 
 
 # Oak Stem-Level Model ####
