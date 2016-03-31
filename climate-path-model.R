@@ -88,7 +88,31 @@ unique(filter(oak_sod, is.na(avg_lfct))$plotid)
 oak_sod$avg_lfct[is.na(oak_sod$avg_lfct)] <- 0
 oak_sod$avg_lfct[oak_sod$plotid == "yahng02" & oak_sod$sample_year == 2010] <- NA
 
-pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, avg_lfct, umca_basal_area)),
+#+ calculate and add importance value ####
+impt_vals <- rbind(stems %>% filter(location == "In", dbh >= 2.0, stem_status == "Alive") %>% select(plotid, species, dbh, stem_status, year), 
+                   untagged_stems %>% filter(stem_status == "Alive") %>% select(-date)) %>% 
+      group_by(plotid, species, year) %>% 
+      summarise(sp_abund = length(species), 
+                sp_basal_area = sum(sum(pi*dbh^2/40000, na.rm = T))) %>% 
+      group_by(plotid, year) %>% 
+      mutate(total_abund = sum(sp_abund), 
+             total_basal_area = sum(sp_basal_area), 
+             imp_val =  
+                   0.5 * ( (sp_abund / total_abund) + 
+                                 (sp_basal_area / total_basal_area) ) )
+unique(impt_vals$year)
+impt_vals$year[impt_vals$year < 2005] <- 2005
+impt_vals <- select(ungroup(impt_vals), plotid, species, year, imp_val) %>% 
+      filter(species == "umca") %>% 
+      rename(umca_impval = imp_val) %>% 
+      select(-species)
+## bad idea to try and use importance value because it isn't consistently calculated; we don't have all species for each year
+
+
+
+oak_sod <- left_join(oak_sod, impt_vals, by = c("plotid", "sample_year"="year"))
+
+pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, avg_lfct, umca_basal_area, umca_impval, candens15m)),
       lower.panel = panel.cor, diag.panel = panel.hist)
 
 #+ pairs plots of oak plots data ####
@@ -163,7 +187,7 @@ pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, H.2005, H.2014, us.
 # oak_sod$oak.inf <- cbind(oak_sod$inf_oak_ct, oak_sod$uninf_oak_ct)
 
 #+ subset data frame and transform/rescale/standardize variables ####
-oakplots.sub <- select(oak_sod, plotid:inf_oak_ct, inf_oak_2plus_ct, tot_bay, tot_lfct, avg_lfct, umca_basal_area, candens15m, twi15m, elev_m, veght_m, contains("avgtmax_wet"), contains("1422_wet"), contains("tmax_rs"), avg_tmax_ds, contains("abv25"), avg_hrsblw10_rs_tminus1, H.2005, H.2014, J.2005, J.2014, os_rich05, os_rich14, rs2d_total, ss2d_total, rs2d_total_t_minus1:avg_rs2d_t1t2)
+oakplots.sub <- select(oak_sod, plotid:inf_oak_ct, inf_oak_2plus_ct, tot_bay, tot_lfct, avg_lfct, umca_basal_area, candens15m, twi15m, elev_m, veght_m, contains("avgtmax_wet"), contains("1422_wet"), contains("blw14_wet"), contains("tmax_rs"), avg_tmax_ds, contains("abv25"), avg_hrsblw10_rs_tminus1, H.2005, H.2014, J.2005, J.2014, os_rich05, os_rich14, rs2d_total, ss2d_total, rs2d_total_t_minus1:avg_rs2d_t1t2)
 summary(oakplots.sub)
 
 # filter(oakplots.sub, is.na(elev_m))
@@ -171,7 +195,7 @@ summary(oakplots.sub)
 # filter(oakplots.sub, is.na(us_rich05))# one plot, never has infected oak
 # filter(oakplots.sub, is.na(os_rich05))# this shouldn't have NAs b/c there should always be at least one species...
 
-pairs(na.omit(select(oakplots.sub, -plotid:-uninf_oak_ct)), lower.panel = panel.cor, diag.panel = panel.hist)
+# pairs(na.omit(select(oakplots.sub, -plotid:-uninf_oak_ct)), lower.panel = panel.cor, diag.panel = panel.hist)
 
 # binomial variable for infected/uninfected oaks in each plot
 oakplots.sub$oak.inf <- cbind(oakplots.sub$inf_oak_ct, oakplots.sub$uninf_oak_ct)
@@ -201,9 +225,12 @@ oakplots.sub$avg_lfct.log <- log1p(oakplots.sub$avg_lfct)
 oakplots.sub$umca_ba.log <- log1p(oakplots.sub$umca_basal_area)
 oakplots.sub$twi15m.log <- log(oakplots.sub$twi15m)
 oakplots.sub$avg_hrs1422_wet_t_t1.log <- log1p(oakplots.sub$avg_hrs1422_wet_t_t1)
+oakplots.sub$hrs1422_wet_tminus1.log <- log1p(oakplots.sub$hrs1422_wet_tminus1)
 # oakplots.sub$avg_lfct.log <- log1p(oakplots.sub$avg_lfct)
 # oakplots.sub$sample_year <- as.factor(oakplots.sub$sample_year)
 oakplots.sub$oak.inf.2plus <- cbind(oakplots.sub$inf_oak_2plus_ct, (oak_sod$tot_oak_ct - oakplots.sub$inf_oak_2plus_ct))
+
+summary(oakplots.sub)
 
 ## rough path-model 1, how does this work? ####
 oakplots.modlist1 <- list(
@@ -306,56 +333,56 @@ pairs(na.omit(select(oakplots.sub, inf_oak_ct, tot_bay, tot_bay.log, tot_lfct.lo
 #+ make dataframe for each season ####
 names(oakplots.sub)
 oakplots.2005 <- (oakplots.sub %>% filter(sample_year == 2005) %>% 
-      select(plotid, oak.inf, inf_oak_ct, oak.inf.2plus, inf_oak_2plus_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, hrs1422_wet, avg_hrs1422_wet_t_t1, hrs_abv25ds, avg_hrsabv25_ds_tminus1, avg_hrsblw10_rs_tminus1, twi15m, twi15m.log))
+      select(plotid, oak.inf, inf_oak_ct, oak.inf.2plus, inf_oak_2plus_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, hrs1422_wet, avg_hrsblw14_wet_tminus1, avg_hrs1422_wet_t_t1, hrs_abv25ds, avg_hrsabv25_ds_tminus1, avg_hrsblw10_rs_tminus1, twi15m, twi15m.log))
 summary(oakplots.2005)
-pairs(select(oakplots.2005, -plotid, -oak.inf),
+pairs(select(oakplots.2005, -plotid, -oak.inf, -oak.inf.2plus),
       lower.panel = panel.cor, diag.panel = panel.hist,
       main = "Oak Plots Data 2005 Sample Season")
 
 oakplots.2006 <- (oakplots.sub %>% filter(sample_year == 2006) %>% 
-      select(plotid, oak.inf, inf_oak_ct, oak.inf.2plus, inf_oak_2plus_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, hrs1422_wet, avg_hrs1422_wet_t_t1, hrs_abv25ds, avg_hrsabv25_ds_tminus1, avg_hrsblw10_rs_tminus1, twi15m, twi15m.log))
-pairs(select(oakplots.2006, -plotid, -oak.inf),
+      select(plotid, oak.inf, inf_oak_ct, oak.inf.2plus, inf_oak_2plus_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, hrs1422_wet, avg_hrsblw14_wet_tminus1, avg_hrs1422_wet_t_t1, hrs_abv25ds, avg_hrsabv25_ds_tminus1, avg_hrsblw10_rs_tminus1, twi15m, twi15m.log))
+pairs(select(oakplots.2006, -plotid, -oak.inf, -oak.inf.2plus),
       lower.panel = panel.cor, diag.panel = panel.hist,
       main = "Oak Plots Data 2006 Sample Season")
 
 oakplots.2007 <- (oakplots.sub %>% filter(sample_year == 2007) %>% 
-      select(plotid, oak.inf, inf_oak_ct, oak.inf.2plus, inf_oak_2plus_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, hrs1422_wet, avg_hrs1422_wet_t_t1, hrs_abv25ds, avg_hrsabv25_ds_tminus1, avg_hrsblw10_rs_tminus1, twi15m, twi15m.log))
-pairs(select(oakplots.2007, -plotid, -oak.inf),
+      select(plotid, oak.inf, inf_oak_ct, oak.inf.2plus, inf_oak_2plus_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, hrs1422_wet, avg_hrsblw14_wet_tminus1, avg_hrs1422_wet_t_t1, hrs_abv25ds, avg_hrsabv25_ds_tminus1, avg_hrsblw10_rs_tminus1, twi15m, twi15m.log))
+pairs(select(oakplots.2007, -plotid, -oak.inf, -oak.inf.2plus),
       lower.panel = panel.cor, diag.panel = panel.hist,
       main = "Oak Plots Data 2007 Sample Season")
 
 oakplots.2008 <- (oakplots.sub %>% filter(sample_year == 2008) %>% 
-      select(plotid, oak.inf, inf_oak_ct, oak.inf.2plus, inf_oak_2plus_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, hrs1422_wet, avg_hrs1422_wet_t_t1, hrs_abv25ds, avg_hrsabv25_ds_tminus1, avg_hrsblw10_rs_tminus1, twi15m, twi15m.log))
-pairs(select(oakplots.2008, -plotid, -oak.inf),
+      select(plotid, oak.inf, inf_oak_ct, oak.inf.2plus, inf_oak_2plus_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, hrs1422_wet, avg_hrsblw14_wet_tminus1, avg_hrs1422_wet_t_t1, hrs_abv25ds, avg_hrsabv25_ds_tminus1, avg_hrsblw10_rs_tminus1, twi15m, twi15m.log))
+pairs(select(oakplots.2008, -plotid, -oak.inf, -oak.inf.2plus),
       lower.panel = panel.cor, diag.panel = panel.hist,
       main = "Oak Plots Data 2008 Sample Season")
 
 oakplots.2009 <- (oakplots.sub %>% filter(sample_year == 2009) %>% 
-      select(plotid, oak.inf, inf_oak_ct, oak.inf.2plus, inf_oak_2plus_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, hrs1422_wet, avg_hrs1422_wet_t_t1, hrs_abv25ds, avg_hrsabv25_ds_tminus1, avg_hrsblw10_rs_tminus1, twi15m, twi15m.log))
-pairs(select(oakplots.2009, -plotid, -oak.inf),
+      select(plotid, oak.inf, inf_oak_ct, oak.inf.2plus, inf_oak_2plus_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, hrs1422_wet, avg_hrsblw14_wet_tminus1, avg_hrs1422_wet_t_t1, hrs_abv25ds, avg_hrsabv25_ds_tminus1, avg_hrsblw10_rs_tminus1, twi15m, twi15m.log))
+pairs(select(oakplots.2009, -plotid, -oak.inf, -oak.inf.2plus),
       lower.panel = panel.cor, diag.panel = panel.hist,
       main = "Oak Plots Data 2009 Sample Season")
 
 oakplots.2010 <- (oakplots.sub %>% filter(sample_year == 2010) %>% 
-      select(plotid, oak.inf, inf_oak_ct, oak.inf.2plus, inf_oak_2plus_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, hrs1422_wet, avg_hrs1422_wet_t_t1, hrs_abv25ds, avg_hrsabv25_ds_tminus1, avg_hrsblw10_rs_tminus1, twi15m, twi15m.log))
-pairs(na.omit(select(oakplots.2010, -plotid, -oak.inf)),
+      select(plotid, oak.inf, inf_oak_ct, oak.inf.2plus, inf_oak_2plus_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, hrs1422_wet, avg_hrsblw14_wet_tminus1, avg_hrs1422_wet_t_t1, hrs_abv25ds, avg_hrsabv25_ds_tminus1, avg_hrsblw10_rs_tminus1, twi15m, twi15m.log))
+pairs(na.omit(select(oakplots.2010, -plotid, -oak.inf, -oak.inf.2plus)),
       lower.panel = panel.cor, diag.panel = panel.hist,
       main = "Oak Plots Data 2010 Sample Season")
 
 oakplots.2011 <- (oakplots.sub %>% filter(sample_year == 2011) %>% 
-      select(plotid, oak.inf, inf_oak_ct, oak.inf.2plus, inf_oak_2plus_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, hrs1422_wet, avg_hrs1422_wet_t_t1, hrs_abv25ds, avg_hrsabv25_ds_tminus1, avg_hrsblw10_rs_tminus1, twi15m, twi15m.log))
-pairs(select(oakplots.2011, -plotid, -oak.inf),
+      select(plotid, oak.inf, inf_oak_ct, oak.inf.2plus, inf_oak_2plus_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, hrs1422_wet, avg_hrsblw14_wet_tminus1, avg_hrs1422_wet_t_t1, hrs_abv25ds, avg_hrsabv25_ds_tminus1, avg_hrsblw10_rs_tminus1, twi15m, twi15m.log))
+pairs(select(oakplots.2011, -plotid, -oak.inf, -oak.inf.2plus),
       lower.panel = panel.cor, diag.panel = panel.hist,
       main = "Oak Plots Data 2011 Sample Season")
 
 oakplots.2012 <- (oakplots.sub %>% filter(sample_year == 2012) %>% 
-      select(plotid, oak.inf, inf_oak_ct, oak.inf.2plus, inf_oak_2plus_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, hrs1422_wet, avg_hrs1422_wet_t_t1, hrs_abv25ds, avg_hrsabv25_ds_tminus1, avg_hrsblw10_rs_tminus1, twi15m, twi15m.log))
-pairs(select(oakplots.2012, -plotid, -oak.inf),
+      select(plotid, oak.inf, inf_oak_ct, oak.inf.2plus, inf_oak_2plus_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, hrs1422_wet, avg_hrsblw14_wet_tminus1, avg_hrs1422_wet_t_t1, hrs_abv25ds, avg_hrsabv25_ds_tminus1, avg_hrsblw10_rs_tminus1, twi15m, twi15m.log))
+pairs(select(oakplots.2012, -plotid, -oak.inf, -oak.inf.2plus),
       lower.panel = panel.cor, diag.panel = panel.hist,
       main = "Oak Plots Data 2012 Sample Season")
 
 oakplots.2014 <- (oakplots.sub %>% filter(sample_year == 2014) %>% 
-      select(plotid, oak.inf, inf_oak_ct, oak.inf.2plus, inf_oak_2plus_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, hrs1422_wet, avg_hrs1422_wet_t_t1, hrs_abv25ds, avg_hrsabv25_ds_tminus1, avg_hrsblw10_rs_tminus1, twi15m, twi15m.log))
+      select(plotid, oak.inf, inf_oak_ct, oak.inf.2plus, inf_oak_2plus_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, hrs1422_wet, avg_hrsblw14_wet_tminus1, avg_hrs1422_wet_t_t1, hrs_abv25ds, avg_hrsabv25_ds_tminus1, avg_hrsblw10_rs_tminus1, twi15m, twi15m.log))
 pairs(select(oakplots.2014, -plotid, -oak.inf, -oak.inf.2plus),
       lower.panel = panel.cor, diag.panel = panel.hist,
       main = "Oak Plots Data 2014 Sample Season")
@@ -938,7 +965,7 @@ sem.coefs(oakplots.modlist, oakplots.sub, standardize = 'scale')
 #+ subset and rescale variables ####
 names(oakplots.sub)
 oakplots.sub2 <- oakplots.sub %>% 
-      select(plotid:umca_basal_area, oak.inf, tot_bay.log, umca_ba.log, tot_lfct.log, hrs_abv25ds, avg_hrs1422_wet_t_t1, avg_hrs1422_wet_t_t1.log, candens15m, H.2005, H.2014, twi15m, twi15m.log, -inf_oak_2plus_ct) %>% 
+      select(plotid:umca_basal_area, oak.inf, tot_bay.log, umca_ba.log, tot_lfct.log, hrs_abv25ds, avg_hrsblw14_wet_tminus1, hrs1422_wet_tminus1, hrs1422_wet_tminus1.log, avg_hrs1422_wet_t_t1, avg_hrs1422_wet_t_t1.log, candens15m, H.2005, H.2014, twi15m, twi15m.log, -inf_oak_2plus_ct) %>% 
       filter(is.na(H.2005)==F, is.na(tot_bay)==F, is.na(avg_hrs1422_wet_t_t1)==F)
 summary(oakplots.sub2)
 
@@ -950,10 +977,12 @@ oakplots.sub2$umca_basal_area.scl <- scale(oakplots.sub2$umca_basal_area)
 oakplots.sub2$umca_ba.log.scl <- scale(oakplots.sub2$umca_ba.log)
 oakplots.sub2$tot_lfct.scl <- scale(oakplots.sub2$tot_lfct)
 oakplots.sub2$tot_lfct.log.scl <- scale(oakplots.sub2$tot_lfct.log)
-oakplots.sub2$avg_lfct.scl <- scale(oakplots.sub2$avg_lfct)
+# oakplots.sub2$avg_lfct.scl <- scale(oakplots.sub2$avg_lfct)
 oakplots.sub2$hrs_abv25ds.scl <- scale(oakplots.sub2$hrs_abv25ds)
-oakplots.sub2$avg_hrs1422_wet_t_t1.scl <- scale(oakplots.sub2$avg_hrs1422_wet_t_t1)
-oakplots.sub2$avg_hrs1422_wet_t_t1.scl.log <- scale(oakplots.sub2$avg_hrs1422_wet_t_t1.log)
+oakplots.sub2$avg_hrsblw14_wet_tminus1.scl <- scale(oakplots.sub2$avg_hrsblw14_wet_tminus1)
+oakplots.sub2$hrs1422_wet_tminus1.log.scl <- scale(oakplots.sub2$hrs1422_wet_tminus1.log)
+# oakplots.sub2$avg_hrs1422_wet_t_t1.scl <- scale(oakplots.sub2$avg_hrs1422_wet_t_t1)
+oakplots.sub2$avg_hrs1422_wet_t_t1.log.scl <- scale(oakplots.sub2$avg_hrs1422_wet_t_t1.log)
 
 ## static variables
 oakplots.sub2$candens15m.scl <- scale(oakplots.sub2$candens15m)
@@ -1219,20 +1248,60 @@ sem.coefs(disease.prevalence.ds.modlist, oakplots.sub2, standardize = "none")
 disease.prevalence.ds.modlist.scl <- list(
       m1 <- lm(shannons2005.scl ~ twi15m.log.scl, data = oakplots.sub2),
       
-      m2 <- lme(tot_bay.log.scl~ twi15m.log.scl, random = ~1|sample_year, data = oakplots.sub2),
+      m2 <- lme(tot_bay.log.scl~ twi15m.log.scl, random = ~1|sample_year/plotid, data = oakplots.sub2),
       
-      m3 <- lme(tot_lfct.log.scl ~ tot_bay.log.scl + hrs_abv25ds.scl + shannons2005.scl + twi15m.log.scl, random = ~1|sample_year, data = oakplots.sub2),
+      m3 <- lme(tot_lfct.log.scl ~ tot_bay.log.scl + hrs_abv25ds.scl + shannons2005.scl + twi15m.log.scl, random = ~1|sample_year/plotid, data = oakplots.sub2),
       
-      m4 <- lme(hrs_abv25ds.scl ~ tot_bay.log.scl + twi15m.log.scl, random = ~1|sample_year, data = oakplots.sub2),
+      m4 <- lme(hrs_abv25ds.scl ~ tot_bay.log.scl + twi15m.log.scl, random = ~1|sample_year/plotid, data = oakplots.sub2),
       
       # m6 <- lme(avg_hrs1422_wet_t_t1.scl.log ~ tot_bay.log.scl, random = ~1|sample_year, data = oakplots.sub2),
       
-      m5 <- glmer(oak.inf ~ tot_lfct.log.scl + hrs_abv25ds.scl + tot_bay.log.scl + shannons2005.scl + (1|sample_year), family = binomial(link = "logit"), data = oakplots.sub2, na.action = na.omit)
+      m5 <- glmer(oak.inf ~ tot_lfct.log.scl + hrs_abv25ds.scl + shannons2005.scl + (1|sample_year) + (1|plotid), family = binomial(link = "logit"), data = oakplots.sub2, na.action = na.omit)
 )
+
+
+disease.prevalence.ds.rmbay.modlist.scl <- list(
+      m1 <- lm(shannons2005.scl ~ twi15m.log.scl, data = oakplots.sub2),
+      
+      # m2 <- lme(umca_ba.log.scl~ twi15m.log.scl, random = ~1|sample_year, data = oakplots.sub2),
+      
+      m3 <- lme(tot_lfct.log.scl ~ hrs_abv25ds.scl + shannons2005.scl + twi15m.log.scl, random = ~1|sample_year, data = oakplots.sub2),
+      
+      m4 <- lme(hrs_abv25ds.scl ~ twi15m.log.scl, random = ~1|sample_year, data = oakplots.sub2),
+      
+      # m6 <- lme(avg_hrs1422_wet_t_t1.scl.log ~ umca_ba.log.scl, random = ~1|sample_year, data = oakplots.sub2),
+      
+      m5 <- glmer(oak.inf ~ tot_lfct.log.scl + hrs_abv25ds.scl + shannons2005.scl + (1|sample_year), family = binomial(link = "logit"), data = oakplots.sub2, na.action = na.omit)
+)
+
+
 sem.fit(disease.prevalence.ws.modlist.scl, oakplots.sub2)
 sem.fit(disease.prevalence.ds.modlist.scl, oakplots.sub2)
+sem.model.fits(disease.prevalence.ds.modlist.scl)
+sem.fit(disease.prevalence.ds.rmbay.modlist.scl, oakplots.sub2)
 sem.coefs(disease.prevalence.ds.modlist.scl, oakplots.sub2)
+sem.coefs(disease.prevalence.ds.rmbay.modlist.scl, oakplots.sub2)
 sem.coefs(disease.prevalence.ws.modlist.scl, oakplots.sub2)
+
+
+disease.prevalence.ds.candens.modlist.scl <- list(
+      m1 <- lm(shannons2005.scl ~ twi15m.log.scl, data = oakplots.sub2),
+      
+      # m2 <- lme(candens15m.scl~ twi15m.log.scl, random = ~1|sample_year, data = oakplots.sub2),
+      
+      m3 <- lme(tot_lfct.log.scl ~ hrs_abv25ds.scl + candens15m.scl + shannons2005.scl + twi15m.log.scl, random = ~1|sample_year, data = oakplots.sub2),
+      
+      m4 <- lme(hrs_abv25ds.scl ~ candens15m.scl + twi15m.log.scl, random = ~1|sample_year, data = oakplots.sub2),
+      
+      # m6 <- lme(avg_hrs1422_wet_t_t1.scl.log ~ umca_ba.log.scl, random = ~1|sample_year, data = oakplots.sub2),
+      
+      m5 <- glmer(oak.inf ~ tot_lfct.log.scl + hrs_abv25ds.scl + shannons2005.scl + candens15m.scl + (1|sample_year), family = binomial(link = "logit"), data = oakplots.sub2, na.action = na.omit)
+)
+sem.fit(disease.prevalence.ds.candens.modlist.scl, oakplots.sub2)
+sem.model.fits(disease.prevalence.ds.candens.modlist.scl)
+(coef.table <- sem.coefs(disease.prevalence.ds.candens.modlist.scl, oakplots.sub2))
+sem.plot(disease.prevalence.ds.candens.modlist.scl, oakplots.sub2)
+sem.plot(coef.table)
 
 
 
