@@ -1,0 +1,18 @@
+---
+title: "Path Model Temperature Comparisons"
+author: "Whalen Dillon"
+date: "April 14, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Based on previous studies, I expect that the summer season temperature and wet season conditions will influence leaf symptoms on California bay laurel. Specifically, hotter and drier summers will result in lower symptomatic leaf counts, because damaged leaves are more likely to abscise in these conditions. Increased abscision of infected leaves results in lower inoculum load to seed the seasonal epidemic during the following wet season. A wet season where rainfall extends into the late spring, when temperatures are warmer, will result in higher symptomatic leaf counts. These climate effects on California bay laurel leaf symptoms should manifest rapidly.
+
+In contrast, symptoms on oak trees (bleeding or oozing cankers) are unlikely to be immediately detectable. Although infection of oak trees most likely happens when there is high inoculum load on California bay laurel seldom will the infection be visibly detectable during the same year. I also assume that conditions need to be favorable for the infection to establish in the oak tree to a degree sufficient to cause visible symptoms. This is supported by Haas et al. (2016), who showed that oak trees experiencing two consecutive years of warm and wet conditions during November-May had an increased probability of exhibiting symptoms of infection. Since I am assessing infection based on visual symptoms I believe that the influence of conditions during the sampling season, particularly with respect to rainfall, are an effect on our ability to visually detect infection as opposed to a true effect on infection of oak trees.
+
+Based on these assessments of the differential relationships between our visual assessments of infection, and how climate and weather effect true infection, I developed temperature and moisture metrics to capture the effect on true infection. These metrics include dry-season temperature variables (the number of hours above or below a threshold temperature) that is intended to capture the influence on the amount of inoculum that over-summers on California bay laurel; a combined temperature/moisture variable that is the number of hours above, below, or within a temperature range during days that had measurable rainfall. Based on Haas et al. (2016), I expected the wet-hours variable averaged over the current and previous wet-seasons to have an effect on oak infection, but a limited statistical influence on California bay laurel leaf symptoms.
+
+While temperature thresholds for growth, reproduction, and survival of *P. ramorum* have been experimentally assessed in laboratory settings, the conditions used have seldom corresponded to natural settings. For example, *P. ramorum* has a growth and reproduction optimum around 18-20 C in laboratory experiments when humdity is 60-70% or greater. In the mediterranean climate of California rarely does a temperature above 18 C correspond to humidity in that range. Still, these experiments and additional observations provided a starting point for developing a set of temperature thresholds to examine using a degree-day approach. By examining the relationships across multiple temperature I am attempting to identify temperatures that may in fact be threshold temperatures where the inferential relationship between disease symptoms and climate changes.
