@@ -251,6 +251,13 @@ stems
 stems <- stems %>% filter(plotid != "bush01", plotid != "ponti01", 
                                 plotid != "sweet01")
 stems$plotid <- droplevels(stems$plotid)
+stems$date <- as.Date(stems$date)
+library(lubridate)
+stems$julian_day <- yday(stems$date)
+stems$month <- month(stems$date)
+stems$week <- week(stems$date)
+summary(stems)
+detach("package:lubridate", unload=TRUE)
 # write.csv(plots_env, "analysis/data/env_gis_variables.csv", row.names = F)
 # write.csv(rainy_season_ppt, "analysis/data/rain_data_long.csv", row.names = F)
 # write.csv(rs_temps, "analysis/data/rs_temps_data.csv", row.names = F)
@@ -269,11 +276,18 @@ Still need to load the .RData source at the beginning of this document, line 32.
 # stems <- read.csv("analysis/data/stems_noBUSH01.csv")
 ```
 
+```{r plot visit dates}
+plot_visit_dates <- stems %>% 
+      select(plotid, year, julian_day:week) %>% 
+      group_by(plotid, year) %>% 
+      summarise(julian_day = mean(julian_day), month = mean(month), week = mean(week))
+plot_visit_dates <- ungroup(plot_visit_dates)
+```
 
 ## Examine the bay laurel data at individual and plot levels
 ```{r examine umca data}
 bay_laurel <- filter(stems, species == "umca") %>% 
-      select(plotid, cluster:stem_status, umca_slc, notes:dbh_entry)
+      select(plotid, cluster:stem_status, umca_slc, notes:week)
 bay_laurel$species <- droplevels(bay_laurel$species)
 summary(bay_laurel) # This has stem-level data on bay laurel.
 length(unique(bay_laurel$plotid))# 183 plots with bay laurel
@@ -305,7 +319,12 @@ umca_plots <- left_join(
             group_by(plotid, year) %>% 
             summarise(avg_lfct = mean(umca_slc, na.rm = T),
                       tot_lfct = sum(umca_slc, na.rm = T)),
-      by = c("plotid", "year"))
+      by = c("plotid","year"))
+umca_plots <- left_join(
+      umca_plots,
+      plot_visit_dates,
+      by = c("plotid","year")
+)
 summary(umca_plots)
 ```
 
@@ -525,7 +544,7 @@ stems <- stems %>% mutate(
 
 
 qusp_stems <- stems %>% 
-      select(plotid, year, tag, species, canker, stem_status, infection_confirmed_1plus, infection_confirmed_2plus) %>% 
+      select(plotid, year, tag, species, canker, stem_status, infection_confirmed_1plus, infection_confirmed_2plus, dbh, dbh_entry, julian_day:week) %>% 
       filter(species == "quag" | species == "quke" | species == "quch" |
                    species == "quwi", stem_status == "Alive")
 
@@ -563,9 +582,14 @@ summary(oak_sod)
 # Add bay laurel infection data to oak plots
 names(umca_plots)
 oak_sod <- left_join(oak_sod, 
-                     select(umca_plots, plotid, sample_year, uninfected_bay_ct, infected_bay_ct, tot_bay, tot_lfct), 
+                     select(umca_plots, plotid, sample_year, uninfected_bay_ct:tot_lfct ), 
                      by = c("plotid", "sample_year"))
 summary(oak_sod) # the NA's for the bay laurel variables are legitimately zeroes b/c there are no bay in some of these plots
+oak_sod <- left_join(
+      oak_sod,
+      plot_visit_dates,
+      by = c("plotid","sample_year"="year"))
+
 filter(oak_sod, is.na(tot_bay), sample_year != 2003)
 # Change NAs of bay laurel in oak only plots to zeroes
 oak_sod$uninfected_bay_ct[is.na(oak_sod$uninfected_bay_ct)] <- 0
@@ -623,7 +647,8 @@ unique(filter(oak_sod, is.na(us.J.2011))$plotid)# ann06, mroth03, sumtv02
 # ann06 & mroth03 are legitimate zeroes for understory richness in 2011
 # i must have excluded mcneil03 from the diversity calculations
 # sumtv02 was abandoned after 2008, so it should be an NA for later years
-
+filter(oak_sod, is.na(hrs_abv25rs))
+oak_sod$hrs_abv25rs[is.na(oak_sod$hrs_abv25rs)] <- 0
 
 filter(oak_sod, sample_year == 2004) # 88 records
 # 2005 appears to be the first full year of observing all the plots
