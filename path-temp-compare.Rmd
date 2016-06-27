@@ -5,14 +5,338 @@ date: "April 14, 2016"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
 Based on previous studies, I expect that the summer season temperature and wet season conditions will influence leaf symptoms on California bay laurel. Specifically, hotter and drier summers will result in lower symptomatic leaf counts, because damaged leaves are more likely to abscise in these conditions. Increased abscision of infected leaves results in lower inoculum load to seed the seasonal epidemic during the following wet season. A wet season where rainfall extends into the late spring, when temperatures are warmer, will result in higher symptomatic leaf counts. These climate effects on California bay laurel leaf symptoms should manifest rapidly.
 
-In contrast, symptoms on oak trees (bleeding or oozing cankers) are unlikely to be immediately detectable. Although infection of oak trees most likely happens when there is high inoculum load on California bay laurel seldom will the infection be visibly detectable during the same year. I also assume that conditions need to be favorable for the infection to establish in the oak tree to a degree sufficient to cause visible symptoms. This is supported by Haas et al. (2016), who showed that oak trees experiencing two consecutive years of warm and wet conditions during November-May had an increased probability of exhibiting symptoms of infection. Since I am assessing infection based on visual symptoms I believe that the influence of conditions during the sampling season, particularly with respect to rainfall, are an effect on our ability to visually detect infection as opposed to a true effect on infection of oak trees.
+In contrast, symptoms on oak trees (bleeding or oozing cankers) are unlikely to be immediately detectable. Although infection of oak trees most likely happens when there is high inoculum load on California bay laurel, seldom will the infection be visibly detectable during the same year. I also assume that conditions need to be favorable for the infection to establish in the oak tree to a degree sufficient to cause visible symptoms. This is supported by Haas et al. (2016), who showed that oak trees experiencing two consecutive years of warm and wet conditions during November-May had an increased probability of exhibiting symptoms of infection. Since I am assessing infection based on visual symptoms I believe that the influence of conditions during the sampling season, particularly with respect to rainfall, are an effect on our ability to visually detect infection as opposed to a biological effect on infection of oak trees.
 
-Based on these assessments of the differential relationships between our visual assessments of infection, and how climate and weather effect true infection, I developed temperature and moisture metrics to capture the effect on true infection. These metrics include dry-season temperature variables (the number of hours above or below a threshold temperature) that is intended to capture the influence on the amount of inoculum that over-summers on California bay laurel; a combined temperature/moisture variable that is the number of hours above, below, or within a temperature range during days that had measurable rainfall. Based on Haas et al. (2016), I expected the wet-hours variable averaged over the current and previous wet-seasons to have an effect on oak infection, but a limited statistical influence on California bay laurel leaf symptoms.
+Based on these assessments of the differential relationships between our visual assessments of infection, and how climate and weather affect true infection, I developed temperature and moisture metrics to capture the effect on true infection. These metrics include dry-season temperature variables (the number of hours above or below a threshold temperature) that is intended to capture the influence on the amount of inoculum that over-summers on California bay laurel; a combined temperature/moisture variable that is the number of hours above, below, or within a temperature range during days that had measurable rainfall. Based on Haas et al. (2016), I expected the wet-hours variable averaged over the current and previous wet-seasons to have an effect on oak infection, but a limited statistical influence on California bay laurel leaf symptoms.
 
-While temperature thresholds for growth, reproduction, and survival of *P. ramorum* have been experimentally assessed in laboratory settings, the conditions used have seldom corresponded to natural settings. For example, *P. ramorum* has a growth and reproduction optimum around 18-20 C in laboratory experiments when humdity is 60-70% or greater. In the mediterranean climate of California rarely does a temperature above 18 C correspond to humidity in that range. Still, these experiments and additional observations provided a starting point for developing a set of temperature thresholds to examine using a degree-day approach. By examining the relationships across multiple temperature I am attempting to identify temperatures that may in fact be threshold temperatures where the inferential relationship between disease symptoms and climate changes.
+While temperature thresholds for growth, reproduction, and survival of *P. ramorum* have been experimentally assessed in laboratory settings, the conditions used have seldom corresponded to natural settings. For example, *P. ramorum* has a growth and reproduction optimum around 18-20C in laboratory experiments when humdity is 60-70% or greater. In the mediterranean climate of California rarely does a temperature above 18C correspond to humidity in that range. Still, these experiments and additional observations provided a starting point for developing a set of temperature thresholds to examine using a degree-day approach. By examining the relationships across multiple temperature cutoffs or ranges I am attempting to identify temperatures that may in fact be threshold temperatures where the inferential relationship between disease symptoms and climate variation changes.
+
+```{r load data, echo=F}
+load("climate-path-model-data.RData")
+library(piecewiseSEM); library(dplyr); library(lme4); library(lmerTest)
+oakplots.sub$umca_density_m2 <- oakplots.sub$tot_bay / (15*15)
+oakplots.sub$umca_density_m2.sqrt <- sqrt(oakplots.sub$umca_density_m2)
+```
+
+```{r rescale variables}
+## rescale variables
+# oakplots.sub2$inf_bay.scl <- scale((oakplots.sub2$infected_bay_ct))
+oakplots.sub$tot_bay.scl <- scale(oakplots.sub$tot_bay)
+oakplots.sub$tot_bay.log.scl <- scale(oakplots.sub$tot_bay.log)
+oakplots.sub$umca_basal_area.scl <- scale(oakplots.sub$umca_basal_area)
+oakplots.sub$umca_ba.log.scl <- scale(oakplots.sub$umca_ba.log)
+oakplots.sub$tot_lfct.scl <- scale(oakplots.sub$tot_lfct)
+oakplots.sub$tot_lfct.log.scl <- scale(oakplots.sub$tot_lfct.log)
+# oakplots.sub$avg_lfct.scl <- scale(oakplots.sub$avg_lfct)
+oakplots.sub$hrs_abv25ds.scl <- scale(oakplots.sub$hrs_abv25ds)
+oakplots.sub$avg_tmax_ds.scl <- scale(oakplots.sub$avg_tmax_ds)
+oakplots.sub$avg_hrsblw14_wet_tminus1.scl <- scale(oakplots.sub$avg_hrsblw14_wet_tminus1)
+oakplots.sub$hrs1422_wet_tminus1.log.scl <- scale(oakplots.sub$hrs1422_wet_tminus1.log)
+# oakplots.sub$avg_hrs1422_wet_t_t1.scl <- scale(oakplots.sub$avg_hrs1422_wet_t_t1)
+oakplots.sub$avg_hrs1422_wet_t_t1.log.scl <- scale(oakplots.sub$avg_hrs1422_wet_t_t1.log)
+
+## static variables
+oakplots.sub$candens15m.scl <- scale(oakplots.sub$candens15m)
+oakplots.sub$shannons2005.scl <- scale(oakplots.sub$H.2005)
+oakplots.sub$shannons2014.scl <- scale(oakplots.sub$H.2014)
+oakplots.sub$twi15m.scl <- scale(oakplots.sub$twi15m)
+oakplots.sub$twi15m.log.scl <- scale(oakplots.sub$twi15m.log)
+```
+
+
+This code chunk describes the general structure for the path model for application in the `piecewiseSEM` package methods.
+```{r general path model structure, eval=F}
+model_list <- list(
+      m1 <- lm(Diversity ~ Topographic_Index, data = data),
+      m2 <- lm(Bay_Laurel_Density ~ Topographic_Index, data = data),
+      m3 <- lm(Symptomatic_Leaf_Count ~ Bay_Laurel_Density + Dry_Season_Temperature + Topographic_Index, data = data),
+      # m6 <- lm(candens15m ~ tot_bay.log, data = oakplots.2007),
+      m6 <- lm(Wet_Hours_Temperature ~ Bay_Laurel_Density, data = data),
+      m4 <- lm(Dry_Season_Temperature ~ Bay_Laurel_Density + Topographic_Index, data = data),
+      m5 <- glm(Oak_Disease_Prevalence ~ Symptomatic_Leaf_Count + Wet_Hours_Temperature + Diversity, family = binomial(link = "logit"), data = data)
+)
+
+# model_list <- list(
+#       m1 <- lm(H.2005 ~ twi15m.log, data = oakplots.2007),
+#       m2 <- lm(tot_bay.log ~ twi15m.log, data = oakplots.2007),
+#       m3 <- lm(tot_lfct.log ~ tot_bay.log + hrs_abv25ds + twi15m.log, data = oakplots.2007),
+#       # m6 <- lm(candens15m ~ tot_bay.log, data = oakplots.2007),
+#       m6 <- lm(avg_hrs1422_wet_t_t1 ~ tot_bay.log, data = oakplots.2007),
+#       m4 <- lm(hrs_abv25ds ~ candens15m + twi15m.log, data = oakplots.2007),
+#       m5 <- glm(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1 + H.2005 + candens15m, family = binomial(link = "logit"), data = oakplots.2007)
+# )
+```
+
+Using data on oak infection at the plot-level:
+```{r model pieces}
+names(oakplots.sub)
+oak_and_bay_plots <- filter(oakplots.sub, tot_bay > 0)
+
+model_list1 <- list(
+      shannons <- lm(H.2005 ~ twi15m.log, data = oakplots.sub),
+      
+      umca_density <- lm(tot_bay.log ~ twi15m.log, data = oakplots.sub),
+      
+      slc <- lmer(tot_lfct.log ~ tot_bay.log + hrs_abv25ds + avg_hrs1422_wet_t_t1.log + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      wet_hours_1422 <- lmer(avg_hrs1422_wet_t_t1.log ~ tot_bay.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      avgtmax_ds <- lmer(hrs_abv25ds ~ twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      oak_infection <- glmer(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1.log + H.2005 + (1|plotid) + (1|sample_year), family = binomial(link = "logit"), data = oakplots.sub)
+)
+model_list1.scl <- list(
+      shannons <- lm(shannons2005.scl ~ twi15m.log.scl, data = oakplots.sub),
+      
+      umca_density <- lm(tot_bay.log.scl ~ twi15m.log.scl, data = oakplots.sub),
+      
+      slc <- lmer(tot_lfct.log.scl ~ tot_bay.log.scl + hrs_abv25ds.scl + avg_hrs1422_wet_t_t1.log.scl + shannons2005.scl + twi15m.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      wet_hours_1422 <- lmer(avg_hrs1422_wet_t_t1.log.scl ~ tot_bay.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      avgtmax_ds <- lmer(hrs_abv25ds.scl ~ twi15m.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      oak_infection <- glmer(oak.inf ~ tot_lfct.log.scl + avg_hrs1422_wet_t_t1.log.scl + shannons2005.scl + (1|plotid) + (1|sample_year), family = binomial(link = "logit"), data = oakplots.sub)
+)
+
+# Model set reduced to plots that have oaks & at least 1 bay laurel
+oak_and_bay_list1 <- list(
+      shannons <- lm(H.2005 ~ twi15m.log, data = oak_and_bay_plots),
+      #umca_density <- lm(tot_bay.log ~ twi15m.log, data = oak_and_bay_plots),
+      slc <- lmer(tot_lfct.log ~ tot_bay.log + hrs_abv25ds + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oak_and_bay_plots),
+      wet_hours_1422 <- lmer(avg_hrs1422_wet_t_t1.log ~ tot_bay.log + (1|plotid) + (1|sample_year), data = oak_and_bay_plots),
+      hrs_abv25 <- lmer(hrs_abv25ds ~ tot_bay.log + twi15m.log + (1|plotid) + (1|sample_year), data = oak_and_bay_plots),
+      oak_infection <- glmer(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1.log + H.2005 + + (1|plotid) + (1|sample_year), family = binomial(link = "logit"), data = oak_and_bay_plots)
+)
+
+# Comparing fits of the piecewise models using all oak plots vs. plots with oaks and at least one bay laurel
+sem.fit(model_list1, oakplots.sub, 
+        corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log"))
+sem.fit(model_list1.scl, oakplots.sub,
+          corr.errors = c("hrs_abv25ds.scl ~~ avg_hrs1422_wet_t_t1.log.scl"))
+
+sem.fit(oak_and_bay_list1, oak_and_bay_plots, 
+        corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log",
+                        "tot_bay.log ~~ H.2005"))
+
+sem.coefs(model_list1, oakplots.sub,
+          corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log"))
+sem.coefs(model_list1.scl, oakplots.sub,
+          corr.errors = c("hrs_abv25ds.scl ~~ avg_hrs1422_wet_t_t1.log.scl"))
+
+sem.coefs(oak_and_bay_list1, oak_and_bay_plots, standardize = "none",
+          corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log",
+                          "tot_bay.log ~~ H.2005"))
+
+# Model set using average daily maximum temperature during the dry season.
+model_avgtmax_ds <- list(
+      shannons <- lm(H.2005 ~ twi15m.log, data = oakplots.sub),
+      # umca_density <- lm(tot_bay.log ~ twi15m.log, data = oakplots.sub),
+      
+      slc <- lmer(tot_lfct.log ~ tot_bay.log + avg_tmax_ds + avg_hrs1422_wet_t_t1.log + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      wet_hours_1422 <- lmer(avg_hrs1422_wet_t_t1.log ~ tot_bay.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      avgtmax_ds <- lmer(avg_tmax_ds ~ tot_bay.log + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      oak_infection <- glmer(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1.log + avg_tmax_ds + H.2005 + (1|plotid) + (1|sample_year), family = binomial(link = "logit"), data = oakplots.sub)
+)
+
+model_avgtmax_ds.scl <- list(
+      shannons <- lm(shannons2005.scl ~ twi15m.log.scl + (1|sample_year), data = oakplots.sub),
+      # umca_density <- lm(tot_bay.log ~ twi15m.log, data = oakplots.sub),
+      
+      slc <- lmer(tot_lfct.log.scl ~ tot_bay.log.scl + avg_tmax_ds.scl + avg_hrs1422_wet_t_t1.log.scl + shannons2005.scl + twi15m.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      wet_hours_1422 <- lmer(avg_hrs1422_wet_t_t1.log.scl ~ tot_bay.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      avgtmax_ds <- lmer(avg_tmax_ds.scl ~ tot_bay.log.scl + twi15m.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      oak_infection <- glmer(oak.inf ~ tot_lfct.log.scl + avg_hrs1422_wet_t_t1.log.scl + avg_tmax_ds.scl + shannons2005.scl + (1|plotid) + (1|sample_year), family = binomial(link = "logit"), data = oakplots.sub)
+)
+
+oak_and_bay_avgtmax_ds <- list(
+      shannons <- lm(H.2005 ~ twi15m.log, data = filter(oak_and_bay_plots)),
+      # umca_density <- lm(tot_bay.log ~ twi15m.log, data = oak_and_bay_plots),
+      
+      slc <- lmer(tot_lfct.log ~ tot_bay.log + avg_tmax_ds + avg_hrs1422_wet_t_t1.log + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oak_and_bay_plots),
+      
+      wet_hours_1422 <- lmer(avg_hrs1422_wet_t_t1.log ~ tot_bay.log + (1|plotid) + (1|sample_year), data = oak_and_bay_plots),
+      
+      avgtmax_ds <- lmer(avg_tmax_ds ~ tot_bay.log + twi15m.log + (1|plotid) + (1|sample_year), data = oak_and_bay_plots),
+      
+      oak_infection <- glmer(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1.log + avg_tmax_ds + H.2005 + (1|plotid) + (1|sample_year), family = binomial(link = "logit"), data = oak_and_bay_plots)
+)
+
+sem.fit(model_avgtmax_ds, oakplots.sub,
+        corr.errors = c(
+              "avg_tmax_ds ~~ avg_hrs1422_wet_t_t1.log",
+              "H.2005 ~~ avg_tmax_ds"
+                        )
+        )
+sem.fit(oak_and_bay_avgtmax_ds, oak_and_bay_plots,
+        corr.errors = c("avg_tmax_ds ~~ avg_hrs1422_wet_t_t1.log"
+                        ,"H.2005 ~~ tot_bay.log"
+                        # ,"H.2005 ~~ avg_tmax_ds"
+                        )
+        )
+
+sem.coefs(model_avgtmax_ds, oakplots.sub, standardize = "none",
+          corr.errors = c(
+                "avg_tmax_ds ~~ avg_hrs1422_wet_t_t1.log",
+                "H.2005 ~~ avg_tmax_ds"))
+sem.coefs(model_avgtmax_ds.scl, oakplots.sub, standardize = "none",
+          corr.errors = c(
+                "avg_tmax_ds.scl ~~ avg_hrs1422_wet_t_t1.log.scl",
+                "shannons2005.scl ~~ avg_tmax_ds.scl"))
+
+sem.coefs(oak_and_bay_avgtmax_ds, oak_and_bay_plots, standardize = "none",
+          corr.errors = c("avg_tmax_ds ~~ avg_hrs1422_wet_t_t1.log",
+                        "H.2005 ~~ tot_bay.log"))
+```
+
+Exploratory modeling of symptomatic leaf count with different temperature variables
+```{r slc with dry-season temperature variables}
+# Models using dry-season temperatures (June-September)
+slc_abv25ds <- lmer(tot_lfct.log ~ tot_bay.log + hrs_abv25ds + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub)
+
+slc_abv20ds <- lmer(tot_lfct.log ~ tot_bay.log + hrs_abv20ds + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub)
+
+slc_blw18ds <- lmer(tot_lfct.log ~ tot_bay.log + hrs_blw18ds + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub)
+
+slc_avgtmax_ds <- lmer(tot_lfct.log ~ tot_bay.log + avg_tmax_ds + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub)
+
+slc_avgtmin_ds <- lmer(tot_lfct.log ~ tot_bay.log + avg_tmin_ds + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub)
+
+AIC(slc_avgtmax_ds)
+AIC(slc_avgtmin_ds)
+AIC(slc_abv25ds)
+AIC(slc_abv20ds)
+AIC(slc_blw18ds)
+## The best model based on AIC is avgtmax_ds. Interestingly, abv20ds & blw18ds have precisely equal support, but show opposite inference. More hours above 20C during the dry season reduces symptomatic leaf count the following spring, while more hours below 18C increases symptomatic leaf count.
+library(ggplot2)
+par(mfrow = c(2,1))
+boxplot(tot_lfct.log ~ sample_year, data = oakplots.sub,
+        xlab = "sample year", ylab = "ln(total symptomatic leaf count)")
+boxplot(hrs_abv25ds ~ sample_year, data = oakplots.sub,
+        xlab = "sample_year", ylab = "number of dry-season hours >25C")
+boxplot(avg_lfct.log ~ sample_year, data = oakplots.sub,
+        xlab = "sample year", ylab = "ln(total symptomatic leaf count)")
+
+
+ggplot(oak_and_bay_plots, aes(hrs_abv25ds, tot_lfct.log)) +
+      geom_point() +
+      ggtitle("Oak & Bay laurel Plots") +
+      xlab("Dry-season Hours >25C") + ylab("log(Total Symptomatic Leaf Count")
+ggplot(oakplots.sub, aes(hrs_abv25ds, tot_lfct.log)) +
+      geom_point() +
+      ggtitle("Oak Plots") +
+      xlab("Dry-season Hours >25C") + ylab("log(Total Symptomatic Leaf Count")
+
+ggplot(oakplots.sub, aes(hrs_abv20ds, tot_lfct.log)) +
+      geom_point() +
+      ggtitle("Oak Plots") +
+      xlab("Dry-season Hours >20C") + ylab("log(Total Symptomatic Leaf Count")
+ggplot(oakplots.sub, aes(hrs_blw18ds, tot_lfct.log)) +
+      geom_point() +
+      ggtitle("Oak Plots") +
+      xlab("Dry-season Hours <18C") + ylab("log(Total Symptomatic Leaf Count")
+
+      
+ggplot(oakplots.sub, aes(avg_tmax_ds, tot_lfct.log)) +
+      geom_point() +
+      ggtitle("Oak Plots") +
+      xlab("Dry-season Average Daily Maximum Temperature (C)") + 
+      ylab("log(Total Symptomatic Leaf Count")
+
+ggplot(oakplots.sub, aes(avg_tmin_ds, tot_lfct.log)) +
+      geom_point() +
+      ggtitle("Oak Plots") +
+      xlab("Dry-season Average Daily Minimum Temperature (C)") + 
+      ylab("log(Total Symptomatic Leaf Count")
+```
+
+## Models of total symptomatic leaf-count using rainy season temperatures
+These models use different rainy-season (November-May) temperature variables to model total symptomatic leaf count on California bay laurel
+```{r slc models using rainy season temperature}
+# Models using rainy-season temperatures (November-May)
+slc_avgtmax_rs <- lmer(tot_lfct.log ~ tot_bay.log + avg_tmax_rs + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub)
+
+slc_avgtmin_rs <- lmer(tot_lfct.log ~ tot_bay.log + avg_tmin_rs + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub)
+
+slc_hrs1420_rs <- lmer(tot_lfct.log ~ tot_bay.log + hrs_14_20_rs + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub)
+
+slc_hrs_abv25rs <- lmer(tot_lfct.log ~ tot_bay.log + hrs_abv25rs + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub)
+
+slc_hrs_abv20_rs <- lmer(tot_lfct.log ~ tot_bay.log + hrs_abv20_rs + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub)
+
+slc_hrs_blw10rs <- lmer(tot_lfct.log ~ tot_bay.log + hrs_blw10rs + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub)
+
+AIC(slc_avgtmax_rs)
+AIC(slc_avgtmin_rs)
+AIC(slc_hrs1420_rs)
+AIC(slc_hrs_abv25rs)
+AIC(slc_hrs_abv20_rs)
+AIC(slc_hrs_blw10rs)
+```
+
+## Models of symptomatic leaf count using temperature on wet days
+These models use different temperature variables calculated for days that had measurable rainfall during the rainy season, based on plots being assigned to the nearest rain gauge.
+```{r slc models using wet-days temperatures}
+# Models using wet-days temperatures
+slc_hrsblw14_wet <- lmer(tot_lfct.log ~ tot_bay.log + hrsblw14_wet + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub)
+
+slc_hrsabv22_wet <- lmer(tot_lfct.log ~ tot_bay.log + hrsabv22_wet + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub)
+
+slc_hrs1422_wet <- lmer(tot_lfct.log ~ tot_bay.log + hrs1422_wet + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub)
+
+slc_hrs1020_wet <- lmer(tot_lfct.log ~ tot_bay.log + hrs1020_wet + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub)
+
+slc_hrsabv20_wet <- lmer(tot_lfct.log ~ tot_bay.log + hrsabv20_wet + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub)
+
+slc_hrsblw10_wet <- lmer(tot_lfct.log ~ tot_bay.log + hrsblw10_wet + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub)
+
+slc_avgtmin_wet <- lmer(tot_lfct.log ~ tot_bay.log + avgtmin_wet + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub)
+
+slc_avgtmax_wet <- lmer(tot_lfct.log ~ tot_bay.log + avgtmax_wet + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub)
+
+slc_avgtemp_wet <- lmer(tot_lfct.log ~ tot_bay.log + avgtemp_wet + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub)
+
+AIC(slc_hrsblw14_wet)
+AIC(slc_hrs1422_wet)
+AIC(slc_hrsabv22_wet)
+AIC(slc_hrsblw10_wet)
+AIC(slc_hrs1020_wet)
+AIC(slc_hrsabv20_wet)
+AIC(slc_avgtmax_wet)
+AIC(slc_avgtmin_wet)
+AIC(slc_avgtemp_wet)
+```
+
+## Models using lagged dry-season temperature variables
+
+```{r slc models using lagged dry-season temperature}
+# Models using lagged dry-season temperature variables
+slc_hrs_abv25ds_tminus1 <- lmer(tot_lfct.log ~ tot_bay.log + hrs_abv25ds_tminus1 + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub)
+
+slc_hrs_blw18ds_tminus1 <- lmer(tot_lfct.log ~ tot_bay.log + hrs_blw18ds_tminus1 + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub)
+
+slc_avg_tmax_ds_tminus1 <- lmer(tot_lfct.log ~ tot_bay.log + avg_tmax_ds_tminus1 + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub)
+
+slc_avg_hrsblw18_ds_tminus1 <- lmer(tot_lfct.log ~ tot_bay.log + avg_hrsblw18_ds_tminus1 + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub)
+
+slc_avgtmax_ds_t_t1 <- lmer(tot_lfct.log ~ tot_bay.log + avgtmax_ds_t_t1 + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub)
+
+slc_avg_hrsabv25_ds_tminus1 <- lmer(tot_lfct.log ~ tot_bay.log + avg_hrsabv25_ds_tminus1 + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub)
+
+AIC(slc_hrs_abv25ds_tminus1)
+AIC(slc_hrs_blw18ds_tminus1)
+AIC(slc_avg_tmax_ds_tminus1)
+AIC(slc_avg_hrsblw18_ds_tminus1)
+AIC(slc_avg_hrsabv25_ds_tminus1)
+AIC(slc_avgtmax_ds_t_t1)
+```
+
+
