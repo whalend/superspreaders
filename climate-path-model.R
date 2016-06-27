@@ -39,18 +39,22 @@ panel.hist <- function(x, ...)
 summary(oak_sod)
 # oak_sod$plotid <- as.factor(oak_sod$plotid)
 str(oak_sod)
+anyDuplicated(oak_sod)
 
 #+ join wet-hours and lagged rainfall data ####
 summary(wet_hrs)# since these are counts the NAs are in fact zeroes
 wet_hrs[is.na(wet_hrs)] <- 0# introduce a lot of zeroes for some columns
+anyDuplicated(wet_hrs)
 oak_sod <- left_join(
-      oak_sod, select(wet_hrs, -X, -hrsabv22_wet, -avgtemp_wet), by = c("plotid","sample_year"))
-oak_sod$plotid <- as.factor(oak_sod$plotid)
+      oak_sod, select(wet_hrs, -X), by = c("plotid","sample_year"))
+anyDuplicated(oak_sod)
+# oak_sod$plotid <- as.factor(oak_sod$plotid)
 
 summary(rs2d_lag1)
 oak_sod <- left_join(
       oak_sod, select(rs2d_lag1, -rs2d_total), by = c("plotid","sample_year"))
-oak_sod$plotid <- as.factor(oak_sod$plotid)
+
+# oak_sod$plotid <- as.factor(oak_sod$plotid)
 
 summary(rs_temps_lag)
 oak_sod <- left_join(
@@ -67,6 +71,8 @@ oak_sod <- left_join(
       oak_sod,
       select(wet_hrs_lag, plotid, sample_year, contains("tminus"), contains("t1")), by = c("plotid","sample_year"))
 
+# oak_sod$plotid <- as.factor(oak_sod$plotid)
+
 ## drop 3d, PRISM, and regression rainfall variables based on discussion with Ryan; use a simple 2d spline interpolation or the Voronoi polygon values
 # oak_sod <- select(oak_sod, -rain_tot_3d, -rain_tot_r, -rain_tot_psm)
 # oak_sod <- filter(oak_sod, plotid != "ponti01", plotid != "sweet01", plotid != "bush01")
@@ -77,43 +83,41 @@ oak_sod <- left_join(
 #' 
 #+ calculate & add umca basal area ####
 umca_ba <- stems %>% filter(year > 2003, species == "umca", stem_status == "Alive", location == "In") %>% select(plotid, year, dbh_entry) %>% group_by(plotid, year) %>% summarise(umca_basal_area = sum(pi*dbh_entry))
-oak_sod <- left_join(oak_sod, umca_ba, by = c("plotid","sample_year" = "year"))
+oak_sod <- left_join(oak_sod, ungroup(umca_ba), by = c("plotid","sample_year" = "year"))
 
 unique(filter(oak_sod, is.na(umca_basal_area))$plotid)
 oak_sod$umca_basal_area[is.na(oak_sod$umca_basal_area)] <- 0
 oak_sod$umca_basal_area[oak_sod$plotid == "yahng02" & oak_sod$sample_year == 2010] <- NA
-oak_sod$plotid <- as.factor(oak_sod$plotid)
-oak_sod <- mutate(oak_sod, avg_lfct = tot_lfct/tot_bay)
+# oak_sod$plotid <- as.factor(oak_sod$plotid)
+# oak_sod <- mutate(oak_sod, avg_lfct = tot_lfct/tot_bay)
 unique(filter(oak_sod, is.na(avg_lfct))$plotid)
 oak_sod$avg_lfct[is.na(oak_sod$avg_lfct)] <- 0
 oak_sod$avg_lfct[oak_sod$plotid == "yahng02" & oak_sod$sample_year == 2010] <- NA
 
 #+ calculate and add importance value ####
-impt_vals <- rbind(stems %>% filter(location == "In", dbh >= 2.0, stem_status == "Alive") %>% select(plotid, species, dbh, stem_status, year), 
-                   untagged_stems %>% filter(stem_status == "Alive") %>% select(-date)) %>% 
-      group_by(plotid, species, year) %>% 
-      summarise(sp_abund = length(species), 
-                sp_basal_area = sum(sum(pi*dbh^2/40000, na.rm = T))) %>% 
-      group_by(plotid, year) %>% 
-      mutate(total_abund = sum(sp_abund), 
-             total_basal_area = sum(sp_basal_area), 
-             imp_val =  
-                   0.5 * ( (sp_abund / total_abund) + 
-                                 (sp_basal_area / total_basal_area) ) )
-unique(impt_vals$year)
-impt_vals$year[impt_vals$year < 2005] <- 2005
-impt_vals <- select(ungroup(impt_vals), plotid, species, year, imp_val) %>% 
-      filter(species == "umca") %>% 
-      rename(umca_impval = imp_val) %>% 
-      select(-species)
-## bad idea to try and use importance value because it isn't consistently calculated; we don't have all species for each year
+# impt_vals <- rbind(stems %>% filter(location == "In", dbh >= 2.0, stem_status == "Alive") %>% select(plotid, species, dbh, stem_status, year), 
+#                    untagged_stems %>% filter(stem_status == "Alive") %>% select(-date)) %>% 
+#       group_by(plotid, species, year) %>% 
+#       summarise(sp_abund = length(species), 
+#                 sp_basal_area = sum(sum(pi*dbh^2/40000, na.rm = T))) %>% 
+#       group_by(plotid, year) %>% 
+#       mutate(total_abund = sum(sp_abund), 
+#              total_basal_area = sum(sp_basal_area), 
+#              imp_val =  
+#                    0.5 * ( (sp_abund / total_abund) + 
+#                                  (sp_basal_area / total_basal_area) ) )
+# unique(impt_vals$year)
+# impt_vals$year[impt_vals$year < 2005] <- 2005
+# impt_vals <- select(ungroup(impt_vals), plotid, species, year, imp_val) %>% 
+#       filter(species == "umca") %>% 
+#       rename(umca_impval = imp_val) %>% 
+#       select(-species)
+# ## bad idea to try and use importance value because it isn't consistently calculated; we don't have all species for each year
+# 
+# oak_sod <- left_join(oak_sod, impt_vals, by = c("plotid", "sample_year"="year"))
 
-
-
-oak_sod <- left_join(oak_sod, impt_vals, by = c("plotid", "sample_year"="year"))
-
-pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, avg_lfct, umca_basal_area, umca_impval, candens15m)),
-      lower.panel = panel.cor, diag.panel = panel.hist)
+# pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, avg_lfct, umca_basal_area, umca_impval, candens15m)),
+#       lower.panel = panel.cor, diag.panel = panel.hist)
 
 #+ pairs plots of oak plots data ####
 pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, avg_lfct, hrsblw14_wet, hrsblw10_wet, hrs1020_wet, hrsabv20_wet, avgtmax_wet, avgtmin_wet, rs2d_total, ss2d_total, rs_days, ss_days)), 
@@ -187,7 +191,7 @@ pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, H.2005, H.2014, us.
 # oak_sod$oak.inf <- cbind(oak_sod$inf_oak_ct, oak_sod$uninf_oak_ct)
 
 #+ subset data frame and transform/rescale/standardize variables ####
-oakplots.sub <- select(oak_sod, plotid:inf_oak_ct, inf_oak_2plus_ct, tot_bay, tot_lfct, avg_lfct, umca_basal_area, candens15m, twi15m, elev_m, veght_m, contains("wet"), contains("tmax_rs"), contains("ds"), contains("tminus1"), H.2005, H.2014, J.2005, J.2014, os_rich05, os_rich14, contains("rs2d"), contains("ss2d"))
+oakplots.sub <- select(oak_sod, plotid:inf_oak_ct, inf_oak_2plus_ct, tot_bay:week, umca_basal_area, candens15m, twi15m, elev_m, veght_m, contains("wet"), contains("rs"), contains("ds"), contains("tminus1"), H.2005, H.2014, J.2005, J.2014, os_rich05, os_rich14, contains("rs2d"), contains("ss2d"))
 oakplots.sub <- select(oakplots.sub, -contains("t_minus2"), -contains("t_minus3"), -contains("t1t2"), -contains("t1t2t3"), -contains("tminus2"), -contains("tminus3"))
 summary(oakplots.sub)
 
@@ -229,9 +233,12 @@ oakplots.sub$avg_hrs1422_wet_t_t1.log <- log1p(oakplots.sub$avg_hrs1422_wet_t_t1
 oakplots.sub$hrs1422_wet_tminus1.log <- log1p(oakplots.sub$hrs1422_wet_tminus1)
 # oakplots.sub$avg_lfct.log <- log1p(oakplots.sub$avg_lfct)
 # oakplots.sub$sample_year <- as.factor(oakplots.sub$sample_year)
-oakplots.sub$oak.inf.2plus <- cbind(oakplots.sub$inf_oak_2plus_ct, (oak_sod$tot_oak_ct - oakplots.sub$inf_oak_2plus_ct))
+# oakplots.sub$oak.inf.2plus <- cbind(oakplots.sub$inf_oak_2plus_ct, (oak_sod$tot_oak_ct - oakplots.sub$inf_oak_2plus_ct))
 
 summary(oakplots.sub)
+anyDuplicated(oakplots.sub)
+oakplots.sub[1565:1570,]
+
 
 ## rough path-model 1, how does this work? ####
 oakplots.modlist1 <- list(
@@ -262,7 +269,7 @@ sem.fit(oakplots.modlist1, data = oakplots.sub)
 sem.fit(oakplots.modlist1, data = oakplots.sub, 
         corr.errors = c("dys_abv25ds ~~ ss2d.cm",
                         "tot_lfct.log ~~ H.2005"))
-sem.model.fits(oakplots1.modlist)
+sem.model.fits(oakplots.modlist1)
 # Most of the variation is explained by the random effects
 
 (coef.table <- sem.coefs(oakplots.modlist1, oakplots.sub,
@@ -334,60 +341,70 @@ pairs(na.omit(select(oakplots.sub, inf_oak_ct, tot_bay, tot_bay.log, tot_lfct.lo
 
 #+ make dataframe for each season ####
 names(oakplots.sub)
-oakplots.2005 <- (oakplots.sub %>% filter(sample_year == 2005) %>% 
-      select(plotid, oak.inf, inf_oak_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, contains("wet"), contains("ds"), contains("rs"), twi15m, twi15m.log))
+oakplots.2005 <- oakplots.sub %>% filter(sample_year == 2005) %>% 
+      select(plotid, oak.inf, inf_oak_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, contains("wet"), contains("ds"), contains("rs"), twi15m, twi15m.log)
 summary(oakplots.2005)
-pairs(select(oakplots.2005, -plotid, -oak.inf, -oak.inf.2plus),
-      lower.panel = panel.cor, diag.panel = panel.hist,
-      main = "Oak Plots Data 2005 Sample Season")
+anyDuplicated(oakplots.2005)
+oakplots.2005[200:212,]
+# pairs(select(oakplots.2005, -plotid, -oak.inf, -oak.inf.2plus),
+#       lower.panel = panel.cor, diag.panel = panel.hist,
+#       main = "Oak Plots Data 2005 Sample Season")
 
 oakplots.2006 <- (oakplots.sub %>% filter(sample_year == 2006) %>% 
                         select(plotid, oak.inf, inf_oak_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, contains("wet"), contains("ds"), contains("rs"), twi15m, twi15m.log))
-pairs(select(oakplots.2006, -plotid, -oak.inf, -oak.inf.2plus),
-      lower.panel = panel.cor, diag.panel = panel.hist,
-      main = "Oak Plots Data 2006 Sample Season")
+anyDuplicated(oakplots.2006)
+# pairs(select(oakplots.2006, -plotid, -oak.inf, -oak.inf.2plus),
+#       lower.panel = panel.cor, diag.panel = panel.hist,
+#       main = "Oak Plots Data 2006 Sample Season")
 
 oakplots.2007 <- (oakplots.sub %>% filter(sample_year == 2007) %>% 
                         select(plotid, oak.inf, inf_oak_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, contains("wet"), contains("ds"), contains("rs"), twi15m, twi15m.log))
-pairs(select(oakplots.2007, -plotid, -oak.inf, -oak.inf.2plus),
-      lower.panel = panel.cor, diag.panel = panel.hist,
-      main = "Oak Plots Data 2007 Sample Season")
+anyDuplicated(oakplots.2007)
+# pairs(select(oakplots.2007, -plotid, -oak.inf, -oak.inf.2plus),
+#       lower.panel = panel.cor, diag.panel = panel.hist,
+#       main = "Oak Plots Data 2007 Sample Season")
 
 oakplots.2008 <- (oakplots.sub %>% filter(sample_year == 2008) %>% 
                         select(plotid, oak.inf, inf_oak_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, contains("wet"), contains("ds"), contains("rs"), twi15m, twi15m.log))
-pairs(select(oakplots.2008, -plotid, -oak.inf, -oak.inf.2plus),
-      lower.panel = panel.cor, diag.panel = panel.hist,
-      main = "Oak Plots Data 2008 Sample Season")
+anyDuplicated(oakplots.2008)
+# pairs(select(oakplots.2008, -plotid, -oak.inf, -oak.inf.2plus),
+#       lower.panel = panel.cor, diag.panel = panel.hist,
+#       main = "Oak Plots Data 2008 Sample Season")
 
 oakplots.2009 <- (oakplots.sub %>% filter(sample_year == 2009) %>% 
                         select(plotid, oak.inf, inf_oak_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, contains("wet"), contains("ds"), contains("rs"), twi15m, twi15m.log))
-pairs(select(oakplots.2009, -plotid, -oak.inf, -oak.inf.2plus),
-      lower.panel = panel.cor, diag.panel = panel.hist,
-      main = "Oak Plots Data 2009 Sample Season")
+anyDuplicated(oakplots.2009)
+# pairs(select(oakplots.2009, -plotid, -oak.inf, -oak.inf.2plus),
+#       lower.panel = panel.cor, diag.panel = panel.hist,
+#       main = "Oak Plots Data 2009 Sample Season")
 
 oakplots.2010 <- (oakplots.sub %>% filter(sample_year == 2010) %>% 
                         select(plotid, oak.inf, inf_oak_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, contains("wet"), contains("ds"), contains("rs"), twi15m, twi15m.log))
-pairs(na.omit(select(oakplots.2010, -plotid, -oak.inf, -oak.inf.2plus)),
-      lower.panel = panel.cor, diag.panel = panel.hist,
-      main = "Oak Plots Data 2010 Sample Season")
+anyDuplicated(oakplots.2010)
+# pairs(na.omit(select(oakplots.2010, -plotid, -oak.inf, -oak.inf.2plus)),
+#       lower.panel = panel.cor, diag.panel = panel.hist,
+#       main = "Oak Plots Data 2010 Sample Season")
 
 oakplots.2011 <- (oakplots.sub %>% filter(sample_year == 2011) %>% 
                         select(plotid, oak.inf, inf_oak_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, contains("wet"), contains("ds"), contains("rs"), twi15m, twi15m.log))
-pairs(select(oakplots.2011, -plotid, -oak.inf, -oak.inf.2plus),
-      lower.panel = panel.cor, diag.panel = panel.hist,
-      main = "Oak Plots Data 2011 Sample Season")
+anyDuplicated(oakplots.2011)
+# pairs(select(oakplots.2011, -plotid, -oak.inf, -oak.inf.2plus),
+#       lower.panel = panel.cor, diag.panel = panel.hist,
+#       main = "Oak Plots Data 2011 Sample Season")
 
 oakplots.2012 <- (oakplots.sub %>% filter(sample_year == 2012) %>% 
                         select(plotid, oak.inf, inf_oak_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, contains("wet"), contains("ds"), contains("rs"), twi15m, twi15m.log))
-pairs(select(oakplots.2012, -plotid, -oak.inf, -oak.inf.2plus),
-      lower.panel = panel.cor, diag.panel = panel.hist,
-      main = "Oak Plots Data 2012 Sample Season")
+anyDuplicated(oakplots.2012)
+# pairs(select(oakplots.2012, -plotid, -oak.inf, -oak.inf.2plus),
+#       lower.panel = panel.cor, diag.panel = panel.hist,
+#       main = "Oak Plots Data 2012 Sample Season")
 
 oakplots.2014 <- (oakplots.sub %>% filter(sample_year == 2014) %>% 
                         select(plotid, oak.inf, inf_oak_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, umca_ba.log, candens15m, H.2005:os_rich14, contains("wet"), contains("ds"), contains("rs"), twi15m, twi15m.log))
-pairs(select(oakplots.2014, -plotid, -oak.inf, -oak.inf.2plus),
-      lower.panel = panel.cor, diag.panel = panel.hist,
-      main = "Oak Plots Data 2014 Sample Season")
+anyDuplicated(oakplots.2014)
+# pairs(select(oakplots.2014, -plotid, -oak.inf, -oak.inf.2plus),
+#       lower.panel = panel.cor, diag.panel = panel.hist,
+#       main = "Oak Plots Data 2014 Sample Season")
 
 save.image("climate-path-model-data.RData")
 #'
@@ -417,6 +434,197 @@ plot(m5, main = "Disease Prevalence ~")
 plot(m6, main = "Canopy Density ~")
 plot(m7, main = "Wet-Days Temperature ~")
 
+# variogram analysis of leaf count residuals ####
+oak_plots_shp <- plots_shp[tolower(plots_shp$PLOT_ID) %in% unique(oak_sod$plotid),]
+oak_plots_shp$PLOT_ID <- tolower(oak_plots_shp$PLOT_ID)
+oakplots.2005 <- left_join(oakplots.2005,
+                           select(oak_plots_shp@data, PLOT_ID, X, Y),
+                           by = c("plotid"="PLOT_ID"))
+coords2005 <- as.matrix(oakplots.2005[,c("X","Y")])
+leafcount <- oakplots.2005$tot_lfct.log
+# plot(coords2005, pch = 1, cex = wethours/500, col = "darkgreen",
+#      xlab = "Easting (m)", ylab = "Northing (m)")
+summary(m3)
+library(spBayes); library(classInt); library(RColorBrewer); library(geoR)
+
+lfct.resid <- resid(m3)
+max.dist <- 0.33 * max(iDist(coords2005))# iDist is from spBayes package
+bins <- 100
+
+vario.lfct <- variog(coords = coords2005, 
+                     data = leafcount,
+                     uvec = (seq(0, max.dist, length = bins)))
+str(vario.lfct)
+fit.lfct <- variofit(
+      vario.lfct, 
+      ini.cov.pars = c(300, 200/-log(0.5)), 
+      cov.model = "exponential", 
+      minimisation.function = "optim",
+      weights = "equal"
+)
+
+vario.lfct.resid <- variog(coords = coords2005, 
+                           data = lfct.resid,
+                           uvec = (seq(0, max.dist, length = bins)))
+str(vario.lfct.resid)
+fit.lfct.resid.vario <- variofit(
+      vario.lfct.resid, 
+      #ini.cov.pars = c(300, 200/-log(0.5)), 
+      cov.model = "exponential", 
+      minimisation.function = "optim",
+      weights = "equal"
+                                 )
+par(mfrow = c(1,2))
+plot(vario.lfct)
+lines(fit.lfct)
+abline(h = fit.lfct$nugget, col = "blue")# nugget
+abline(h = fit.lfct$cov.pars[1] + fit.lfct$nugget, col = "green")# sill
+abline(v = -log(.05) * fit.lfct$cov.pars[2], col = "red3")# range
+
+plot(vario.lfct.resid)
+lines(fit.lfct.resid.vario)
+abline(h = fit.lfct.resid.vario$nugget, col = "blue")# nugget
+abline(h = fit.lfct.resid.vario$cov.pars[1] + fit.lfct.resid.vario$nugget, col = "green")# sill
+abline(v = -log(.05) * fit.lfct.resid.vario$cov.pars[2], col = "red3")# range
+
+library(gstat); library(spdep); library(maptools)
+sp.data.2005 <- as.data.frame(oakplots.2005)
+coordinates(sp.data.2005) <- c("X","Y")
+vario.lfct2 <- variogram(tot_lfct.log ~ tot_bay.log + hrs_abv25ds + twi15m.log,
+                         data = sp.data.2005, cutoff = max.dist,
+                         width = 50, alpha = (0:3) * 45)
+fit.vario.lfct2 <- fit.variogram(vario.lfct2, 
+                                 vgm(psill = 3, model = "Exp", 
+                                     range = 11000, nugget = 1.5))
+print(plot(vario.lfct2, fit.vario.lfct2))
+
+sel <- plot(variogram(tot_lfct.log ~ tot_bay.log + hrs_abv25ds + twi15m.log,
+                      data = sp.data.2005, cutoff = 3000,
+                      width = 50, cloud = T), digitize = T)
+plot(sel, sp.data.2005)
+
+
+sp.data.2005@data$lfct.resid <- lfct.resid
+bubble(sp.data.2005, zcol = "lfct.resid")
+
+# nearest neighbor distances ####
+sp.data.2005.kn2 <- knn2nb(knearneigh(coordinates(sp.data.2005), k = 2),
+                           row.names=sp.data.2005@data$plotid)
+plot(sp.data.2005, main = "K-nearest-neighbors = 2")
+plot(sp.data.2005.kn2, coords2005, add = T)
+sp.data.2005.kn2.w <- nb2listw(sp.data.2005.kn2)
+
+sp.data.2005.kn3 <- knn2nb(knearneigh(coordinates(sp.data.2005), k = 3),
+                           row.names=sp.data.2005@data$plotid)
+plot(sp.data.2005, main = "K-nearest-neighbors = 3")
+plot(sp.data.2005.kn3, coords2005, add = T)
+sp.data.2005.kn3.w <- nb2listw(sp.data.2005.kn3)
+
+sp.data.2005.kn4 <- knn2nb(knearneigh(coordinates(sp.data.2005), k = 4),
+                           row.names=sp.data.2005@data$plotid)
+plot(sp.data.2005, main = "K-nearest-neighbors = 4")
+plot(sp.data.2005.kn4, coords2005, add = T)
+sp.data.2005.kn4.w <- nb2listw(sp.data.2005.kn4, style = "B")
+
+sp.data.2005.kn5 <- knn2nb(knearneigh(coordinates(sp.data.2005), k = 5),
+                           row.names=sp.data.2005@data$plotid)
+plot(sp.data.2005, main = "K-nearest-neighbors = 5")
+plot(sp.data.2005.kn5, coords2005, add = T)
+sp.data.2005.kn5.w <- nb2listw(sp.data.2005.kn5, style = "B")
+
+
+moran.test(sp.data.2005$lfct.resid, listw = sp.data.2005.kn2.w)
+geary.test(sp.data.2005$lfct.resid, listw = sp.data.2005.kn2.w)
+
+moran.test(sp.data.2005$lfct.resid, listw = sp.data.2005.kn3.w)
+geary.test(sp.data.2005$lfct.resid, listw = sp.data.2005.kn3.w)
+
+moran.test(sp.data.2005$lfct.resid, listw = sp.data.2005.kn4.w)
+geary.test(sp.data.2005$lfct.resid, listw = sp.data.2005.kn4.w)
+moran.plot(sp.data.2005$lfct.resid, listw = sp.data.2005.kn5.w)
+
+moran.test(sp.data.2005$lfct.resid, listw = sp.data.2005.kn5.w)
+geary.test(sp.data.2005$lfct.resid, listw = sp.data.2005.kn5.w)
+
+moran.test(sp.data.2005$tot_lfct.log, listw = sp.data.2005.kn5.w)
+moran.plot(sp.data.2005$tot_lfct.log, listw = sp.data.2005.kn5.w)
+geary.test(sp.data.2005$tot_lfct.log, listw = sp.data.2005.kn5.w)
+
+sp.data.2005.kn1 <- knn2nb(knearneigh(coordinates(sp.data.2005), k = 1),
+                           row.names=sp.data.2005@data$plotid)
+sp.data.2005.kn1.w <- nb2listw(sp.data.2005.kn1)
+dist <- unlist(nbdists(sp.data.2005.kn1, coords2005))
+summary(dist)
+max.k1 <- max(dist)
+moran.test(sp.data.2005$lfct.resid, listw = sp.data.2005.kn1.w)
+geary.test(sp.data.2005$lfct.resid, listw = sp.data.2005.kn1.w)
+
+sp.data.2005.kd1 <- dnearneigh(coords2005, d1 = 0, d2 = 0.75*max.k1, 
+                               row.names = sp.data.2005@data$plotid)
+sp.data.2005.kd1.w <- nb2listw(sp.data.2005.kd1, zero.policy=T)
+plot(sp.data.2005)
+plot(sp.data.2005.kd1, coords2005, add = T)
+# moran.test(sp.data.2005$lfct.resid, listw = sp.data.2005.kd1.w)
+
+sp.data.2005.kd2 <- dnearneigh(coords2005, d1 = 0, d2 = max.k1, 
+                               row.names = sp.data.2005@data$plotid)
+sp.data.2005.kd2.w <- nb2listw(sp.data.2005.kd2, style = "B")
+plot(sp.data.2005)
+plot(sp.data.2005.kd2, coords2005, add = T)
+moran.test(sp.data.2005$lfct.resid, listw = sp.data.2005.kd2.w)
+moran.plot(sp.data.2005$lfct.resid, listw = sp.data.2005.kd2.w)
+geary.test(sp.data.2005$lfct.resid, listw = sp.data.2005.kd2.w)
+
+sp.data.2005.kd3 <- dnearneigh(coords2005, d1 = 0, d2 = 1.5*max.k1, 
+                               row.names = sp.data.2005@data$plotid)
+sp.data.2005.kd3.w <- nb2listw(sp.data.2005.kd3, style = "B")
+plot(sp.data.2005)
+plot(sp.data.2005.kd3, coords2005, add = T)
+moran.test(sp.data.2005$lfct.resid, listw = sp.data.2005.kd3.w)
+moran.plot(sp.data.2005$lfct.resid, listw = sp.data.2005.kd3.w)
+geary.test(sp.data.2005$lfct.resid, listw = sp.data.2005.kd3.w)
+
+lm.morantest(m3, sp.data.2005.kd3.w)
+lm.LMtests(m3, sp.data.2005.kd3.w, test = "all")
+## indicates error & lag dependence, but stronger error dependence
+
+sp.data.2005.kd4 <- dnearneigh(coords2005, d1 = 0, d2 = 2*max.k1, 
+                               row.names = sp.data.2005@data$plotid)
+sp.data.2005.kd4.w <- nb2listw(sp.data.2005.kd4, style = "B")
+moran.test(sp.data.2005$lfct.resid, listw = sp.data.2005.kd4.w)
+moran.plot(sp.data.2005$lfct.resid, listw = sp.data.2005.kd4.w)
+geary.test(sp.data.2005$lfct.resid, listw = sp.data.2005.kd4.w)
+
+sp.data.2005.kd5 <- dnearneigh(coords2005, d1 = 0, d2 = 2.5*max.k1, 
+                               row.names = sp.data.2005@data$plotid)
+sp.data.2005.kd5.w <- nb2listw(sp.data.2005.kd5, style = "B")
+moran.test(sp.data.2005$lfct.resid, listw = sp.data.2005.kd5.w)
+moran.plot(sp.data.2005$lfct.resid, listw = sp.data.2005.kd5.w)
+geary.test(sp.data.2005$lfct.resid, listw = sp.data.2005.kd5.w)
+globalG.test(sp.data.2005$lfct.resid, listw = sp.data.2005.kd5.w)
+
+sp.data.2005.kd6 <- dnearneigh(coords2005, d1 = 0, d2 = 3*max.k1, 
+                               row.names = sp.data.2005@data$plotid)
+sp.data.2005.kd6.w <- nb2listw(sp.data.2005.kd6, style = "B")
+plot(sp.data.2005)
+plot(sp.data.2005.kd6, coords2005, add = T)
+moran.test(sp.data.2005$lfct.resid, listw = sp.data.2005.kd6.w)
+moran.plot(sp.data.2005$lfct.resid, listw = sp.data.2005.kd6.w)
+geary.test(sp.data.2005$lfct.resid, listw = sp.data.2005.kd6.w)
+
+sp.data.2005.kd7 <- dnearneigh(coords2005, d1 = 0, d2 = 3.25*max.k1, 
+                               row.names = sp.data.2005@data$plotid)
+sp.data.2005.kd7.w <- nb2listw(sp.data.2005.kd7, style = "B")
+plot(sp.data.2005)
+plot(sp.data.2005.kd7, coords2005, add = T)
+moran.test(sp.data.2005$lfct.resid, listw = sp.data.2005.kd7.w)
+moran.plot(sp.data.2005$lfct.resid, listw = sp.data.2005.kd7.w)
+geary.test(sp.data.2005$lfct.resid, listw = sp.data.2005.kd7.w)
+localmoran(sp.data.2005$lfct.resid, listw = sp.data.2005.kd7.w)
+localmoran.exact(m3, nb = sp.data.2005.kd7)
+
+
+# umca basal area 2005 model ####
 oakplots2005.modlist2 <- list(
       m1 <- lm(H.2005 ~ twi15m.log, data = oakplots.2005),
       m2 <- lm(umca_ba.log ~ twi15m.log, data = oakplots.2005),
