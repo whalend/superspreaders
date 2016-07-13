@@ -20,6 +20,24 @@ oakplots.sub$umca_density_m2 <- oakplots.sub$tot_bay / (15*15)
 oakplots.sub$umca_density_m2.sqrt <- sqrt(oakplots.sub$umca_density_m2)
 ```
 
+```{r combine plots data, eval=F, echo=F}
+soco_plots <- stems %>%
+      select(plotid, species, year) %>%
+      group_by(plotid, year) %>%
+      # filter(species == "UMCA", status == "Alive") %>%
+      summarise(stem_total = length(species))
+
+soco_plots <- rename(soco_plots, sample_year = year)
+
+soco_plots <- left_join(soco_plots, select(umca_plots, plotid:tot_lfct), by = c("plotid", "sample_year"))
+soco_plots <- left_join(soco_plots, select(oakplots.sub, plotid:inf_oak_ct), by = c("plotid","sample_year"))
+soco_plots <- left_join(soco_plots, plots_env, by = "plotid")
+summary(soco_plots)
+soco_plots <- select(soco_plots, -stem_total)
+
+write.csv(soco_plots, "analysis/data/soco_plots.csv")
+```
+
 ```{r rescale variables}
 ## rescale variables
 # oakplots.sub2$inf_bay.scl <- scale((oakplots.sub2$infected_bay_ct))
