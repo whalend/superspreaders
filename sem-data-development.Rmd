@@ -284,8 +284,10 @@ plot_visit_dates <- stems %>%
 plot_visit_dates <- ungroup(plot_visit_dates)
 ```
 
+
 ## Examine the bay laurel data at individual and plot levels
 ```{r examine umca data}
+# All tagged bay laurel
 bay_laurel <- filter(stems, species == "umca") %>% 
       select(plotid, cluster:stem_status, umca_slc, notes:week)
 bay_laurel$species <- droplevels(bay_laurel$species)
@@ -293,39 +295,53 @@ summary(bay_laurel) # This has stem-level data on bay laurel.
 length(unique(bay_laurel$plotid))# 183 plots with bay laurel
 # bay_laurel <- filter(bay_laurel, plot != "BUSH01")
 
-# Data frame of UMCA plots only
+# Only bay laurel rooted within the plot boundaries
+bay_laurel_in <- filter(stems, species == "umca", location == "In") %>% 
+      select(plotid, cluster:stem_status, umca_slc, notes:week)
+bay_laurel_in$species <- droplevels(bay_laurel_in$species)
+summary(bay_laurel_in) # This has stem-level data on bay laurel.
+
+# Data frames of UMCA-only plots, summarizing UMCA abundance and symptomatic leaf count
 umca_plots <- bay_laurel %>%
       # select(plotid, date, species, umca_slc, year, stem_status) %>%
-      group_by(plotid, year, species) %>%
-      filter(species == "umca", stem_status == "Alive") %>%
+      group_by(plotid, year) %>%
+      filter(stem_status == "Alive") %>%
       summarise(uninfected_bay_ct = length(which(umca_slc == 0)), 
                 infected_bay_ct = length(which(umca_slc > 0)), 
-                tot_bay = length(species)) 
+                tot_bay = infected_bay_ct + uninfected_bay_ct,
+                avg_lfct = mean(umca_slc, na.rm = T),
+                tot_lfct = sum(umca_slc, na.rm = T)) 
 summary(umca_plots)
 
+umca_in_plots <- bay_laurel_in %>%
+      # select(plotid, date, species, umca_slc, year, stem_status) %>%
+      group_by(plotid, year) %>%
+      filter(stem_status == "Alive") %>%
+      summarise(uninfected_bay_ct = length(which(umca_slc == 0)), 
+                infected_bay_ct = length(which(umca_slc > 0)), 
+                tot_bay = uninfected_bay_ct + infected_bay_ct,
+                avg_lfct = mean(umca_slc, na.rm = T),
+                tot_lfct = sum(umca_slc, na.rm = T))
+summary(umca_in_plots)
 # length(unique(umca_plots$plotid))# 183 plots with bay laurel
 # umca_plots <- filter(plots_umca, plot != "BUSH01")
 rm(plots_umca)
 ```
 
-I can use the stem-level data to calculate plot level leaf count variables (sum, average) for each plot and year.
 ```{r calculate plot level leaf counts}
-live_umca <- bay_laurel %>% filter(stem_status == "Alive")
-filter(live_umca, is.na(umca_slc))
-# Spot checking some of these shows that NAs are due to missing data, i.e. they should not be changed to zeroes
-umca_plots <- left_join(
-      umca_plots, 
-      live_umca %>% 
-            group_by(plotid, year) %>% 
-            summarise(avg_lfct = mean(umca_slc, na.rm = T),
-                      tot_lfct = sum(umca_slc, na.rm = T)),
-      by = c("plotid","year"))
 umca_plots <- left_join(
       umca_plots,
       plot_visit_dates,
       by = c("plotid","year")
 )
 summary(umca_plots)
+
+umca_in_plots <- left_join(
+      umca_in_plots,
+      plot_visit_dates,
+      by = c("plotid","year")
+)
+summary(umca_in_plots)
 ```
 
 Explore the NAs in the UMCA leaf counts.
@@ -352,14 +368,15 @@ summary(umca_plots)
 # plot == plotid, year == sample_year
 
 # Join the environmental data to the bay laurel infection data
-umca_plots <- left_join(select(umca_plots, -species), plots_env, by = "plotid")
+umca_plots <- left_join(umca_plots, plots_env, by = "plotid")
 summary(umca_plots)
 # filter(umca_plots, is.na(lon_utm))
 # NAs due to no topo data for abandoned SUGAR02; remove SUGAR02
 # umca_plots <- na.omit(umca_plots)
 umca_plots <- rename(umca_plots, sample_year = year)
 # umca_plots$plotid <- tolower(umca_plots$plotid)
-
+umca_in_plots <- left_join(umca_in_plots, plots_env, by = "plotid")
+umca_in_plots <- rename(umca_in_plots, sample_year = year)
 # Join rainy season and summer temperatures to bay laurel infection data.
 ## I need to rename temperature variables to differentiate rainy vs. dry season
 rs_temps <- as.tbl(rs_temps)
@@ -384,6 +401,8 @@ umca_plots <- left_join(umca_plots, summer_temps, by = c("plotid", "sample_year"
 summary(umca_plots)# 7 NAs introduced into the temperature variables
 filter(umca_plots, is.na(avg_tmax_rs))# NAs due to records from 2003
 ## I don't think these will end up in my analysis, but no reason to remove them at this time.
+umca_in_plots <- left_join(umca_in_plots, rs_temps, by = c("plotid", "sample_year"))
+umca_in_plots <- left_join(umca_in_plots, summer_temps, by = c("plotid", "sample_year"))
 
 # Add rainfall data to UMCA plots data frame
 summary(rain_rs_total)
@@ -415,6 +434,10 @@ umca_plots <- left_join(umca_plots, rain_total, by = c("plotid", "sample_year"))
 umca_plots <- left_join(umca_plots, rain_days, by = c("plotid", "sample_year"))
 summary(umca_plots)
 
+umca_in_plots$sample_year <- as.character(umca_in_plots$sample_year)
+umca_in_plots <- left_join(umca_in_plots, rain_total, by = c("plotid", "sample_year"))
+umca_in_plots <- left_join(umca_in_plots, rain_days, by = c("plotid", "sample_year"))
+
 filter(umca_plots, is.na(rs2d_total))
 # Same case of NAs in rainfall due to data sampled in 2003
 ```
@@ -429,6 +452,7 @@ summary(os.us.diversity)
 umca_plots
 
 umca_plots <- left_join(umca_plots, os.us.diversity, by = c("plotid"))
+umca_in_plots <- left_join(umca_in_plots, os.us.diversity, by = c("plotid"))
 summary(umca_plots)
 unique(filter(umca_plots, is.na(H.2014))$plotid)
 ## NAs due to plots abandoned/lost between 2005 and 2014; 4 unique plots
@@ -582,9 +606,18 @@ summary(oak_sod)
 # Add bay laurel infection data to oak plots
 names(umca_plots)
 oak_sod <- left_join(oak_sod, 
-                     select(umca_plots, plotid, sample_year, uninfected_bay_ct:tot_lfct ), 
-                     by = c("plotid", "sample_year"))
+                     select(umca_plots, plotid, sample_year, 
+                            avg_lfct, tot_lfct ),
+                     by = c("plotid","sample_year"))
+names(umca_in_plots)
+umca_in_plots$sample_year <- as.character(umca_in_plots$sample_year)
+oak_sod$sample_year <- as.character(oak_sod$sample_year)
+oak_sod <- left_join(oak_sod,
+                     select(umca_in_plots, plotid, sample_year,
+                            tot_bay, infected_bay_ct),
+                     by = c("plotid","sample_year"))
 summary(oak_sod) # the NA's for the bay laurel variables are legitimately zeroes b/c there are no bay in some of these plots
+plot_visit_dates$year <- as.character(plot_visit_dates$year)
 oak_sod <- left_join(
       oak_sod,
       plot_visit_dates,
@@ -592,7 +625,7 @@ oak_sod <- left_join(
 
 filter(oak_sod, is.na(tot_bay), sample_year != 2003)
 # Change NAs of bay laurel in oak only plots to zeroes
-oak_sod$uninfected_bay_ct[is.na(oak_sod$uninfected_bay_ct)] <- 0
+# oak_sod$uninfected_bay_ct[is.na(oak_sod$uninfected_bay_ct)] <- 0
 oak_sod$infected_bay_ct[is.na(oak_sod$infected_bay_ct)] <- 0
 oak_sod$tot_bay[is.na(oak_sod$tot_bay)] <- 0
 
@@ -603,6 +636,7 @@ oak_sod <- left_join(oak_sod, plots_env, by = "plotid")# Topo data
 
 rs_temps
 summer_temps
+oak_sod$sample_year <- as.integer(oak_sod$sample_year)
 oak_sod <- left_join(oak_sod, rs_temps, by = c("plotid", "sample_year"))
 oak_sod <- left_join(oak_sod, summer_temps, by = c("plotid", "sample_year"))
 oak_sod
