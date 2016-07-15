@@ -223,7 +223,7 @@ plots_umca <- stems %>%
       select(plot, Date, species, slc, year, status) %>%
       group_by(plot, year, species) %>%
       filter(species == "UMCA", status == "Alive") %>%
-      summarise(uninfected_bay_ct = length(which(slc==0)), infected_bay_ct = length(which(slc > 0)), tot_bay = length(species)) 
+      summarise(uninfected_bay_ct = length(which(slc==0)), infected_bay_ct = length(which(slc > 0)), tot_bay = length(species))
 
 # plots_umca$infected <- ifelse(plots_umca$infected_bay_ct==0, 0, 1)
 summary(plots_umca)
