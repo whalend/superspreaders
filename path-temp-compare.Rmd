@@ -16,10 +16,10 @@ While temperature thresholds for growth, reproduction, and survival of *P. ramor
 ```{r load data, echo=F}
 load("climate-path-model-data.RData")
 library(piecewiseSEM); library(dplyr); library(lme4); library(lmerTest)
-oakplots.sub$umca_density_m2 <- oakplots.sub$tot_bay / (15*15)
+
+# Calculate oak density variable as stems per hectare 
 oakplots.sub$umca_density_ha <- (oakplots.sub$tot_bay / (15*15))*10000
-oakplots.sub$umca_density_m2.sqrt <- sqrt(oakplots.sub$umca_density_m2)
-oakplots.sub$umca_density_ha.sqrt <- sqrt(oakplots.sub$umca_density_ha)
+oakplots.sub$umca_density_ha.log <- log(oakplots.sub$umca_density_ha+1)
 ```
 
 ```{r combine plots data, eval=F, echo=F}
@@ -40,19 +40,20 @@ soco_plots <- select(soco_plots, -stem_total)
 write.csv(soco_plots, "analysis/data/soco_plots.csv")
 ```
 
-```{r rescale variables}
+```{r rescale variables, echo=F}
 ## rescale variables
 # oakplots.sub2$inf_bay.scl <- scale((oakplots.sub2$infected_bay_ct))
 oakplots.sub$tot_bay.scl <- scale(oakplots.sub$tot_bay)
 oakplots.sub$tot_bay.log.scl <- scale(oakplots.sub$tot_bay.log)
-oakplots.sub$umca_density_m2.scl <- scale(oakplots.sub$umca_density_m2)
-oakplots.sub$umca_density_m2.sqrt.scl <- scale(oakplots.sub$umca_density_m2.sqrt)
+oakplots.sub$umca_density_ha.scl <- scale(oakplots.sub$umca_density_ha)
+oakplots.sub$umca_density_ha.log.scl <- scale(oakplots.sub$umca_density_ha.log)
 oakplots.sub$umca_basal_area.scl <- scale(oakplots.sub$umca_basal_area)
 oakplots.sub$umca_ba.log.scl <- scale(oakplots.sub$umca_ba.log)
 oakplots.sub$tot_lfct.scl <- scale(oakplots.sub$tot_lfct)
 oakplots.sub$tot_lfct.log.scl <- scale(oakplots.sub$tot_lfct.log)
 # oakplots.sub$avg_lfct.scl <- scale(oakplots.sub$avg_lfct)
 oakplots.sub$hrs_abv25ds.scl <- scale(oakplots.sub$hrs_abv25ds)
+oakplots.sub$dys_abv25ds.scl <- scale(oakplots.sub$dys_abv25ds)
 oakplots.sub$avg_tmax_ds.scl <- scale(oakplots.sub$avg_tmax_ds)
 oakplots.sub$avg_hrsblw14_wet_tminus1.scl <- scale(oakplots.sub$avg_hrsblw14_wet_tminus1)
 oakplots.sub$hrs1422_wet_tminus1.log.scl <- scale(oakplots.sub$hrs1422_wet_tminus1.log)
@@ -91,39 +92,73 @@ model_list <- list(
 # )
 ```
 
-Using data on oak infection at the plot-level:
-```{r model pieces}
-names(oakplots.sub)
-oak_and_bay_plots <- filter(oakplots.sub, tot_bay > 0)
 
+Using data on oak infection at the plot-level:
+```{r hours >25 path model all oak plots unscaled, echo=F}
 model_list1 <- list(
-      shannons <- lm(H.2005 ~ twi15m.log, data = oakplots.sub),
+      shannons <- lm(H.2005 ~ twi15m.log, data = filter(oakplots.sub, sample_year == 2005)),
       
-      umca_density <- lm(tot_bay.log ~ twi15m.log, data = oakplots.sub),
+      umca_density <- lmer(umca_density_ha.log ~ twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
       
       slc <- lmer(tot_lfct.log ~ tot_bay.log + hrs_abv25ds + avg_hrs1422_wet_t_t1.log + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
       
       wet_hours_1422 <- lmer(avg_hrs1422_wet_t_t1.log ~ tot_bay.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
       
-      avgtmax_ds <- lmer(hrs_abv25ds ~ twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      hrs_abv25 <- lmer(hrs_abv25ds ~ twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
       
       oak_infection <- glmer(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1.log + H.2005 + (1|plotid) + (1|sample_year), family = binomial(link = "logit"), data = oakplots.sub)
 )
+```
+
+
+Path model with the continuous variables standardized using the default settings of the `scale` function, resulting in each having a mean of zero and standard deviation of one. Each variable is first  centered by subtracting its mean and then scaled by dividing by its standard deviation.
+```{r hours >25 path model all oak plots scaled}
 model_list1.scl <- list(
       shannons <- lm(shannons2005.scl ~ twi15m.log.scl, data = oakplots.sub),
       
-      umca_density <- lm(tot_bay.log.scl ~ twi15m.log.scl, data = oakplots.sub),
+      umca_density <- lmer(umca_density_ha.log.scl ~ twi15m.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
       
       slc <- lmer(tot_lfct.log.scl ~ tot_bay.log.scl + hrs_abv25ds.scl + avg_hrs1422_wet_t_t1.log.scl + shannons2005.scl + twi15m.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
       
       wet_hours_1422 <- lmer(avg_hrs1422_wet_t_t1.log.scl ~ tot_bay.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
       
-      avgtmax_ds <- lmer(hrs_abv25ds.scl ~ twi15m.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      hrs_abv25 <- lmer(hrs_abv25ds.scl ~ twi15m.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
       
       oak_infection <- glmer(oak.inf ~ tot_lfct.log.scl + avg_hrs1422_wet_t_t1.log.scl + shannons2005.scl + (1|plotid) + (1|sample_year), family = binomial(link = "logit"), data = oakplots.sub)
 )
+```
 
-# Model set reduced to plots that have oaks & at least 1 bay laurel
+Examining the residual plots of each piece of the path model
+```{r shannons residuals plot}
+par(mfrow=c(2,2))
+plot(shannons, main = "OLS regression of diversity ~ wetness index")
+```
+
+```{r bay laurel density residuals plot}
+plot(umca_density, main = "LMM of bay laurel density")
+```
+
+```{r symptomatic leaf count residuals plot}
+plot(slc, main = "LMM of symptomatic leaf count")
+```
+
+```{r wet-hours residuals plot}
+plot(wet_hours_1422, main = "LMM of avg. # of hours 14-22 C current & prev. year")
+```
+
+```{r dry-season hours residuals plot}
+plot(hrs_abv25, main = "LMM of # of hours >25 C during prev. dry season")
+```
+
+```{r oak infection residuals plot}
+plot(oak_infection, main = "Binomial GLMM of oak infection")
+```
+
+
+
+Model set reduced to plots that have oaks & at least 1 bay laurel
+```{r path model with oak plots having >0 bay laurel}
+oak_and_bay_plots <- filter(oakplots.sub, tot_bay > 0)
 oak_and_bay_list1 <- list(
       shannons <- lm(H.2005 ~ twi15m.log, data = oak_and_bay_plots),
       #umca_density <- lm(tot_bay.log ~ twi15m.log, data = oak_and_bay_plots),
@@ -132,7 +167,10 @@ oak_and_bay_list1 <- list(
       hrs_abv25 <- lmer(hrs_abv25ds ~ tot_bay.log + twi15m.log + (1|plotid) + (1|sample_year), data = oak_and_bay_plots),
       oak_infection <- glmer(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1.log + H.2005 + + (1|plotid) + (1|sample_year), family = binomial(link = "logit"), data = oak_and_bay_plots)
 )
+```
 
+
+```{r fit and compare all oak plots vs >0 bay laurel oak plots}
 # Comparing fits of the piecewise models using all oak plots vs. plots with oaks and at least one bay laurel
 sem.fit(model_list1, oakplots.sub, 
         corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log"))
@@ -142,7 +180,11 @@ sem.fit(model_list1.scl, oakplots.sub,
 sem.fit(oak_and_bay_list1, oak_and_bay_plots, 
         corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log",
                         "tot_bay.log ~~ H.2005"))
+```
 
+
+Get the path coeffcients for the fitted path models
+```{r get path coefficients}
 sem.coefs(model_list1, oakplots.sub,
           corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log"))
 sem.coefs(model_list1.scl, oakplots.sub,
@@ -151,7 +193,12 @@ sem.coefs(model_list1.scl, oakplots.sub,
 sem.coefs(oak_and_bay_list1, oak_and_bay_plots, standardize = "none",
           corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log",
                           "tot_bay.log ~~ H.2005"))
+```
 
+
+
+
+```{r path models using avg dry season tmax}
 # Model set using average daily maximum temperature during the dry season.
 model_avgtmax_ds <- list(
       shannons <- lm(H.2005 ~ twi15m.log, data = oakplots.sub),
@@ -218,6 +265,7 @@ sem.coefs(oak_and_bay_avgtmax_ds, oak_and_bay_plots, standardize = "none",
           corr.errors = c("avg_tmax_ds ~~ avg_hrs1422_wet_t_t1.log",
                         "H.2005 ~~ tot_bay.log"))
 ```
+
 
 Exploratory modeling of symptomatic leaf count with different temperature variables
 ```{r slc with dry-season temperature variables}
