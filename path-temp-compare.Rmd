@@ -93,24 +93,6 @@ model_list <- list(
 ```
 
 
-Using data on oak infection at the plot-level:
-```{r hours >25 path model all oak plots unscaled, echo=F}
-model_list1 <- list(
-      shannons <- lm(H.2005 ~ twi15m.log, data = filter(oakplots.sub, sample_year == 2005)),
-      
-      umca_density <- lmer(umca_density_ha.log ~ twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
-      
-      slc <- lmer(tot_lfct.log ~ tot_bay.log + hrs_abv25ds + avg_hrs1422_wet_t_t1.log + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
-      
-      wet_hours_1422 <- lmer(avg_hrs1422_wet_t_t1.log ~ tot_bay.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
-      
-      hrs_abv25 <- lmer(hrs_abv25ds ~ twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
-      
-      oak_infection <- glmer(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1.log + H.2005 + (1|plotid) + (1|sample_year), family = binomial(link = "logit"), data = oakplots.sub)
-)
-```
-
-
 Path model with the continuous variables standardized using the default settings of the `scale` function, resulting in each having a mean of zero and standard deviation of one. Each variable is first  centered by subtracting its mean and then scaled by dividing by its standard deviation.
 ```{r hours >25 path model all oak plots scaled}
 model_list1.scl <- list(
@@ -128,30 +110,56 @@ model_list1.scl <- list(
 )
 ```
 
+
+```{r hours >25 path model all oak plots unscaled, echo=F}
+model_list1 <- list(
+      shannons <- lm(H.2005 ~ twi15m.log, data = oakplots.sub),
+      
+      umca_density <- lmer(umca_density_ha.log ~ twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      slc <- lmer(tot_lfct.log ~ tot_bay.log + hrs_abv25ds + avg_hrs1422_wet_t_t1.log + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      wet_hours_1422 <- lmer(avg_hrs1422_wet_t_t1.log ~ tot_bay.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      hrs_abv25 <- lmer(hrs_abv25ds ~ twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      oak_infection <- glmer(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1.log + H.2005 + (1|plotid) + (1|sample_year), family = binomial(link = "logit"), data = oakplots.sub)
+)
+```
+
 Examining the residual plots of each piece of the path model
 ```{r shannons residuals plot}
 par(mfrow=c(2,2))
-plot(shannons, main = "OLS regression of diversity ~ wetness index")
+plot(shannons, main = "OLS regression of diversity ~ wetness index residuals")
+par(mfrow=c(1,1))
+plot(shannons$model$twi15m.log, resid(shannons),
+     xlab = "wetness index",
+     ylab = "model residuals",
+     main = "Diversity model residuals vs. wetness index predictor")
 ```
 
 ```{r bay laurel density residuals plot}
-plot(umca_density, main = "LMM of bay laurel density")
+plot(umca_density, main = "LMM of bay laurel density residuals")
+plot(umca_density@frame$twi15m.log, resid(umca_density),
+     xlab = "wetness index",
+     ylab = "model residuals",
+     main = "Bay laurel density model residuals vs. wetness index predictor")
 ```
 
 ```{r symptomatic leaf count residuals plot}
-plot(slc, main = "LMM of symptomatic leaf count")
+plot(slc, main = "LMM of symptomatic leaf count residuals")
 ```
 
 ```{r wet-hours residuals plot}
-plot(wet_hours_1422, main = "LMM of avg. # of hours 14-22 C current & prev. year")
+plot(wet_hours_1422, main = "LMM of avg. # of hours 14-22 C current & prev. year residuals")
 ```
 
 ```{r dry-season hours residuals plot}
-plot(hrs_abv25, main = "LMM of # of hours >25 C during prev. dry season")
+plot(hrs_abv25, main = "LMM of # of hours >25 C during prev. dry season residuals")
 ```
 
 ```{r oak infection residuals plot}
-plot(oak_infection, main = "Binomial GLMM of oak infection")
+plot(oak_infection, main = "Binomial GLMM of oak infection residuals")
 ```
 
 
