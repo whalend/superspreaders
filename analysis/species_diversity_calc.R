@@ -275,7 +275,7 @@ untagged_dbh_2014 %>% group_by(plotid, year) %>% summarise(untagged_rich = lengt
 # Calculate the richness of the tagged stems ####
 stems <- as.tbl(read.csv("analysis/data/tag-dbh_0514-corrected.csv"))
 summary(stems)
-unique(live_tagged$plotid)
+# unique(live_tagged$plotid)
 # stems$plotid <- tolower(stems$plotid)
 # stems$species <- tolower(stems$species)
 
@@ -305,16 +305,23 @@ summary(tagged_abund_2014)
 # Join tagged and untagged stems for 2005
 tagged_abund_2005; unique(tagged_abund_2005$species)
 untagged_dbh_2005; unique(untagged_dbh_2005$species)
+untagged_dbh_2005 <- ungroup(untagged_dbh_2005) %>% 
+      select(plotid, species, live_count)
 
 ## 2005 data
 abund_2005 <- rbind(tagged_abund_2005, select(untagged_dbh_2005, plotid, species, live_count))
-sort(unique(abund_2005$species))# 25 species
+sort(unique(abund_2005$species))# 26 species, remove 'unknown sp.'
+abund_2005 <- droplevels(filter(abund_2005, species != "unknown sp."))
 
+# reformat so that abundance of each species is shown in each plot
 abund_2005_wide <- ungroup(abund_2005) %>% spread(species, live_count)
 
 ## 2014 data
-abund_2014 <- rbind(tagged_abund_2014, select(untagged_dbh_2014, plotid, species, live_count))
-sort(unique(abund_2014$species))# 24 species
+abund_2014 <- rbind(tagged_abund_2014, ungroup(select(untagged_dbh_2014, plotid, species, live_count)))
+sort(unique(abund_2014$species))# 25 species, need to remove 'unknown sp.'
+abund_2014 <- droplevels(filter(abund_2014, species != "unknown sp."))
+
+# reformat so that abundance of each species is shown in each plot
 abund_2014_wide <- abund_2014 %>% spread(species, live_count)
 
 # Summarize into overstory species richness - number of each species in each plot for each survey
@@ -332,8 +339,9 @@ unique(os_rich2014$plotid)
 os_richness <- left_join(os_rich2005, os_rich2014, by = "plotid")
 summary(os_richness)
 filter(os_richness, is.na(os_rich14))
+
 # remove abandoned plots
-os_richness <- filter(os_richness, plotid != "bush01", plotid != "ann28", plotid != "halow01", plotid != "sweet01")
+# os_richness <- filter(os_richness, plotid != "mcneil01", plotid != "votru01", plotid != "sweet01")
 # Other plots were abandoned later in the study. Overstory from 2012 data for mcneil03 may be possible.
 
 # Join overstory richness and understory richness (counts) into single data frame
@@ -343,8 +351,8 @@ filter(richness, is.na(us_rich05))
 filter(richness, is.na(us_rich11))
 filter(richness, is.na(os_rich05))
 filter(richness, is.na(os_rich14))
-richness <- filter(richness, plotid != "sumtv02", plotid != "sweet01",
-                   plotid != "mcneil01", plotid != "mcneil03")
+# richness <- filter(richness, plotid != "sumtv02", plotid != "sweet01",
+#                    plotid != "mcneil01", plotid != "mcneil03")
 
 
 #' ## Calculate Diversity Indices
@@ -381,8 +389,8 @@ os.diversity <- full_join(diversity.2005, diversity.2014, by = "plotid")
 
 summary(os.diversity)
 filter(os.diversity, is.na(H.2014))
-os.diversity <- filter(os.diversity, plotid != "mcneil01", plotid != "sweet01",
-                       plotid != "votru01")
+# os.diversity <- filter(os.diversity, plotid != "mcneil01", plotid != "sweet01",
+#                        plotid != "votru01")
 # remove 4 early abandoned plots, keep 4 late abandoned plots
 # os.diversity <- filter(os.diversity, plotid != "ann28", plotid != "bush01",
 #                        plotid != "halow01", plotid != "sweet01")
@@ -424,12 +432,12 @@ summary(us.diversity)
 filter(us.diversity, is.na(us.H.2005))# calculation with 0 richness = NAs
 filter(us.diversity, is.na(us.H.2011))
 # remove abandoned plots
-us.diversity <- filter(us.diversity, plotid != "bush01", plotid != "halow01",
-                       plotid != "sweet01", plotid != "mcneil01", 
-                       plotid != "sumtv02")
+# us.diversity <- filter(us.diversity, plotid != "bush01", plotid != "halow01",
+#                        plotid != "sweet01", plotid != "mcneil01", 
+#                        plotid != "sumtv02")
 # ann06 & mroth03 had 0 for understory species richness in 2011
 # mcneil01 & sumtv02 were abandoned prior to the 2011 season
-us.diversity[is.na(us.diversity)] <- 0
+# us.diversity[is.na(us.diversity)] <- 0
 
 
 # Diversity calculation with subset of understory species
@@ -463,12 +471,12 @@ summary(us_sub.diversity)
 filter(us_sub.diversity, is.na(us.H.2005))# calculation with 0 richness = NAs
 filter(us_sub.diversity, is.na(us.H.2011))
 # remove abandoned plots
-us_sub.diversity <- filter(us_sub.diversity, plotid != "bush01", 
-                           plotid != "halow01", plotid != "sweet01",
-                           plotid != "mcneil01", plotid != "sumtv02")
+# us_sub.diversity <- filter(us_sub.diversity, plotid != "bush01", 
+#                            plotid != "halow01", plotid != "sweet01",
+#                            plotid != "mcneil01", plotid != "sumtv02")
 # ann06 & mroth03 had 0 for understory species richness in 2011
 # mcneil01 & sumtv02 were abandoned prior to the 2011 season
-us_sub.diversity[is.na(us_sub.diversity)] <- 0
+# us_sub.diversity[is.na(us_sub.diversity)] <- 0
 
 
 summary(us.diversity)
