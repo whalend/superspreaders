@@ -17,7 +17,9 @@ While temperature thresholds for growth, reproduction, and survival of *P. ramor
 load("climate-path-model-data.RData")
 library(piecewiseSEM); library(dplyr); library(lme4); library(lmerTest)
 oakplots.sub$umca_density_m2 <- oakplots.sub$tot_bay / (15*15)
+oakplots.sub$umca_density_ha <- (oakplots.sub$tot_bay / (15*15))*10000
 oakplots.sub$umca_density_m2.sqrt <- sqrt(oakplots.sub$umca_density_m2)
+oakplots.sub$umca_density_ha.sqrt <- sqrt(oakplots.sub$umca_density_ha)
 ```
 
 ```{r combine plots data, eval=F, echo=F}
@@ -43,6 +45,8 @@ write.csv(soco_plots, "analysis/data/soco_plots.csv")
 # oakplots.sub2$inf_bay.scl <- scale((oakplots.sub2$infected_bay_ct))
 oakplots.sub$tot_bay.scl <- scale(oakplots.sub$tot_bay)
 oakplots.sub$tot_bay.log.scl <- scale(oakplots.sub$tot_bay.log)
+oakplots.sub$umca_density_m2.scl <- scale(oakplots.sub$umca_density_m2)
+oakplots.sub$umca_density_m2.sqrt.scl <- scale(oakplots.sub$umca_density_m2.sqrt)
 oakplots.sub$umca_basal_area.scl <- scale(oakplots.sub$umca_basal_area)
 oakplots.sub$umca_ba.log.scl <- scale(oakplots.sub$umca_ba.log)
 oakplots.sub$tot_lfct.scl <- scale(oakplots.sub$tot_lfct)
