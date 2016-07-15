@@ -81,7 +81,7 @@ oak_sod <- left_join(
 #' 
 #' A single large tree supporting a lot of infection can have a substantial epidemiological role in the plot, and likely beyond the plot. I think total leaf count underrepresents the role of these stems, whereas the average leaf count may underrepresent the role of many small stems in producing a high total inoculum load. I guess the leads to the question of whether I want to use the average inoculum load on bay laurel in the plot, capturing the role of a few large trees with potentially high inoculum load, or the total inoculum load on bay laurel, which ignores the role of a few large trees while capturing some of the effect of stem density. 
 #' 
-#+ calculate & add umca basal area ####
+#+ calculate & add "in-plot" living umca basal area ####
 umca_ba <- stems %>% filter(year > 2003, species == "umca", stem_status == "Alive", location == "In") %>% select(plotid, year, dbh_entry) %>% group_by(plotid, year) %>% summarise(umca_basal_area = sum(pi*dbh_entry))
 oak_sod <- left_join(oak_sod, ungroup(umca_ba), by = c("plotid","sample_year" = "year"))
 
@@ -120,17 +120,17 @@ oak_sod$avg_lfct[oak_sod$plotid == "yahng02" & oak_sod$sample_year == 2010] <- N
 #       lower.panel = panel.cor, diag.panel = panel.hist)
 
 #+ pairs plots of oak plots data ####
-pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, avg_lfct, hrsblw14_wet, hrsblw10_wet, hrs1020_wet, hrsabv20_wet, avgtmax_wet, avgtmin_wet, rs2d_total, ss2d_total, rs_days, ss_days)), 
-      lower.panel = panel.cor, diag.panel = panel.hist,
-      main = "Oak Plots Current Year Rainfall Variables")
-
-pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, avg_lfct, starts_with("avg_rs2d"), contains("rs2d_t"))), 
-      lower.panel = panel.cor, diag.panel = panel.hist,
-      main = "Oak Plots Lagged Rainfall Variables")
-
-pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, avg_lfct, hrsblw14_wet, avgtmax_wet, hrs1020_wet, rs2d_total, ss2d_total, rs_days, ss_days, rs2d_total_t_minus1, avg_rs2d_t_minus1)), 
-      lower.panel = panel.cor, diag.panel = panel.hist,
-      main = "Oak Plots Rainfall Variables")
+# pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, avg_lfct, hrsblw14_wet, hrsblw10_wet, hrs1020_wet, hrsabv20_wet, avgtmax_wet, avgtmin_wet, rs2d_total, ss2d_total, rs_days, ss_days)), 
+#       lower.panel = panel.cor, diag.panel = panel.hist,
+#       main = "Oak Plots Current Year Rainfall Variables")
+# 
+# pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, avg_lfct, starts_with("avg_rs2d"), contains("rs2d_t"))), 
+#       lower.panel = panel.cor, diag.panel = panel.hist,
+#       main = "Oak Plots Lagged Rainfall Variables")
+# 
+# pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, avg_lfct, hrsblw14_wet, avgtmax_wet, hrs1020_wet, rs2d_total, ss2d_total, rs_days, ss_days, rs2d_total_t_minus1, avg_rs2d_t_minus1)), 
+#       lower.panel = panel.cor, diag.panel = panel.hist,
+#       main = "Oak Plots Rainfall Variables")
 # The regression variables are the least correlated within totals & days.
 # The 2D/3D interpolations are strongly correlated with each other, and strongly correlated with with the Voronoi polygon extractions.
 # The days & total precipitation variables are fairly strongly correlated.
@@ -139,43 +139,43 @@ pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, avg_lfct, hrsblw14_
 # Wet hours below 10 is correlated with total rainfall r = 0.61 - 0.68
 # To me, this indicates the possibility of using the wet-hours count combination variable of hours below 14 C in place of rainfall. This is only weakly correlated with the average temperature variables calculated for wet days. The number of hours below 14 C on wet days definitely captures the number of rainy days, as it should (r = 0.94).
 
-pairs(na.omit(select(oak_sod, inf_oak_ct, tot_lfct, avg_lfct, umca_basal_area, ends_with("rs"), ends_with("ds"), hrsblw14_wet, avgtmin_wet, avgtmax_wet)),
-      lower.panel = panel.cor, diag.panel = panel.hist,
-      main = "Oak Plots Current Temperature Variables")
+# pairs(na.omit(select(oak_sod, inf_oak_ct, tot_lfct, avg_lfct, umca_basal_area, ends_with("rs"), ends_with("ds"), hrsblw14_wet, avgtmin_wet, avgtmax_wet)),
+#       lower.panel = panel.cor, diag.panel = panel.hist,
+#       main = "Oak Plots Current Temperature Variables")
 # Overall, correlations among variables are relatively weak with a few strong pairs. For specific pairs of variables it may be okay to use one from the dry season and one from the rainy season.
 
-pairs(na.omit(select(oak_sod, inf_oak_ct, inf_oak_2plus_ct, tot_lfct, avg_lfct, ends_with("ds"), ends_with("wet"))),
-      lower.panel = panel.cor, diag.panel = panel.hist,
-      main = "Oak Plots Wet-Days & Dry Season Temperature Variables")
-
-pairs(na.omit(select(oak_sod, inf_oak_ct, tot_lfct, ends_with("rs"), starts_with("rain"), ends_with("wet"))),
-      lower.panel = panel.cor, diag.panel = panel.hist,
-      main = "Oak Plots RS Temperature and Rainfall Variables")
+# pairs(na.omit(select(oak_sod, inf_oak_ct, inf_oak_2plus_ct, tot_lfct, avg_lfct, ends_with("ds"), ends_with("wet"))),
+#       lower.panel = panel.cor, diag.panel = panel.hist,
+#       main = "Oak Plots Wet-Days & Dry Season Temperature Variables")
+# 
+# pairs(na.omit(select(oak_sod, inf_oak_ct, tot_lfct, ends_with("rs"), starts_with("rain"), ends_with("wet"))),
+#       lower.panel = panel.cor, diag.panel = panel.hist,
+#       main = "Oak Plots RS Temperature and Rainfall Variables")
 # For the most part rainfall and temperature variables are fairly weakly correlated. 
 # Rainy days interpolations are correlated with hours below 10, hours 14-20, and average maximum temperature
 
-pairs(na.omit(select(oak_sod, inf_oak_ct, tot_lfct, ends_with("ds"), contains("total"))),
-      lower.panel = panel.cor, diag.panel = panel.hist,
-      main = "Oak Plots DS Temperature and Rainfall Variables")
+# pairs(na.omit(select(oak_sod, inf_oak_ct, tot_lfct, ends_with("ds"), contains("total"))),
+#       lower.panel = panel.cor, diag.panel = panel.hist,
+#       main = "Oak Plots DS Temperature and Rainfall Variables")
 # Dry season temperature variables are only very weakly correlated with rainfall variables.
 
 ## Correlations of lagged variables 
-pairs(na.omit(select(oak_sod, inf_oak_ct, inf_oak_2plus_ct, tot_lfct, contains("t1"))),
-      lower.panel = panel.cor, diag.panel = panel.hist,
-      main = "Oak Plots Average Lagged Variables")
-pairs(na.omit(select(oak_sod, inf_oak_ct, inf_oak_2plus_ct, tot_lfct, contains("tminus1"))),
-      lower.panel = panel.cor, diag.panel = panel.hist,
-      main = "Oak Plots Lagged Variables t-1")
-pairs(na.omit(select(oak_sod, inf_oak_ct, inf_oak_2plus_ct, tot_lfct, contains("tminus2"))),
-      lower.panel = panel.cor, diag.panel = panel.hist,
-      main = "Oak Plots Lagged Variables t-2")
-pairs(na.omit(select(oak_sod, inf_oak_ct, inf_oak_2plus_ct, tot_lfct, contains("rs2d"))),
-      lower.panel = panel.cor, diag.panel = panel.hist,
-      main = "Oak Plots Lagged Rainfall Variables")
+# pairs(na.omit(select(oak_sod, inf_oak_ct, inf_oak_2plus_ct, tot_lfct, contains("t1"))),
+#       lower.panel = panel.cor, diag.panel = panel.hist,
+#       main = "Oak Plots Average Lagged Variables")
+# pairs(na.omit(select(oak_sod, inf_oak_ct, inf_oak_2plus_ct, tot_lfct, contains("tminus1"))),
+#       lower.panel = panel.cor, diag.panel = panel.hist,
+#       main = "Oak Plots Lagged Variables t-1")
+# pairs(na.omit(select(oak_sod, inf_oak_ct, inf_oak_2plus_ct, tot_lfct, contains("tminus2"))),
+#       lower.panel = panel.cor, diag.panel = panel.hist,
+#       main = "Oak Plots Lagged Variables t-2")
+# pairs(na.omit(select(oak_sod, inf_oak_ct, inf_oak_2plus_ct, tot_lfct, contains("rs2d"))),
+#       lower.panel = panel.cor, diag.panel = panel.hist,
+#       main = "Oak Plots Lagged Rainfall Variables")
 
 
-pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, umca_basal_area, H.2005, H.2014, hrsblw14_wet, hrsblw10_wet, hrs1020_wet, avgtmax_wet, avgtmin_wet, hrs_blw10rs, avg_tmax_rs, avg_tmin_rs, hrs_abv25ds, avg_tmax_ds, avg_tmin_ds, rs2d_total, ss2d_total, twi15m)),
-      lower.panel = panel.cor, diag.panel = panel.hist)
+# pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, umca_basal_area, H.2005, H.2014, hrsblw14_wet, hrsblw10_wet, hrs1020_wet, avgtmax_wet, avgtmin_wet, hrs_blw10rs, avg_tmax_rs, avg_tmin_rs, hrs_abv25ds, avg_tmax_ds, avg_tmin_ds, rs2d_total, ss2d_total, twi15m)),
+#       lower.panel = panel.cor, diag.panel = panel.hist)
 
 #' # Oak Plots Path Models
 #' These are models of that terminate in disease prevalence of oak species at the plot-level. 
@@ -183,15 +183,15 @@ pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, umca_basal_area, H.
 #' I am going to model each year independently, and use a "repeated measures" approach that accounts for correlation among plots sampled during the same season by applying the sample year as a random effect. This is effectively a single model implemented to account for the same plots being sampled repeatedly, i.e. once each year.
 #' 
 #+ repeated measures plot-level path model ####
-pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, H.2005, H.2014, us.H.2005, us.H.2011, hrsblw14_wet, hrs1020_wet, avg_tmax_ds, avg_tmin_ds, hrs_abv25ds, rs2d_total, rs_v_total, twi15m)),
-      lower.panel = panel.cor, diag.panel = panel.hist)
+# pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, H.2005, H.2014, us.H.2005, us.H.2011, hrsblw14_wet, hrs1020_wet, avg_tmax_ds, avg_tmin_ds, hrs_abv25ds, rs2d_total, rs_v_total, twi15m)),
+#       lower.panel = panel.cor, diag.panel = panel.hist)
 
 # RS temperature hours 14-20, voronoi rain total, OS diversity 2005
 ## create binomial variable for oak infection
 # oak_sod$oak.inf <- cbind(oak_sod$inf_oak_ct, oak_sod$uninf_oak_ct)
 
 #+ subset data frame and transform/rescale/standardize variables ####
-oakplots.sub <- select(oak_sod, plotid:inf_oak_ct, inf_oak_2plus_ct, tot_bay:week, umca_basal_area, candens15m, twi15m, elev_m, veght_m, contains("wet"), contains("rs"), contains("ds"), contains("tminus1"), H.2005, H.2014, J.2005, J.2014, os_rich05, os_rich14, contains("rs2d"), contains("ss2d"))
+oakplots.sub <- select(oak_sod, plotid:inf_oak_ct, inf_oak_2plus_ct, avg_lfct:week, umca_basal_area, candens15m:veght_m, contains("wet"), contains("rs"), contains("ds"), contains("tminus1"), H.2005, H.2014, J.2005, J.2014, os_rich05, os_rich14, contains("rs2d"), contains("ss2d"))
 oakplots.sub <- select(oakplots.sub, -contains("t_minus2"), -contains("t_minus3"), -contains("t1t2"), -contains("t1t2t3"), -contains("tminus2"), -contains("tminus3"))
 summary(oakplots.sub)
 
@@ -260,8 +260,8 @@ oakplots.modlist1 <- list(
             na.action = na.omit)
 )
 
-pairs(na.omit(select(oakplots.sub, inf_oak_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, H.2005, H.2014, dys_abv25ds, avg_tmax_rs, avg_tmax_ds, ss2d.cm, twi15m, twi15m.log)),
-      lower.panel = panel.cor, diag.panel = panel.hist)
+# pairs(na.omit(select(oakplots.sub, inf_oak_ct, tot_bay.log, tot_lfct.log, avg_lfct.log, H.2005, H.2014, dys_abv25ds, avg_tmax_rs, avg_tmax_ds, ss2d.cm, twi15m, twi15m.log)),
+#       lower.panel = panel.cor, diag.panel = panel.hist)
 
 sem.fit(oakplots.modlist1, data = oakplots.sub)
 # Unacceptable fit at a p = 0.05 threshold (p = 0)
