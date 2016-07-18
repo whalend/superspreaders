@@ -15,7 +15,10 @@ While temperature thresholds for growth, reproduction, and survival of *P. ramor
 
 ```{r load data, echo=F}
 load("climate-path-model-data.RData")
-library(piecewiseSEM); library(dplyr); library(lme4); library(lmerTest)
+library(piecewiseSEM)# version 1.1.1, tried most recent version & kept getting errror 7/18/2016 b/c matrices rows were unequal in sem.missing.paths function
+library(dplyr)
+library(lme4)
+library(lmerTest)
 
 # Calculate oak density variable as stems per hectare 
 oakplots.sub$umca_density_ha <- (oakplots.sub$tot_bay / (15*15))*10000
@@ -43,29 +46,29 @@ write.csv(soco_plots, "analysis/data/soco_plots.csv")
 ```{r rescale variables, echo=F}
 ## rescale variables
 # oakplots.sub2$inf_bay.scl <- scale((oakplots.sub2$infected_bay_ct))
-oakplots.sub$tot_bay.scl <- scale(oakplots.sub$tot_bay)
-oakplots.sub$tot_bay.log.scl <- scale(oakplots.sub$tot_bay.log)
-oakplots.sub$umca_density_ha.scl <- scale(oakplots.sub$umca_density_ha)
-oakplots.sub$umca_density_ha.log.scl <- scale(oakplots.sub$umca_density_ha.log)
-oakplots.sub$umca_basal_area.scl <- scale(oakplots.sub$umca_basal_area)
-oakplots.sub$umca_ba.log.scl <- scale(oakplots.sub$umca_ba.log)
-oakplots.sub$tot_lfct.scl <- scale(oakplots.sub$tot_lfct)
-oakplots.sub$tot_lfct.log.scl <- scale(oakplots.sub$tot_lfct.log)
+oakplots.sub$tot_bay.scl <- as.numeric(scale(oakplots.sub$tot_bay))
+oakplots.sub$tot_bay.log.scl <- as.numeric(scale(oakplots.sub$tot_bay.log))
+oakplots.sub$umca_density_ha.scl <- as.numeric(scale(oakplots.sub$umca_density_ha))
+oakplots.sub$umca_density_ha.log.scl <- as.numeric(scale(oakplots.sub$umca_density_ha.log))
+oakplots.sub$umca_basal_area.scl <- as.numeric(scale(oakplots.sub$umca_basal_area))
+oakplots.sub$umca_ba.log.scl <- as.numeric(scale(oakplots.sub$umca_ba.log))
+oakplots.sub$tot_lfct.scl <- as.numeric(scale(oakplots.sub$tot_lfct))
+oakplots.sub$tot_lfct.log.scl <- as.numeric(scale(oakplots.sub$tot_lfct.log))
 # oakplots.sub$avg_lfct.scl <- scale(oakplots.sub$avg_lfct)
-oakplots.sub$hrs_abv25ds.scl <- scale(oakplots.sub$hrs_abv25ds)
-oakplots.sub$dys_abv25ds.scl <- scale(oakplots.sub$dys_abv25ds)
-oakplots.sub$avg_tmax_ds.scl <- scale(oakplots.sub$avg_tmax_ds)
-oakplots.sub$avg_hrsblw14_wet_tminus1.scl <- scale(oakplots.sub$avg_hrsblw14_wet_tminus1)
-oakplots.sub$hrs1422_wet_tminus1.log.scl <- scale(oakplots.sub$hrs1422_wet_tminus1.log)
+oakplots.sub$hrs_abv25ds.scl <- as.numeric(scale(oakplots.sub$hrs_abv25ds))
+oakplots.sub$dys_abv25ds.scl <- as.numeric(scale(oakplots.sub$dys_abv25ds))
+oakplots.sub$avg_tmax_ds.scl <- as.numeric(scale(oakplots.sub$avg_tmax_ds))
+oakplots.sub$avg_hrsblw14_wet_tminus1.scl <- as.numeric(scale(oakplots.sub$avg_hrsblw14_wet_tminus1))
+oakplots.sub$hrs1422_wet_tminus1.log.scl <- as.numeric(scale(oakplots.sub$hrs1422_wet_tminus1.log))
 # oakplots.sub$avg_hrs1422_wet_t_t1.scl <- scale(oakplots.sub$avg_hrs1422_wet_t_t1)
-oakplots.sub$avg_hrs1422_wet_t_t1.log.scl <- scale(oakplots.sub$avg_hrs1422_wet_t_t1.log)
+oakplots.sub$avg_hrs1422_wet_t_t1.log.scl <- as.numeric(scale(oakplots.sub$avg_hrs1422_wet_t_t1.log))
 
 ## static variables
-oakplots.sub$candens15m.scl <- scale(oakplots.sub$candens15m)
-oakplots.sub$shannons2005.scl <- scale(oakplots.sub$H.2005)
-oakplots.sub$shannons2014.scl <- scale(oakplots.sub$H.2014)
-oakplots.sub$twi15m.scl <- scale(oakplots.sub$twi15m)
-oakplots.sub$twi15m.log.scl <- scale(oakplots.sub$twi15m.log)
+oakplots.sub$candens15m.scl <- as.numeric(scale(oakplots.sub$candens15m))
+oakplots.sub$shannons2005.scl <- as.numeric(scale(oakplots.sub$H.2005))
+oakplots.sub$shannons2014.scl <- as.numeric(scale(oakplots.sub$H.2014))
+oakplots.sub$twi15m.scl <- as.numeric(scale(oakplots.sub$twi15m))
+oakplots.sub$twi15m.log.scl <- as.numeric(scale(oakplots.sub$twi15m.log))
 ```
 
 
@@ -100,9 +103,9 @@ model_list1.scl <- list(
       
       umca_density <- lmer(umca_density_ha.log.scl ~ twi15m.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
       
-      slc <- lmer(tot_lfct.log.scl ~ tot_bay.log.scl + hrs_abv25ds.scl + avg_hrs1422_wet_t_t1.log.scl + shannons2005.scl + twi15m.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      slc <- lmer(tot_lfct.log.scl ~ umca_density_ha.log.scl + hrs_abv25ds.scl + avg_hrs1422_wet_t_t1.log.scl + shannons2005.scl + twi15m.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
       
-      wet_hours_1422 <- lmer(avg_hrs1422_wet_t_t1.log.scl ~ tot_bay.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      wet_hours_1422 <- lmer(avg_hrs1422_wet_t_t1.log.scl ~ umca_density_ha.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
       
       hrs_abv25 <- lmer(hrs_abv25ds.scl ~ twi15m.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
       
@@ -115,7 +118,7 @@ model_list1.scl <- list(
 model_list1 <- list(
       shannons <- lm(H.2005 ~ twi15m.log, data = oakplots.sub),
       
-      umca_density <- lmer(umca_density_ha.log ~ twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      umca_density <- lmer(tot_bay.log ~ twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
       
       slc <- lmer(tot_lfct.log ~ tot_bay.log + hrs_abv25ds + avg_hrs1422_wet_t_t1.log + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
       
@@ -148,18 +151,58 @@ plot(umca_density@frame$twi15m.log, resid(umca_density),
 
 ```{r symptomatic leaf count residuals plot}
 plot(slc, main = "LMM of symptomatic leaf count residuals")
+plot(slc@frame$umca_density_ha.log, resid(slc),
+     xlab = "bay laurel density",
+     ylab = "model residuals",
+     main = "SLC model residuals vs. bay laurel density predictor")
+plot(slc@frame$hrs_abv25ds, resid(slc),
+     xlab = "# dry-season hours >25 C",
+     ylab = "model residuals",
+     main = "SLC model residuals vs. dry-season hours >25 C predictor")
+plot(slc@frame$avg_hrs1422_wet_t_t1.log,
+     xlab = "avg. wet-hours 14-22C",
+     ylab = "model residuals",
+     main = "SLC model residuals vs. wet-hours predictor")
+plot(slc@frame$H.2005, resid(slc),
+     xlab = "Shannon's diversity index",
+     ylab = "model residuals",
+     main = "SLC model residuals vs. Shannon's diversity predictor")
+plot(slc@frame$twi15m.log, resid(slc),
+     xlab = "wetness index",
+     ylab = "model residuals",
+     main = "SLC model residuals vs. wetness index predictor")
 ```
 
 ```{r wet-hours residuals plot}
 plot(wet_hours_1422, main = "LMM of avg. # of hours 14-22 C current & prev. year residuals")
+plot(wet_hours_1422@frame$umca_density_ha.log, resid(wet_hours_1422),
+     xlab = "bay laurel density",
+     ylab = "model residuals",
+     main = "Wet-hours model residuals vs. bay laurel density predictor")
 ```
 
 ```{r dry-season hours residuals plot}
 plot(hrs_abv25, main = "LMM of # of hours >25 C during prev. dry season residuals")
+plot(hrs_abv25@frame$twi15m.log, resid(hrs_abv25),
+     xlab = "wetness index",
+     ylab = "model residuals",
+     main = "Dry-season hours model residuals vs. wetness index predictor")
 ```
 
 ```{r oak infection residuals plot}
 plot(oak_infection, main = "Binomial GLMM of oak infection residuals")
+plot(oak_infection@frame$tot_lfct.log, resid(oak_infection),
+     xlab = "symptomatic leaf count",
+     ylab = "model residuals",
+     main = "Oak infection model residuals vs. symptomatic leaf count predictor")
+plot(oak_infection@frame$avg_hrs1422_wet_t_t1.log, resid(oak_infection),
+     xlab = "avg. wet-hours 14-22C",
+     ylab = "model residuals",
+     main = "Oak infectin model residuals vs. wet-hours predictor")
+plot(oak_infection@frame$H.2005, resid(oak_infection),
+     xlab = "Shannon's diversity index",
+     ylab = "model residuals",
+     main = "Oak infection model residuals vs. diversity predictor")
 ```
 
 
@@ -185,9 +228,9 @@ sem.fit(model_list1, oakplots.sub,
 sem.fit(model_list1.scl, oakplots.sub,
           corr.errors = c("hrs_abv25ds.scl ~~ avg_hrs1422_wet_t_t1.log.scl"))
 
-sem.fit(oak_and_bay_list1, oak_and_bay_plots, 
-        corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log",
-                        "tot_bay.log ~~ H.2005"))
+# sem.fit(oak_and_bay_list1, oak_and_bay_plots, 
+#         corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log",
+#                         "tot_bay.log ~~ H.2005"))
 ```
 
 
@@ -198,9 +241,9 @@ sem.coefs(model_list1, oakplots.sub,
 sem.coefs(model_list1.scl, oakplots.sub,
           corr.errors = c("hrs_abv25ds.scl ~~ avg_hrs1422_wet_t_t1.log.scl"))
 
-sem.coefs(oak_and_bay_list1, oak_and_bay_plots, standardize = "none",
-          corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log",
-                          "tot_bay.log ~~ H.2005"))
+# sem.coefs(oak_and_bay_list1, oak_and_bay_plots, standardize = "none",
+#           corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log",
+#                           "tot_bay.log ~~ H.2005"))
 ```
 
 
