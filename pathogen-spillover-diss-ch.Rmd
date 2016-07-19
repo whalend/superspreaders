@@ -199,7 +199,17 @@ kable(raw_coefficients,
 kable(scaled_coefficients,
       caption = "Standardized path coefficients")
 ```
-There were five non-significant path coefficients at the p=0.05 level. Two of these (symptomatic leaf count ~ wet-hours and wet-hours ~ bay laurel density) were marginal, with p-values <0.10, which may warrant further investigation and I will address the ecological relevance in the Discussion section. The topographic wetness index was not a statistically significant predictor of bay laurel density nor symptomatic leaf count after accounting for other predictor variables and additional variability due to unmeasured plot-level factors and repeated measures. The diversity index was not a statistically significant predictor of symptomatic leaf count, but was the strongest of the direct effects on oak infection.
+There were five non-significant path coefficients at the p=0.05 level. Two of these (symptomatic leaf count ~ wet-hours and wet-hours ~ bay laurel density) were marginal, with p-values <0.10, which may warrant further investigation and I will address the ecological relevance in the Discussion section. The topographic wetness index was not a statistically significant predictor of bay laurel density nor symptomatic leaf count after accounting for other predictor variables and additional variability due to unmeasured plot-level factors and repeated measures. Locations with higher potential soil moisture (larger values of the wetness index) were significantly less diverse and had significanly fewer hours when the temperature was above 25 C during the dry-season. Based on the path model structure, the wetness index has only indirect effects on oak infection (pathogen spillover).
+
+* Total raw effect of the wetness index on pathogen spillover (significant paths only): `r (-.37 * -1.71) + (-124.21 * -.002 * .21)`
+
+* Total standardized effect of the wetness index on pathogen spillover (significant paths only): `r (-.24 * -.62) + (-21 * -.12 * .49)`
+
+The inference for the total effect of the wetness index on pathogen spillover was positive, indicating that oak trees located in areas with higher potential soil moisture are more likely to become infected.
+
+The diversity index was not a statistically significant predictor of symptomatic leaf count, but it was the strongest of the direct effects on oak infection. The negative effect of diversity on oak infection is evidence for a dilution effect. With the other hypothesized relationship of diversity in this system non-significant I only interpret the direct effect. 
+
+The average number of hours between 14 C and 22 C on wet days during the current and sample year had a positive, but statistically weak direct effect (p = 0.068) on symptomatic leaf count. The direct effect of this variable on oak infection was positive and statistically significant, resulting in an overall positive effect.  
 
 
 ```{r print session info}
