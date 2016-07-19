@@ -207,9 +207,11 @@ There were five non-significant path coefficients at the p=0.05 level. Two of th
 
 The inference for the total effect of the wetness index on pathogen spillover was positive, indicating that oak trees located in areas with higher potential soil moisture are more likely to become infected.
 
-The diversity index was not a statistically significant predictor of symptomatic leaf count, but it was the strongest of the direct effects on oak infection. The negative effect of diversity on oak infection is evidence for a dilution effect. With the other hypothesized relationship of diversity in this system non-significant I only interpret the direct effect. 
+The diversity index was not a statistically significant predictor of symptomatic leaf count, but it was the strongest of the direct effects on oak infection. The negative effect of diversity on oak infection is evidence for a dilution effect, where oak trees in plots with greater plant diversity are less likely to become infected. With the other hypothesized relationship of diversity in this system non-significant I only interpret the direct effect. 
 
-The average number of hours between 14 C and 22 C on wet days during the current and sample year had a positive, but statistically weak direct effect (p = 0.068) on symptomatic leaf count. The direct effect of this variable on oak infection was positive and statistically significant, resulting in an overall positive effect.  
+The average number of hours between 14 C and 22 C on wet days during the current and sample year had a positive, but statistically weak direct effect (p = 0.068) on symptomatic leaf count. The direct effect of this variable on oak infection was positive and statistically significant, resulting in an overall positive effect. This indicates that oak trees in locations that have warm temperatures when it is wet are more likely to become infected.
+
+The number of hours greater than 25 C during the dry-season prior to the sample year was hypothesized to have a direct effect on bay laurel symptomatic leaf count (potential inoculum), and through this an indirect effect on pathogen spillover leading to oak infection. The direct effect on potential inoculum was negative, indicating that bay laurel trees in locations experiencing more time at desiccating temperatures during the dry-season had fewer infected leaves the during the following sample season. The total effect of the dry-season hours on pathogen spillover (oak infection) is negative, so oak trees in locations with more time at desiccating temperatures are less likely to become infected.
 
 
 ```{r print session info}
