@@ -158,7 +158,7 @@ plot(oak_infection@frame$tot_lfct.log.scl, resid(oak_infection),
 plot(oak_infection@frame$avg_hrs1422_wet_t_t1.log.scl, resid(oak_infection),
      xlab = "avg. wet-hours 14-22C",
      ylab = "model residuals",
-     main = "Oak infectin model residuals vs. wet-hours predictor")
+     main = "Oak infection model residuals vs. wet-hours predictor")
 plot(oak_infection@frame$shannons2005.scl, resid(oak_infection),
      xlab = "Shannon's diversity index",
      ylab = "model residuals",
@@ -167,7 +167,7 @@ plot(oak_infection@frame$shannons2005.scl, resid(oak_infection),
 
 ### Fitting the path model
 Fitting the path model by implementing the d-sep test using standardized and unstandardized variables with the assumption of correlated errors between the two climate variables. All continuous variables were standardized to a mean of zero and standard deviation of one. The results for the conditional claims of independence for the standardized and unstandardized variables are reported in the tables. Statistically significant p-values indicate possible missing paths, however, the overall model may still be accepted if the p-value of the C-statistic ("fisher.c") is >0.05. In this case, the significant missing path between diversity and bay laurel density makes ecological sense, but neither variable can be determined as causal to the other. I chose to maintain the initial hypothesized structure of the path model since the overall fit of the model was still acceptable, though this relationship could also be included as a correlated error.
-```{r fit and compare all oak plots, echo=F, }
+```{r fit and compare all oak plots, echo=F, message=F}
 raw_variables_model <- sem.fit(model_list1, oakplots.sub, 
         corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log"))
 scaled_variables_model <- sem.fit(model_list1.scl, oakplots.sub,
@@ -184,9 +184,7 @@ kable(scaled_variables_model,
 
 
 ### Path coefficients
-Tables of the path coeffcients for the fitted path models with raw and standardized variables. The path model provides direct and indirect effects of predictor variables on multiple responses, which can be combined to calculate the total effect of a predictor variable on a response. Direct effects are from the variables that have a path pointing directly to a response variable, so effect on the response is the value of the path coefficient. Variables with indirect effects are those that are at least once removed from another response variable, that is the response variable of a predictor with an indirect effect is the predictor variable along another path in the model. Indirect effects are calculated by multiplying the coefficients along the path to the response variable of interest. The total effect of variables that have a direct and indirect effect(s) on a response is the sum of the direct and indirect effects. 
-
-The standardized coefficients of the predictors that have the same response variable (i.e. direct effects) can be interpreted relative to each other in terms of influence on the response variable. Indirect effects
+Tables of the path coeffcients for the fitted path models with raw and standardized variables. The path model provides direct and indirect effects of predictor variables on multiple responses, which can be combined to calculate the total effect of a predictor variable on a response. Direct effects are from the variables that have a path pointing directly to a response variable, so effect on the response is the value of the path coefficient. Variables with indirect effects are those that are at least once removed from another response variable, that is the response variable of a predictor with an indirect effect is the predictor variable along another path in the model. Indirect effects are calculated by multiplying the coefficients along the path to the response variable of interest. The total effect of variables that have a direct and indirect effect(s) on a response is the sum of the direct and indirect effects. The standardized coefficients of the predictors that have the same response variable (i.e. direct effects) can be interpreted relative to each other in terms of influence on the response variable.
 ```{r get path coefficients, echo=F}
 raw_coefficients <- sem.coefs(model_list1, oakplots.sub,
           corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log"))
@@ -199,6 +197,7 @@ kable(raw_coefficients,
 kable(scaled_coefficients,
       caption = "Standardized path coefficients")
 ```
+
 There were five non-significant path coefficients at the p=0.05 level. Two of these (symptomatic leaf count ~ wet-hours and wet-hours ~ bay laurel density) were marginal, with p-values <0.10, which may warrant further investigation and I will address the ecological relevance in the Discussion section. The topographic wetness index was not a statistically significant predictor of bay laurel density nor symptomatic leaf count after accounting for other predictor variables and additional variability due to unmeasured plot-level factors and repeated measures. Locations with higher potential soil moisture (larger values of the wetness index) were significantly less diverse and had significanly fewer hours when the temperature was above 25 C during the dry-season. Based on the path model structure, the wetness index has only indirect effects on oak infection (pathogen spillover).
 
 * Total raw effect of the wetness index on pathogen spillover (significant paths only): `r (-.37 * -1.71) + (-124.21 * -.002 * .21)`
@@ -211,8 +210,11 @@ The diversity index was not a statistically significant predictor of symptomatic
 
 The average number of hours between 14 C and 22 C on wet days during the current and sample year had a positive, but statistically weak direct effect (p = 0.068) on symptomatic leaf count. The direct effect of this variable on oak infection was positive and statistically significant, resulting in an overall positive effect. This indicates that oak trees in locations that have warm temperatures when it is wet are more likely to become infected.
 
-The number of hours greater than 25 C during the dry-season prior to the sample year was hypothesized to have a direct effect on bay laurel symptomatic leaf count (potential inoculum), and through this an indirect effect on pathogen spillover leading to oak infection. The direct effect on potential inoculum was negative, indicating that bay laurel trees in locations experiencing more time at desiccating temperatures during the dry-season had fewer infected leaves the during the following sample season. The total effect of the dry-season hours on pathogen spillover (oak infection) is negative, so oak trees in locations with more time at desiccating temperatures are less likely to become infected.
+The number of hours greater than 25 C during the dry-season prior to the sample year was hypothesized to have a direct effect on bay laurel symptomatic leaf count (potential inoculum), and through this an indirect effect on pathogen spillover leading to oak infection. The direct effect on potential inoculum was negative, indicating that bay laurel trees in locations experiencing more time at desiccating temperatures during the dry-season had fewer infected leaves the during the following sample season. The total effect of the dry-season hours on pathogen spillover (oak infection) is negative, so oak trees in locations that experienced more time at desiccating temperatures are less likely to become infected.
 
+Expectedly, bay laurel density and potential inoculum load are tightly related through the direct effect of density on symptomatic leaf count. I structured the path model hypothesizing that bay laurel density indirectly influences pathogen spillover through its direct effect on inoculum load. The total effect of bay laurel density effect on pathogen spillover is positive through its direct influences on inoculum load and average number of wet-hours.
+
+The symptomatic leaf count represents potential inoculum load, and ecologically is the primary driver that I measured of the pathogen spillover process leading to oak infection. Oaks in locations with greater inoculum load are more likely to be infected. Additional factors have direct and indirect effects on the success of the pathogen spillover process as indicated by infection of oak trees.
 
 ```{r print session info}
 print(sessionInfo())
