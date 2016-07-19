@@ -1,0 +1,206 @@
+---
+title: "Pathogen Spillover - dissertation chapter"
+author: "Whalen Dillon"
+date: "July 18, 2016"
+output: html_document
+---
+
+# CHAPTER 3: EFFECTS OF DIVERSITY, TOPOGRAPHY, AND INTERANNUAL CLIMATE VARIABILITY ON PATHOGEN SPILLOVER
+
+## Results
+
+```{r load data, echo=F, message=F}
+library(knitr)
+load("climate_path_model_data.RData")
+library(piecewiseSEM)# version 1.1.1, tried most recent version & kept getting errror 7/18/2016 b/c matrices rows were unequal in sem.missing.paths function
+library(dplyr, verbose = F)
+library(lme4, verbose = F)
+library(lmerTest, verbose = F)
+
+# Calculate oak density variable as stems per hectare 
+oakplots.sub$umca_density_ha <- (oakplots.sub$tot_bay / (15*15))*10000
+oakplots.sub$umca_density_ha.log <- log(oakplots.sub$umca_density_ha+1)
+```
+
+```{r rescale variables, echo=F}
+## rescale variables
+# oakplots.sub2$inf_bay.scl <- scale((oakplots.sub2$infected_bay_ct))
+oakplots.sub$tot_bay.scl <- as.numeric(scale(oakplots.sub$tot_bay))
+oakplots.sub$tot_bay.log.scl <- as.numeric(scale(oakplots.sub$tot_bay.log))
+oakplots.sub$umca_density_ha.scl <- as.numeric(scale(oakplots.sub$umca_density_ha))
+oakplots.sub$umca_density_ha.log.scl <- as.numeric(scale(oakplots.sub$umca_density_ha.log))
+oakplots.sub$umca_basal_area.scl <- as.numeric(scale(oakplots.sub$umca_basal_area))
+oakplots.sub$umca_ba.log.scl <- as.numeric(scale(oakplots.sub$umca_ba.log))
+oakplots.sub$tot_lfct.scl <- as.numeric(scale(oakplots.sub$tot_lfct))
+oakplots.sub$tot_lfct.log.scl <- as.numeric(scale(oakplots.sub$tot_lfct.log))
+# oakplots.sub$avg_lfct.scl <- scale(oakplots.sub$avg_lfct)
+oakplots.sub$hrs_abv25ds.scl <- as.numeric(scale(oakplots.sub$hrs_abv25ds))
+oakplots.sub$dys_abv25ds.scl <- as.numeric(scale(oakplots.sub$dys_abv25ds))
+oakplots.sub$avg_tmax_ds.scl <- as.numeric(scale(oakplots.sub$avg_tmax_ds))
+oakplots.sub$avg_hrsblw14_wet_tminus1.scl <- as.numeric(scale(oakplots.sub$avg_hrsblw14_wet_tminus1))
+oakplots.sub$hrs1422_wet_tminus1.log.scl <- as.numeric(scale(oakplots.sub$hrs1422_wet_tminus1.log))
+# oakplots.sub$avg_hrs1422_wet_t_t1.scl <- scale(oakplots.sub$avg_hrs1422_wet_t_t1)
+oakplots.sub$avg_hrs1422_wet_t_t1.log.scl <- as.numeric(scale(oakplots.sub$avg_hrs1422_wet_t_t1.log))
+
+## static variables
+oakplots.sub$candens15m.scl <- as.numeric(scale(oakplots.sub$candens15m))
+oakplots.sub$shannons2005.scl <- as.numeric(scale(oakplots.sub$H.2005))
+oakplots.sub$shannons2014.scl <- as.numeric(scale(oakplots.sub$H.2014))
+oakplots.sub$twi15m.scl <- as.numeric(scale(oakplots.sub$twi15m))
+oakplots.sub$twi15m.log.scl <- as.numeric(scale(oakplots.sub$twi15m.log))
+```
+
+### Path model 
+Path model with the continuous variables standardized using the default settings of the `scale` function, resulting in each having a mean of zero and standard deviation of one. Each variable is first  centered by subtracting its mean and then scaled by dividing by its standard deviation.
+```{r hours >25 path model all oak plots unscaled, echo=F}
+model_list1 <- list(
+      shannons <- lm(H.2005 ~ twi15m.log, data = oakplots.sub),
+      
+      umca_density <- lmer(umca_density_ha.log ~ twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      slc <- lmer(tot_lfct.log ~ umca_density_ha.log + hrs_abv25ds + avg_hrs1422_wet_t_t1.log + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      wet_hours_1422 <- lmer(avg_hrs1422_wet_t_t1.log ~ umca_density_ha.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      hrs_abv25 <- lmer(hrs_abv25ds ~ twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      oak_infection <- glmer(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1.log + H.2005 + (1|plotid) + (1|sample_year), family = binomial(link = "logit"), data = oakplots.sub)
+)
+```
+
+```{r hours >25 path model all oak plots scaled}
+model_list1.scl <- list(
+      shannons <- lm(shannons2005.scl ~ twi15m.log.scl, data = oakplots.sub),
+      
+      umca_density <- lmer(umca_density_ha.log.scl ~ twi15m.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      slc <- lmer(tot_lfct.log.scl ~ umca_density_ha.log.scl + hrs_abv25ds.scl + avg_hrs1422_wet_t_t1.log.scl + shannons2005.scl + twi15m.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      wet_hours_1422 <- lmer(avg_hrs1422_wet_t_t1.log.scl ~ umca_density_ha.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      hrs_abv25 <- lmer(hrs_abv25ds.scl ~ twi15m.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      oak_infection <- glmer(oak.inf ~ tot_lfct.log.scl + avg_hrs1422_wet_t_t1.log.scl + shannons2005.scl + (1|plotid) + (1|sample_year), family = binomial(link = "logit"), data = oakplots.sub)
+)
+```
+
+
+### Examining the residual plots of each piece of the path model
+**Residual plots of Shannon's Diversity Index model**
+```{r shannons residuals plot, echo=F}
+plot(shannons, main = "OLS regression of diversity ~ wetness index residuals")
+plot(shannons$model$twi15m.log.scl, resid(shannons),
+     xlab = "wetness index",
+     ylab = "model residuals",
+     main = "Diversity model residuals vs. wetness index predictor")
+```
+
+**Residual plots of bay laurel density model**
+```{r bay laurel density residuals plot, echo=F}
+plot(umca_density, main = "LMM of bay laurel density residuals")
+plot(umca_density@frame$twi15m.log.scl, resid(umca_density),
+     xlab = "wetness index",
+     ylab = "model residuals",
+     main = "Bay laurel density model residuals vs. wetness index predictor")
+```
+
+**Residual plots of symptomatic leaf count model**
+```{r symptomatic leaf count residuals plot, echo=F}
+plot(slc, main = "LMM of symptomatic leaf count residuals")
+plot(slc@frame$umca_density_ha.log.scl, resid(slc),
+     xlab = "bay laurel density",
+     ylab = "model residuals",
+     main = "SLC model residuals vs. bay laurel density predictor")
+plot(slc@frame$hrs_abv25ds.scl, resid(slc),
+     xlab = "# dry-season hours >25 C",
+     ylab = "model residuals",
+     main = "SLC model residuals vs. dry-season hours >25 C predictor")
+plot(slc@frame$avg_hrs1422_wet_t_t1.log.scl,
+     xlab = "avg. wet-hours 14-22C",
+     ylab = "model residuals",
+     main = "SLC model residuals vs. wet-hours predictor")
+plot(slc@frame$shannons2005.scl, resid(slc),
+     xlab = "Shannon's diversity index",
+     ylab = "model residuals",
+     main = "SLC model residuals vs. Shannon's diversity predictor")
+plot(slc@frame$twi15m.log.scl, resid(slc),
+     xlab = "wetness index",
+     ylab = "model residuals",
+     main = "SLC model residuals vs. wetness index predictor")
+```
+
+**Residual plots of average number of wet-hours model**
+```{r wet-hours residuals plot, echo=F}
+plot(wet_hours_1422, main = "LMM of avg. # of hours 14-22 C current & prev. year residuals")
+plot(wet_hours_1422@frame$umca_density_ha.log.scl, resid(wet_hours_1422),
+     xlab = "bay laurel density",
+     ylab = "model residuals",
+     main = "Wet-hours model residuals vs. bay laurel density predictor")
+```
+
+**Residual plots of dry-season temperature >25C model**
+```{r dry-season hours residuals plot, echo=F}
+plot(hrs_abv25, main = "LMM of # of hours >25 C during prev. dry season residuals")
+plot(hrs_abv25@frame$twi15m.log.scl, resid(hrs_abv25),
+     xlab = "wetness index",
+     ylab = "model residuals",
+     main = "Dry-season hours model residuals vs. wetness index predictor")
+```
+
+
+**Residual plots of oak infection model**
+```{r oak infection residuals plot, echo=F}
+plot(oak_infection, main = "Binomial GLMM of oak infection residuals")
+plot(oak_infection@frame$tot_lfct.log.scl, resid(oak_infection),
+     xlab = "symptomatic leaf count",
+     ylab = "model residuals",
+     main = "Oak infection model residuals vs. symptomatic leaf count predictor")
+plot(oak_infection@frame$avg_hrs1422_wet_t_t1.log.scl, resid(oak_infection),
+     xlab = "avg. wet-hours 14-22C",
+     ylab = "model residuals",
+     main = "Oak infectin model residuals vs. wet-hours predictor")
+plot(oak_infection@frame$shannons2005.scl, resid(oak_infection),
+     xlab = "Shannon's diversity index",
+     ylab = "model residuals",
+     main = "Oak infection model residuals vs. diversity predictor")
+```
+
+### Fitting the path model
+Fitting the path model by implementing the d-sep test using standardized and unstandardized variables with the assumption of correlated errors between the two climate variables. All continuous variables were standardized to a mean of zero and standard deviation of one. The results for the conditional claims of independence for the standardized and unstandardized variables are reported in the tables. Statistically significant p-values indicate possible missing paths, however, the overall model may still be accepted if the p-value of the C-statistic ("fisher.c") is >0.05. In this case, the significant missing path between diversity and bay laurel density makes ecological sense, but neither variable can be determined as causal to the other. I chose to maintain the initial hypothesized structure of the path model since the overall fit of the model was still acceptable, though this relationship could also be included as a correlated error.
+```{r fit and compare all oak plots, echo=F, }
+raw_variables_model <- sem.fit(model_list1, oakplots.sub, 
+        corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log"))
+scaled_variables_model <- sem.fit(model_list1.scl, oakplots.sub,
+          corr.errors = c("hrs_abv25ds.scl ~~ avg_hrs1422_wet_t_t1.log.scl"))
+```
+
+The overall model fit is reported to the right of of independence claims in these tables where 'fisher.c' and additional model results are reported.
+```{r tables of d-sep test results from sem.fit, echo=F}
+kable(raw_variables_model, 
+      caption = "Values for the d-sep test using raw variables.")
+kable(scaled_variables_model,
+      caption = "Values for the d-sep test using standardized variables.")
+```
+
+
+### Path coefficients
+Tables of the path coeffcients for the fitted path models with raw and standardized variables. The standardized coefficients of the predictors that have the same response variable can be interpreted relative to each other in terms of influence on the response variable.
+```{r get path coefficients, echo=F}
+raw_coefficients <- sem.coefs(model_list1, oakplots.sub,
+          corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log"))
+scaled_coefficients <- sem.coefs(model_list1.scl, oakplots.sub,
+          corr.errors = c("hrs_abv25ds.scl ~~ avg_hrs1422_wet_t_t1.log.scl"))
+```
+```{r tables of path coefficients, echo=F}
+kable(raw_coefficients,
+      caption = "Raw path coefficients")
+kable(scaled_coefficients,
+      caption = "Standardized path coefficients")
+```
+There were five non-significant path coefficients at the p=0.05 level. Two of these (symptomatic leaf count ~ wet-hours and wet-hours ~ bay laurel density) were marginal, with p-values <0.10, which may warrant further investigation and I will address the ecological relevance in the Discussion section. The topographic wetness index was not a statistically significant predictor of bay laurel density nor symptomatic leaf count after accounting for other predictor variables and additional variability due to unmeasured plot-level factors and repeated measures. The diversity index was not a statistically significant predictor of symptomatic leaf count
+
+
+```{r print session info}
+print(sessionInfo())
+```
+
