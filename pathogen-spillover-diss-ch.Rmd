@@ -184,7 +184,9 @@ kable(scaled_variables_model,
 
 
 ### Path coefficients
-Tables of the path coeffcients for the fitted path models with raw and standardized variables. The standardized coefficients of the predictors that have the same response variable can be interpreted relative to each other in terms of influence on the response variable.
+Tables of the path coeffcients for the fitted path models with raw and standardized variables. The path model provides direct and indirect effects of predictor variables on multiple responses, which can be combined to calculate the total effect of a predictor variable on a response. Direct effects are from the variables that have a path pointing directly to a response variable, so effect on the response is the value of the path coefficient. Variables with indirect effects are those that are at least once removed from another response variable, that is the response variable of a predictor with an indirect effect is the predictor variable along another path in the model. Indirect effects are calculated by multiplying the coefficients along the path to the response variable of interest. The total effect of variables that have a direct and indirect effect(s) on a response is the sum of the direct and indirect effects. 
+
+The standardized coefficients of the predictors that have the same response variable (i.e. direct effects) can be interpreted relative to each other in terms of influence on the response variable. Indirect effects
 ```{r get path coefficients, echo=F}
 raw_coefficients <- sem.coefs(model_list1, oakplots.sub,
           corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log"))
@@ -197,7 +199,7 @@ kable(raw_coefficients,
 kable(scaled_coefficients,
       caption = "Standardized path coefficients")
 ```
-There were five non-significant path coefficients at the p=0.05 level. Two of these (symptomatic leaf count ~ wet-hours and wet-hours ~ bay laurel density) were marginal, with p-values <0.10, which may warrant further investigation and I will address the ecological relevance in the Discussion section. The topographic wetness index was not a statistically significant predictor of bay laurel density nor symptomatic leaf count after accounting for other predictor variables and additional variability due to unmeasured plot-level factors and repeated measures. The diversity index was not a statistically significant predictor of symptomatic leaf count
+There were five non-significant path coefficients at the p=0.05 level. Two of these (symptomatic leaf count ~ wet-hours and wet-hours ~ bay laurel density) were marginal, with p-values <0.10, which may warrant further investigation and I will address the ecological relevance in the Discussion section. The topographic wetness index was not a statistically significant predictor of bay laurel density nor symptomatic leaf count after accounting for other predictor variables and additional variability due to unmeasured plot-level factors and repeated measures. The diversity index was not a statistically significant predictor of symptomatic leaf count, but was the strongest of the direct effects on oak infection.
 
 
 ```{r print session info}
