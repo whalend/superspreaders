@@ -2,7 +2,11 @@
 title: "Pathogen Spillover - dissertation chapter"
 author: "Whalen Dillon"
 date: "July 18, 2016"
-output: html_document
+output:
+  html_document:
+    self_contained: no
+  pdf_document: default
+  word_document: default
 ---
 
 # CHAPTER 3: EFFECTS OF DIVERSITY, TOPOGRAPHY, AND INTERANNUAL CLIMATE VARIABILITY ON PATHOGEN SPILLOVER
@@ -51,7 +55,8 @@ oakplots.sub$twi15m.log.scl <- as.numeric(scale(oakplots.sub$twi15m.log))
 ```
 
 ### Path model 
-Path model with the continuous variables standardized using the default settings of the `scale` function, resulting in each having a mean of zero and standard deviation of one. Each variable is first  centered by subtracting its mean and then scaled by dividing by its standard deviation.
+This is the list of models that make up the path model to be fit using the methods implemented in the 'piecewiseSEM' packag. The continuous variables in the models were standardized using the default settings of the 'scale' function in R, resulting in each having a mean of zero and standard deviation of one. Each variable is first centered by subtracting its mean and then scaled by dividing by its standard deviation.
+
 ```{r hours >25 path model all oak plots unscaled, echo=F}
 model_list1 <- list(
       shannons <- lm(H.2005 ~ twi15m.log, data = oakplots.sub),
@@ -84,8 +89,10 @@ model_list1.scl <- list(
 )
 ```
 
+In my assessment of model residuals I found no substantial violations of the assumption of homoscedacity for individual models, and no relationships between the model residuals and the predictor variable(s). The patterning in the residual plots for some of the models is likely in part due to observations of count variables where the value is zero. Since the dataset in this analysis is all plots with one or more susceptible oak species there are some plots that have zero bay laurel and zero symptomatic bay laurel leaves.
 
 ### Examining the residual plots of each piece of the path model
+
 **Residual plots of Shannon's Diversity Index model**
 ```{r shannons residuals plot, echo=F}
 plot(shannons, main = "OLS regression of diversity ~ wetness index residuals")
@@ -128,6 +135,11 @@ plot(slc@frame$twi15m.log.scl, resid(slc),
      ylab = "model residuals",
      main = "SLC model residuals vs. wetness index predictor")
 ```
+```{r pairs plot of slc predictor variables}
+pairs(select(oakplots.sub, umca_density_ha.log.scl, hrs_abv25ds.scl, avg_hrs1422_wet_t_t1.log.scl, shannons2005.scl, twi15m.log.scl),
+      lower.panel = panel.cor, diag.panel = panel.hist,
+      main = "Predictor variables for symptomatic leaf count models")
+```
 
 **Residual plots of average number of wet-hours model**
 ```{r wet-hours residuals plot, echo=F}
@@ -164,9 +176,19 @@ plot(oak_infection@frame$shannons2005.scl, resid(oak_infection),
      ylab = "model residuals",
      main = "Oak infection model residuals vs. diversity predictor")
 ```
+```{r pairs plot of oak infection predictor variables, echo=F}
+pairs(select(oakplots.sub, tot_lfct.log.scl, avg_hrs1422_wet_t_t1.log.scl, shannons2005.scl),
+      lower.panel = panel.cor, diag.panel = panel.hist,
+      main = "Predictor variables for oak infection model")
+```
+
 
 ### Fitting the path model
-Fitting the path model by implementing the d-sep test using standardized and unstandardized variables with the assumption of correlated errors between the two climate variables. All continuous variables were standardized to a mean of zero and standard deviation of one. The results for the conditional claims of independence for the standardized and unstandardized variables are reported in the tables. Statistically significant p-values indicate possible missing paths, however, the overall model may still be accepted if the p-value of the C-statistic ("fisher.c") is >0.05. In this case, the significant missing path between diversity and bay laurel density makes ecological sense, but neither variable can be determined as causal to the other. I chose to maintain the initial hypothesized structure of the path model since the overall fit of the model was still acceptable, though this relationship could also be included as a correlated error.
+
+I fit the path model by implementing the d-sep test using the 'sem.fit' function separately for standardized and unstandardized variables, with the assumption of correlated errors between the two climate variables. In the model with standardized variables all continuous variables were scaled to a mean of zero and standard deviation of one. The results for the conditional claims of independence (the d-sep test) for the standardized and unstandardized variables are reported in the tables. Statistically significant p-values indicate possible missing paths, however, the overall model may still be accepted if the p-value of Fisher's C-statistic is >0.05. The results of the d-sep test assessing overall model fit is reported with Fisher's C-statistic (fisher.c), degrees of freedom (df), the p-value of Fisher's C based on comparison to a Chi-squared distribution, the general Akaike information criterion (AIC) and corrected for sample size (AICc), the number of parameters (K) estimated, the sample size (n). The sample size and number of parameters are used in calculating AIC.
+
+In this case, the significant missing path between diversity and bay laurel density may be explained ecologically, but neither variable can be determined as causal to the other. I chose to maintain the initial hypothesized structure of the path model since the overall fit of the model was still acceptable, though this relationship could also be included as a correlated error.
+
 ```{r fit and compare all oak plots, echo=F, message=F}
 raw_variables_model <- sem.fit(model_list1, oakplots.sub, 
         corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log"))
@@ -174,23 +196,25 @@ scaled_variables_model <- sem.fit(model_list1.scl, oakplots.sub,
           corr.errors = c("hrs_abv25ds.scl ~~ avg_hrs1422_wet_t_t1.log.scl"))
 ```
 
-The overall model fit is reported to the right of of independence claims in these tables where 'fisher.c' and additional model results are reported.
 ```{r tables of d-sep test results from sem.fit, echo=F}
 kable(raw_variables_model, 
-      caption = "Values for the d-sep test using raw variables.")
+      caption = "Results of the d-sep test using raw variables.")
 kable(scaled_variables_model,
-      caption = "Values for the d-sep test using standardized variables.")
+      caption = "Results of the d-sep test using standardized variables.")
 ```
 
-
 ### Path coefficients
-Tables of the path coeffcients for the fitted path models with raw and standardized variables. The path model provides direct and indirect effects of predictor variables on multiple responses, which can be combined to calculate the total effect of a predictor variable on a response. Direct effects are from the variables that have a path pointing directly to a response variable, so effect on the response is the value of the path coefficient. Variables with indirect effects are those that are at least once removed from another response variable, that is the response variable of a predictor with an indirect effect is the predictor variable along another path in the model. Indirect effects are calculated by multiplying the coefficients along the path to the response variable of interest. The total effect of variables that have a direct and indirect effect(s) on a response is the sum of the direct and indirect effects. The standardized coefficients of the predictors that have the same response variable (i.e. direct effects) can be interpreted relative to each other in terms of influence on the response variable.
+The path model provides direct and indirect effects of predictor variables on multiple responses, which can be combined to calculate the total effect of a predictor variable on a response. Direct effects are from the variables that have a path pointing directly to a response variable, so effect on the response is the value of the path coefficient. Variables with indirect effects are those that are at least once removed from another response variable, that is the response variable of a predictor with an indirect effect is the predictor variable along another path in the model. Indirect effects are calculated by multiplying the coefficients along the path to the response variable of interest. The total effect of variables that have a direct and indirect effect(s) on a response is the sum of the direct and indirect effects. The standardized coefficients of the predictors that have the same response variable (i.e. direct effects) can be interpreted relative to each other in terms of influence on the response variable.
+
 ```{r get path coefficients, echo=F}
 raw_coefficients <- sem.coefs(model_list1, oakplots.sub,
           corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log"))
 scaled_coefficients <- sem.coefs(model_list1.scl, oakplots.sub,
           corr.errors = c("hrs_abv25ds.scl ~~ avg_hrs1422_wet_t_t1.log.scl"))
 ```
+
+**Tables of the path coeffcients for the fitted path models with raw and standardized variables.** 
+
 ```{r tables of path coefficients, echo=F}
 kable(raw_coefficients,
       caption = "Raw path coefficients")
@@ -198,13 +222,7 @@ kable(scaled_coefficients,
       caption = "Standardized path coefficients")
 ```
 
-There were five non-significant path coefficients at the p=0.05 level. Two of these (symptomatic leaf count ~ wet-hours and wet-hours ~ bay laurel density) were marginal, with p-values <0.10, which may warrant further investigation and I will address the ecological relevance in the Discussion section. The topographic wetness index was not a statistically significant predictor of bay laurel density nor symptomatic leaf count after accounting for other predictor variables and additional variability due to unmeasured plot-level factors and repeated measures. Locations with higher potential soil moisture (larger values of the wetness index) were significantly less diverse and had significanly fewer hours when the temperature was above 25 C during the dry-season. Based on the path model structure, the wetness index has only indirect effects on oak infection (pathogen spillover).
-
-* Total raw effect of the wetness index on pathogen spillover (significant paths only): `r (-.37 * -1.71) + (-124.21 * -.002 * .21)`
-
-* Total standardized effect of the wetness index on pathogen spillover (significant paths only): `r (-.24 * -.62) + (-21 * -.12 * .49)`
-
-The inference for the total effect of the wetness index on pathogen spillover was positive, indicating that oak trees located in areas with higher potential soil moisture are more likely to become infected.
+There were five non-significant path coefficients at the p=0.05 level. Two of these (symptomatic leaf count ~ wet-hours and wet-hours ~ bay laurel density) were marginal, with p-values <0.10, which may warrant further investigation and I will address the ecological relevance in the Discussion section. The topographic wetness index was not a statistically significant predictor of bay laurel density nor symptomatic leaf count after accounting for other predictor variables and additional variability due to unmeasured plot-level factors and repeated measures. Locations with higher potential soil moisture (larger values of the wetness index) were significantly less diverse and had significanly fewer hours when the temperature was above 25 C during the dry-season. Based on the path model structure, the wetness index has only indirect effects on oak infection (pathogen spillover). The inference for the total effect of the wetness index on pathogen spillover was positive, indicating that oak trees located in areas with higher potential soil moisture are more likely to become infected.
 
 The diversity index was not a statistically significant predictor of symptomatic leaf count, but it was the strongest of the direct effects on oak infection. The negative effect of diversity on oak infection is evidence for a dilution effect, where oak trees in plots with greater plant diversity are less likely to become infected. With the other hypothesized relationship of diversity in this system non-significant I only interpret the direct effect. 
 
@@ -215,6 +233,55 @@ The number of hours greater than 25 C during the dry-season prior to the sample 
 Expectedly, bay laurel density and potential inoculum load are tightly related through the direct effect of density on symptomatic leaf count. I structured the path model hypothesizing that bay laurel density indirectly influences pathogen spillover through its direct effect on inoculum load. The total effect of bay laurel density effect on pathogen spillover is positive through its direct influences on inoculum load and average number of wet-hours.
 
 The symptomatic leaf count represents potential inoculum load, and ecologically is the primary driver that I measured of the pathogen spillover process leading to oak infection. Oaks in locations with greater inoculum load are more likely to be infected. Additional factors have direct and indirect effects on the success of the pathogen spillover process as indicated by infection of oak trees.
+
+
+## Temperature Figures
+```{r temperature figures}
+library(ggplot2)
+library(scales)
+temperatures <- left_join(
+      select(summer_temps, plotid, sample_year, hrs_abv25ds),
+      select(wet_hrs, plotid, sample_year, hrs1422_wet),
+      by = c("plotid","sample_year"))
+oak_sod$year <- as.Date(oak_sod$sample_year)
+
+temps_figure <- ggplot(oak_sod, aes(group = sample_year))
+
+sstemps_figure <- temps_figure + 
+      geom_boxplot(aes(as.factor(sample_year), hrs_abv25ds)) +
+      theme_bw() +
+      xlab("Sample Year") +
+      ylab("Number of hours") +
+      ggtitle("Dry-season Hours >25 C")
+      
+slc_avg_figure <- temps_figure + 
+      geom_boxplot(aes(as.factor(sample_year), avg_lfct)) +
+      theme_bw() +
+      xlab("Sample Year") +
+      ylab("Symptomatic leaf count") +
+      ggtitle("California bay laurel leaf symptoms - plot averages")
+
+slc_total_figure <- temps_figure + 
+      geom_boxplot(aes(as.factor(sample_year), tot_lfct)) +
+      theme_bw() +
+      xlab("Sample Year") +
+      ylab("Symptomatic leaf count") +
+      ggtitle("California bay laurel leaf symptoms - plot totals")
+
+rstemps_figure <- temps_figure + 
+      geom_boxplot(aes(as.factor(sample_year), hrs1422_wet)) +
+      theme_bw() +
+      xlab("Sample Year") +
+      ylab("Number of hours") +
+      ggtitle("Wet-ours 14-22 C")
+
+```
+
+## Rainfall Figures
+```{r rainfall figures}
+summary(rainy_season_ppt)
+```
+
 
 ```{r print session info}
 print(sessionInfo())
