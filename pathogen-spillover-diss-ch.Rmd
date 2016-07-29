@@ -273,8 +273,15 @@ rstemps_figure <- temps_figure +
       theme_bw() +
       xlab("Sample Year") +
       ylab("Number of hours") +
-      ggtitle("Wet-ours 14-22 C")
+      ggtitle("Wet-hours 14-22 C")
 
+oak_infection_figure <- temps_figure +
+      geom_bar(aes(as.factor(sample_year), inf_oak_ct), stat = "identity") +
+      # geom_boxplot(aes(as.factor(sample_year), inf_oak_ct)) +
+      theme_bw() +
+      xlab("Sample Year") +
+      ylab("Number of infected oaks") +
+      ggtitle("Incident oak infection")
 ```
 
 ## Rainfall Figures
