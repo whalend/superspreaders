@@ -216,6 +216,7 @@ scaled_coefficients <- sem.coefs(model_list1.scl, oakplots.sub,
 **Tables of the path coeffcients for the fitted path models with raw and standardized variables.** 
 
 ```{r tables of path coefficients, echo=F}
+library(knitr)
 kable(raw_coefficients,
       caption = "Raw path coefficients")
 kable(scaled_coefficients,
@@ -234,16 +235,15 @@ Expectedly, bay laurel density and potential inoculum load are tightly related t
 
 The symptomatic leaf count represents potential inoculum load, and ecologically is the primary driver that I measured of the pathogen spillover process leading to oak infection. Oaks in locations with greater inoculum load are more likely to be infected. Additional factors have direct and indirect effects on the success of the pathogen spillover process as indicated by infection of oak trees.
 
-
 ## Temperature Figures
-```{r temperature figures}
+```{r temperature figures, echo=F}
 library(ggplot2)
 library(scales)
 temperatures <- left_join(
       select(summer_temps, plotid, sample_year, hrs_abv25ds),
       select(wet_hrs, plotid, sample_year, hrs1422_wet),
       by = c("plotid","sample_year"))
-oak_sod$year <- as.Date(oak_sod$sample_year)
+# oak_sod$year <- as.Date(oak_sod$sample_year)
 
 temps_figure <- ggplot(oak_sod, aes(group = sample_year))
 
@@ -286,7 +286,7 @@ oak_infection_figure <- temps_figure +
 
 ## Rainfall Figures
 ```{r rainfall figures}
-summary(rainy_season_ppt)
+# summary(rainy_season_ppt)
 ```
 
 
