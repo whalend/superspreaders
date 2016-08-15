@@ -14,7 +14,7 @@ Based on these assessments of the differential relationships between our visual 
 While temperature thresholds for growth, reproduction, and survival of *P. ramorum* have been experimentally assessed in laboratory settings, the conditions used have seldom corresponded to natural settings. For example, *P. ramorum* has a growth and reproduction optimum around 18-20C in laboratory experiments when humdity is 60-70% or greater. In the mediterranean climate of California rarely does a temperature above 18C correspond to humidity in that range. Still, these experiments and additional observations provided a starting point for developing a set of temperature thresholds to examine using a degree-day approach. By examining the relationships across multiple temperature cutoffs or ranges I am attempting to identify temperatures that may in fact be threshold temperatures where the inferential relationship between disease symptoms and climate variation changes.
 
 ```{r load data, echo=F}
-load("climate-path-model-data.RData")
+load("climate_path_model_data.RData")
 library(piecewiseSEM)# version 1.1.1, tried most recent version & kept getting errror 7/18/2016 b/c matrices rows were unequal in sem.missing.paths function
 library(dplyr)
 library(lme4)
@@ -69,6 +69,19 @@ oakplots.sub$shannons2005.scl <- as.numeric(scale(oakplots.sub$H.2005))
 oakplots.sub$shannons2014.scl <- as.numeric(scale(oakplots.sub$H.2014))
 oakplots.sub$twi15m.scl <- as.numeric(scale(oakplots.sub$twi15m))
 oakplots.sub$twi15m.log.scl <- as.numeric(scale(oakplots.sub$twi15m.log))
+
+
+plot_coords <- select(plots_shp@data, PLOT_ID, X, Y)
+plot_coords$PLOT_ID <- tolower(plot_coords$PLOT_ID)
+oakplots.sub <- left_join(oakplots.sub, plot_coords, by = c("plotid"="PLOT_ID"))
+oakplots.2006 <- left_join(oakplots.2006, plot_coords, by = c("plotid"="PLOT_ID"))
+
+oakplots.2006$twi15m.log.scl <- as.numeric(scale(oakplots.2006$twi15m.log))
+oakplots.2006$shannons2005.scl <- as.numeric(scale(oakplots.2006$H.2005))
+
+## convert grouping variables to factors
+oakplots.sub$plotid <- as.factor(oakplots.sub$plotid)
+oakplots.sub$sample_year <- as.factor(oakplots.sub$sample_year)
 ```
 
 
@@ -99,7 +112,7 @@ model_list <- list(
 Path model with the continuous variables standardized using the default settings of the `scale` function, resulting in each having a mean of zero and standard deviation of one. Each variable is first  centered by subtracting its mean and then scaled by dividing by its standard deviation.
 ```{r hours >25 path model all oak plots scaled}
 model_list1.scl <- list(
-      shannons <- lm(shannons2005.scl ~ twi15m.log.scl, data = oakplots.sub),
+      shannons <- lm(shannons2005.scl ~ twi15m.log.scl, data = oakplots.2006),
       
       umca_density <- lmer(umca_density_ha.log.scl ~ twi15m.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
       
@@ -116,13 +129,13 @@ model_list1.scl <- list(
 
 ```{r hours >25 path model all oak plots unscaled, echo=F}
 model_list1 <- list(
-      shannons <- lm(H.2005 ~ twi15m.log, data = oakplots.sub),
+      shannons <- lm(H.2005 ~ twi15m.log, data = oakplots.2006),
       
-      umca_density <- lmer(tot_bay.log ~ twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      umca_density <- lmer(umca_density_ha.log.scl ~ twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
       
-      slc <- lmer(tot_lfct.log ~ tot_bay.log + hrs_abv25ds + avg_hrs1422_wet_t_t1.log + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      slc <- lmer(tot_lfct.log ~ umca_density_ha.log.scl + hrs_abv25ds + avg_hrs1422_wet_t_t1.log + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
       
-      wet_hours_1422 <- lmer(avg_hrs1422_wet_t_t1.log ~ tot_bay.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      wet_hours_1422 <- lmer(avg_hrs1422_wet_t_t1.log ~ umca_density_ha.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
       
       hrs_abv25 <- lmer(hrs_abv25ds ~ twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
       
@@ -130,8 +143,28 @@ model_list1 <- list(
 )
 ```
 
-Examining the residual plots of each piece of the path model
-```{r shannons residuals plot}
+Examining the residual plots of each piece of the path model and checking for spatial autocorrelation in the residuals.
+```{r general code for testing SAC, echo=F, eval=F}
+### Check for spatial autocorrelation in residuals
+
+#install.packages('ape')
+library(ape)
+
+### Create inverse distance matrix
+points <- as.matrix(dist(cbind(data$x, data$y)))
+points.inv <- 1/points
+diag(points.inv) <- 0
+# points.inv [is.infinite(points.inv)]<-0 
+# WAS GETTING ERROR - if (obs <= ei) 2 * pv else 2 * (1 - pv) : 
+# missing value where TRUE/FALSE needed, this fixed the infinite values in the data 
+
+### Calculate Moran's I
+Moran.I(model.residuals, points.inv) 
+### Additional description calculating Moran's I in R: http://www.ats.ucla.edu/stat/r/faq/morans_i.htm
+### Where model.residuals = residuals(model)
+```
+
+```{r shannons residuals plot, echo=F}
 par(mfrow=c(2,2))
 plot(shannons, main = "OLS regression of diversity ~ wetness index residuals")
 par(mfrow=c(1,1))
@@ -141,7 +174,55 @@ plot(shannons$model$twi15m.log, resid(shannons),
      main = "Diversity model residuals vs. wetness index predictor")
 ```
 
-```{r bay laurel density residuals plot}
+```{r test SAC diversity model residuals, echo=F}
+library(spBayes); library(classInt); library(RColorBrewer); library(geoR)
+summary(na.omit(oakplots.2006))
+points <- select(na.omit(oakplots.2006), X, Y)
+points <- as.matrix(dist(cbind(points$X, points$Y)))
+points.inv <- 1/points
+diag(points.inv) <- 0
+shannons.resids <- resid(shannons)
+max.dist <- 0.33 * max(iDist(points))
+bins <- 100
+
+vario.shannons <- variog(coords = points, 
+                     data = na.omit(oakplots.2006$shannons2005.scl),
+                     uvec = (seq(0, max.dist, length = bins)))
+fit.vario.shannons <- variofit(
+      vario.shannons,
+      ini.cov.pars = c(300, 200/-log(0.5)),
+      cov.model = "exponential",
+      minimisation.function = "optim",
+      weights = "equal"
+)
+par(mfrow = c(1,2))
+plot(vario.shannons)
+lines(fit.vario.shannons)
+abline(h = fit.vario.shannons$nugget, col = "blue")# nugget
+abline(h = fit.vario.shannons$cov.pars[1] + fit.vario.shannons$nugget, col = "green")# sill
+abline(v = -log(.05) * fit.vario.shannons$cov.pars[2], col = "red3")# range
+
+vario.shannons.resid <- variog(coords = points,
+                               data = shannons.resids,
+                               uvec = (seq(0, max.dist, length = bins)))
+fit.vario.shannons.resid <- variofit(
+      vario.shannons.resid,
+      cov.model = "exponential",
+      minimisation.function = "optim",
+      weights = "equal"
+)
+par(mfrow = c(1,2))
+plot(vario.shannons.resid)
+lines(fit.vario.shannons.resid)
+abline(h = fit.vario.shannons.resid$nugget, col = "blue")# nugget
+abline(h = fit.vario.shannons.resid$cov.pars[1] + fit.vario.shannons.resid$nugget, col = "green")# sill
+abline(v = -log(.05) * fit.vario.shannons.resid$cov.pars[2], col = "red3")# range
+
+Moran.I(shannons.resids, points.inv)
+# Significant p-value, but no pattern in the model residuals 
+```
+
+```{r bay laurel density residuals plot, echo=F}
 plot(umca_density, main = "LMM of bay laurel density residuals")
 plot(umca_density@frame$twi15m.log, resid(umca_density),
      xlab = "wetness index",
@@ -149,7 +230,71 @@ plot(umca_density@frame$twi15m.log, resid(umca_density),
      main = "Bay laurel density model residuals vs. wetness index predictor")
 ```
 
-```{r symptomatic leaf count residuals plot}
+```{r test SAC bay density model, echo=F}
+# Test SAC of residuals
+umca_density.resids <- resid(umca_density)
+plots1 <- select(umca_density@frame, plotid)
+plots1 <- as.vector(plots1$plotid)
+plots1 <- as.data.frame(plots1)
+names(plots1) <- "plotid"
+# plots1$plotid <- as.character(plots1$plotid)
+str(plots1)
+
+plots2 <- select(plots_shp@data, PLOT_ID, X, Y)
+# plots2$plotid <- as.character(plots2$plotid)
+names(plots2) <- tolower(names(plots2))
+plots2$plot_id <- tolower(plots2$plot_id)
+str(plots2)
+
+# all.equal(plots1$plotid,plots2$plotid)
+points_rep <- left_join(plots1, plots2, by = c("plotid"="plot_id"))
+summary(points_rep)
+points_rep <- as.matrix(dist(cbind(points_rep$x, points_rep$y)))
+points_rep.inv <- 1/points_rep
+points_rep.inv[points_rep.inv == "Inf"] <- 0
+summary(points_rep.inv)
+
+# Plot variograms
+vario.umca_density <- variog(coords = points_rep, 
+                     data = na.omit(umca_density@frame$tot_bay.log),
+                     uvec = (seq(0, max.dist, length = bins)))
+fit.vario.umca_density <- variofit(
+      vario.umca_density,
+      # ini.cov.pars = c(300, 200/-log(0.5)),
+      cov.model = "exponential",
+      minimisation.function = "optim",
+      weights = "equal"
+)
+par(mfrow = c(1,2))
+plot(vario.umca_density)
+lines(fit.vario.umca_density)
+abline(h = fit.vario.umca_density$nugget, col = "blue")# nugget
+abline(h = fit.vario.umca_density$cov.pars[1] + fit.vario.umca_density$nugget, col = "green")# sill
+abline(v = -log(.05) * fit.vario.umca_density$cov.pars[2], col = "red3")# range
+
+vario.umca_density.resids <- variog(coords = points_rep,
+                               data = umca_density.resids,
+                               uvec = (seq(0, max.dist, length = bins)))
+fit.vario.umca_density.resids <- variofit(
+      vario.umca_density.resids,
+      cov.model = "exponential",
+      minimisation.function = "optim",
+      weights = "equal"
+)
+# par(mfrow = c(1,2))
+plot(vario.umca_density.resids)
+lines(fit.vario.umca_density.resids)
+abline(h = fit.vario.umca_density.resids$nugget, col = "blue")# nugget
+abline(h = fit.vario.umca_density.resids$cov.pars[1] + fit.vario.umca_density.resids$nugget, col = "green")# sill
+abline(v = -log(.05) * fit.vario.umca_density.resids$cov.pars[2], col = "red3")# range
+
+Moran.I(umca_density.resids, points_rep.inv)
+
+# length(umca_density.resids)
+# dim(points_rep)
+```
+
+```{r symptomatic leaf count residuals plot, echo=F}
 plot(slc, main = "LMM of symptomatic leaf count residuals")
 plot(slc@frame$umca_density_ha.log, resid(slc),
      xlab = "bay laurel density",
@@ -173,7 +318,68 @@ plot(slc@frame$twi15m.log, resid(slc),
      main = "SLC model residuals vs. wetness index predictor")
 ```
 
-```{r wet-hours residuals plot}
+```{r test SAC of slc model residuals, echo=F}
+# Test SAC of residuals
+slc.resids <- resid(slc)
+plots1 <- select(slc@frame, plotid)
+plots1 <- as.vector(plots1$plotid)
+plots1 <- as.data.frame(plots1)
+names(plots1) <- "plotid"
+# plots1$plotid <- as.character(plots1$plotid)
+str(plots1)
+
+plots2 <- select(plots_shp@data, PLOT_ID, X, Y)
+# plots2$plotid <- as.character(plots2$plotid)
+names(plots2) <- tolower(names(plots2))
+plots2$plot_id <- tolower(plots2$plot_id)
+str(plots2)
+
+# all.equal(plots1$plotid,plots2$plotid)
+points_rep <- left_join(plots1, plots2, by = c("plotid"="plot_id"))
+summary(points_rep)
+points_rep <- as.matrix(dist(cbind(points_rep$x, points_rep$y)))
+points_rep.inv <- 1/points_rep
+points_rep.inv[points_rep.inv == "Inf"] <- 0
+summary(points_rep.inv)
+
+# Plot variograms
+vario.slc <- variog(coords = points_rep, 
+                     data = na.omit(slc@frame$tot_lfct.log),
+                     uvec = (seq(0, max.dist, length = bins)))
+fit.vario.slc <- variofit(
+      vario.slc,
+      # ini.cov.pars = c(300, 200/-log(0.5)),
+      cov.model = "exponential",
+      minimisation.function = "optim",
+      weights = "equal"
+)
+par(mfrow = c(1,2))
+plot(vario.slc)
+lines(fit.vario.slc)
+abline(h = fit.vario.slc$nugget, col = "blue")# nugget
+abline(h = fit.vario.slc$cov.pars[1] + fit.vario.slc$nugget, col = "green")# sill
+abline(v = -log(.05) * fit.vario.slc$cov.pars[2], col = "red3")# range
+
+vario.slc.resids <- variog(coords = points_rep,
+                               data = slc.resids,
+                               uvec = (seq(0, max.dist, length = bins)))
+fit.vario.slc.resids <- variofit(
+      vario.slc.resids,
+      cov.model = "exponential",
+      minimisation.function = "optim",
+      weights = "equal"
+)
+# par(mfrow = c(1,2))
+plot(vario.slc.resids)
+lines(fit.vario.slc.resids)
+abline(h = fit.vario.slc.resids$nugget, col = "blue")# nugget
+abline(h = fit.vario.slc.resids$cov.pars[1] + fit.vario.slc.resids$nugget, col = "green")# sill
+abline(v = -log(.05) * fit.vario.slc.resids$cov.pars[2], col = "red3")# range
+
+Moran.I(slc.resids, points_rep.inv)
+```
+
+```{r wet-hours residuals plot, echo=F}
 plot(wet_hours_1422, main = "LMM of avg. # of hours 14-22 C current & prev. year residuals")
 plot(wet_hours_1422@frame$umca_density_ha.log, resid(wet_hours_1422),
      xlab = "bay laurel density",
@@ -181,7 +387,70 @@ plot(wet_hours_1422@frame$umca_density_ha.log, resid(wet_hours_1422),
      main = "Wet-hours model residuals vs. bay laurel density predictor")
 ```
 
-```{r dry-season hours residuals plot}
+```{r test SAC wet-hours residuals, echo=F}
+# Test SAC of residuals
+wet_hours.resids <- resid(wet_hours_1422)
+plots1 <- select(wet_hours_1422@frame, plotid)
+plots1 <- as.vector(plots1$plotid)
+plots1 <- as.data.frame(plots1)
+names(plots1) <- "plotid"
+# plots1$plotid <- as.character(plots1$plotid)
+str(plots1)
+
+plots2 <- select(plots_shp@data, PLOT_ID, X, Y)
+# plots2$plotid <- as.character(plots2$plotid)
+names(plots2) <- tolower(names(plots2))
+plots2$plot_id <- tolower(plots2$plot_id)
+str(plots2)
+
+# all.equal(plots1$plotid,plots2$plotid)
+points_rep <- left_join(plots1, plots2, by = c("plotid"="plot_id"))
+summary(points_rep)
+points_rep <- as.matrix(dist(cbind(points_rep$x, points_rep$y)))
+points_rep.inv <- 1/points_rep
+points_rep.inv[points_rep.inv == "Inf"] <- 0
+summary(points_rep.inv)
+
+# Plot variograms
+vario. <- variog(coords = points_rep, 
+                     data = na.omit(umca_density@frame$tot_bay.log),
+                     uvec = (seq(0, max.dist, length = bins)))
+fit.vario.umca_density <- variofit(
+      vario.umca_density,
+      # ini.cov.pars = c(300, 200/-log(0.5)),
+      cov.model = "exponential",
+      minimisation.function = "optim",
+      weights = "equal"
+)
+par(mfrow = c(1,2))
+plot(vario.umca_density)
+lines(fit.vario.umca_density)
+abline(h = fit.vario.umca_density$nugget, col = "blue")# nugget
+abline(h = fit.vario.umca_density$cov.pars[1] + fit.vario.umca_density$nugget, col = "green")# sill
+abline(v = -log(.05) * fit.vario.umca_density$cov.pars[2], col = "red3")# range
+
+vario.umca_density.resids <- variog(coords = points_rep,
+                               data = umca_density.resids,
+                               uvec = (seq(0, max.dist, length = bins)))
+fit.vario.umca_density.resids <- variofit(
+      vario.umca_density.resids,
+      cov.model = "exponential",
+      minimisation.function = "optim",
+      weights = "equal"
+)
+# par(mfrow = c(1,2))
+plot(vario.umca_density.resids, 
+     main = "Variogram - UMCA deensity model residuals",
+     xlab = "distance (m)")
+lines(fit.vario.umca_density.resids)
+abline(h = fit.vario.umca_density.resids$nugget, col = "blue")# nugget
+abline(h = fit.vario.umca_density.resids$cov.pars[1] + fit.vario.umca_density.resids$nugget, col = "green")# sill
+abline(v = -log(.05) * fit.vario.umca_density.resids$cov.pars[2], col = "red3")# range
+
+Moran.I(wet_hours.resids, points_rep.inv)
+```
+
+```{r dry-season hours residuals plot, echo=F}
 plot(hrs_abv25, main = "LMM of # of hours >25 C during prev. dry season residuals")
 plot(hrs_abv25@frame$twi15m.log, resid(hrs_abv25),
      xlab = "wetness index",
@@ -189,7 +458,34 @@ plot(hrs_abv25@frame$twi15m.log, resid(hrs_abv25),
      main = "Dry-season hours model residuals vs. wetness index predictor")
 ```
 
-```{r oak infection residuals plot}
+```{r test SAC dry-season model residuals, echo=F}
+# Test SAC of residuals
+hrs_abv25.resids <- resid(hrs_abv25)
+plots1 <- select(hrs_abv25@frame, plotid)
+plots1 <- as.vector(plots1$plotid)
+plots1 <- as.data.frame(plots1)
+names(plots1) <- "plotid"
+# plots1$plotid <- as.character(plots1$plotid)
+str(plots1)
+
+plots2 <- select(plots_shp@data, PLOT_ID, X, Y)
+# plots2$plotid <- as.character(plots2$plotid)
+names(plots2) <- tolower(names(plots2))
+plots2$plot_id <- tolower(plots2$plot_id)
+str(plots2)
+
+# all.equal(plots1$plotid,plots2$plotid)
+points_rep <- left_join(plots1, plots2, by = c("plotid"="plot_id"))
+summary(points_rep)
+points_rep <- as.matrix(dist(cbind(points_rep$x, points_rep$y)))
+points_rep.inv <- 1/points_rep
+points_rep.inv[points_rep.inv == "Inf"] <- 0
+summary(points_rep.inv)
+
+Moran.I(hrs_abv25.resids, points_rep.inv)
+```
+
+```{r oak infection residuals plot, echo=F}
 plot(oak_infection, main = "Binomial GLMM of oak infection residuals")
 plot(oak_infection@frame$tot_lfct.log, resid(oak_infection),
      xlab = "symptomatic leaf count",
@@ -203,6 +499,33 @@ plot(oak_infection@frame$H.2005, resid(oak_infection),
      xlab = "Shannon's diversity index",
      ylab = "model residuals",
      main = "Oak infection model residuals vs. diversity predictor")
+```
+
+```{r test SAC of oak infection residuals, echo=F}
+# Test SAC of residuals
+oak_infection.resids <- resid(oak_infection)
+plots1 <- select(oak_infection@frame, plotid)
+plots1 <- as.vector(plots1$plotid)
+plots1 <- as.data.frame(plots1)
+names(plots1) <- "plotid"
+# plots1$plotid <- as.character(plots1$plotid)
+str(plots1)
+
+plots2 <- select(plots_shp@data, PLOT_ID, X, Y)
+# plots2$plotid <- as.character(plots2$plotid)
+names(plots2) <- tolower(names(plots2))
+plots2$plot_id <- tolower(plots2$plot_id)
+str(plots2)
+
+# all.equal(plots1$plotid,plots2$plotid)
+points_rep <- left_join(plots1, plots2, by = c("plotid"="plot_id"))
+summary(points_rep)
+points_rep <- as.matrix(dist(cbind(points_rep$x, points_rep$y)))
+points_rep.inv <- 1/points_rep
+points_rep.inv[points_rep.inv == "Inf"] <- 0
+summary(points_rep.inv)
+
+Moran.I(oak_infection.resids, points_rep.inv)
 ```
 
 
@@ -223,10 +546,10 @@ oak_and_bay_list1 <- list(
 
 ```{r fit and compare all oak plots vs >0 bay laurel oak plots}
 # Comparing fits of the piecewise models using all oak plots vs. plots with oaks and at least one bay laurel
-sem.fit(model_list1, oakplots.sub, 
-        corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log"))
-sem.fit(model_list1.scl, oakplots.sub,
-          corr.errors = c("hrs_abv25ds.scl ~~ avg_hrs1422_wet_t_t1.log.scl"))
+(sem.fit(model_list1, oakplots.sub, 
+        corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log")))
+(sem.fit(model_list1.scl, oakplots.sub,
+          corr.errors = c("hrs_abv25ds.scl ~~ avg_hrs1422_wet_t_t1.log.scl")))
 
 # sem.fit(oak_and_bay_list1, oak_and_bay_plots, 
 #         corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log",
