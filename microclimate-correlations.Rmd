@@ -2,16 +2,37 @@
 title: "Microclimate Variable Correlations"
 author: "Whalen Dillon"
 date: "August 24, 2016"
-output: html_document
+output: 
+  html_document: 
+    theme: journal
+    toc: yes
 ---
 
+```{r include=F}
+knitr::opts_chunk$set(warning = F)
+```
+
+
 ```{r load data, echo=F, message=F}
-library(knitr)
 load("climate_path_model_data.RData")
-library(piecewiseSEM)# version 1.1.1, tried most recent version & kept getting errror 7/18/2016 b/c matrices rows were unequal in sem.missing.paths function
-library(plyr); library(dplyr, verbose = F)
-library(lme4, verbose = F)
-library(lmerTest, verbose = F)
+library(plyr); library(dplyr, verbose = F); library(ggplot2, verbose = F)
+library(knitr)
+panel.cor <- function(x, y, digits = 2, cex.cor, ...){
+      usr <- par("usr"); on.exit(par(usr))
+      par(usr = c(0, 1, 0, 1))
+      # correlation coefficient
+      r <- cor(x, y)
+      txt <- format(c(r, 0.123456789), digits = digits)[1]
+      txt <- paste("r= ", txt, sep = "")
+      text(0.5, 0.5, txt, cex = 1.2)
+      
+      # p-value calculation
+      # p <- cor.test(x, y)$p.value
+      # txt2 <- format(c(p, 0.123456789), digits = digits)[1]
+      # txt2 <- paste("p= ", txt2, sep = "")
+      # if(p<0.01) txt2 <- paste("p= ", "<0.01", sep = "")
+      # text(0.5, 0.4, txt2)
+}
 
 # Calculate oak density variable as stems per hectare 
 oakplots.sub$umca_density_ha <- (oakplots.sub$tot_bay / (15*15))*10000
@@ -44,36 +65,34 @@ oakplots.sub$shannons2005.scl <- as.numeric(scale(oakplots.sub$H.2005))
 oakplots.sub$shannons2014.scl <- as.numeric(scale(oakplots.sub$H.2014))
 oakplots.sub$twi15m.scl <- as.numeric(scale(oakplots.sub$twi15m))
 oakplots.sub$twi15m.log.scl <- as.numeric(scale(oakplots.sub$twi15m.log))
+
+microclimate_variables <- oakplots.sub %>% 
+      select(sample_year, plotid, tot_lfct.log, avg_lfct.log, contains("hrs"), contains("tmax"), contains("tmin"))
+# summary(microclimate_variables)
+```
+
+## Correlation Plots
+These plots show the correlations and scatter plots among a selection of the microclimate variables that I calculated, and the relationship with symptomatic leaf count for a plot (total and average).
+
+These data are for the plots that I used in the path model, which means they had to have at least one susceptible oak tree, but could (and do in some cases) have zero California bay laurel.
+
+I broke down the plots into each sample year, and then provide a plot with all the data aggregated across sample years at the end. The earliest sampling that enables applying a one year lag of the microclimate data is 2005, so I start with that season. It is also the first full sampling year after plot establishment in 2003-2004.
+
+#### Variable Name Descriptions
+ * The dry-season corresponds to the months June-September and the rainy season corresponds to the months November-May.
+
+ * Wet-days are days when the nearest rain gauge recorded precipitation.
+ 
+```{r var names, echo=F}
+var_names <- as.data.frame(names(microclimate_variables %>% select(tot_lfct.log, avg_lfct.log, avg_hrs1422_wet_t_t1.log, hrs_abv25ds, avg_tmax_rs, avg_tmax_ds, avg_tmin_rs, avg_tmin_ds, avgtmax_wet)))
+var_names <- var_names %>% select(variable_name = starts_with("names"))
+var_names$description <- c("Natural log of the total leaf count", "Natural log of the average leaf count", "Averaged number of hours the temperature was 14-22 C on wet days during the current & previous year", "Number of hours the temperature was >25 C during the dry season", "Average daily maximum temperature during the rainy season", "Average daily maximum temperature during the dry season", "Average daily minimum temperature during the rainy season", "Average daily minimum temperature during the dry season", "Average daily maximum temperature during wet days")
+
+kable(var_names)
 ```
 
 
 ```{r microclimate correlations, echo=F}
-library(ggplot2)
-panel.cor <- function(x, y, digits = 2, cex.cor, ...){
-      usr <- par("usr"); on.exit(par(usr))
-      par(usr = c(0, 1, 0, 1))
-      # correlation coefficient
-      r <- cor(x, y)
-      txt <- format(c(r, 0.123456789), digits = digits)[1]
-      txt <- paste("r= ", txt, sep = "")
-      text(0.5, 0.5, txt, cex = 1.2)
-      
-      # p-value calculation
-      # p <- cor.test(x, y)$p.value
-      # txt2 <- format(c(p, 0.123456789), digits = digits)[1]
-      # txt2 <- paste("p= ", txt2, sep = "")
-      # if(p<0.01) txt2 <- paste("p= ", "<0.01", sep = "")
-      # text(0.5, 0.4, txt2)
-}
-
-microclimate_variables <- oakplots.sub %>% 
-      select(sample_year, plotid, tot_lfct.log, avg_lfct.log, contains("hrs"), contains("tmax"), contains("tmin"))
-summary(microclimate_variables)
-
-# umca_plots <- left_join(umca_plots, select(rs_temps_lag, -avg_tmax_rs), by = c("plotid","sample_year"))
-# umca_plots <- left_join(umca_plots, wet_hrs_lag, by = c("plotid","sample_year"))
-
-
 pairs(select(filter(microclimate_variables, sample_year == 2005), tot_lfct.log, avg_lfct.log, avg_hrs1422_wet_t_t1.log, hrs_abv25ds, avg_tmax_rs, avgtmax_rs_t_t1, avg_tmax_ds, avg_tmin_rs, avg_tmin_ds), lower.panel = panel.cor,
       main = "Correlations Between Variables for 2005 Sample Year \n n=165 oak plots")
 pairs(select(filter(microclimate_variables, sample_year == 2006), tot_lfct.log, avg_lfct.log, avg_hrs1422_wet_t_t1.log, hrs_abv25ds, avg_tmax_rs, avgtmax_rs_t_t1, avg_tmax_ds, avg_tmin_rs, avg_tmin_ds), lower.panel = panel.cor,
@@ -92,17 +111,23 @@ pairs(select(filter(microclimate_variables, sample_year == 2012), tot_lfct.log, 
       main = "Correlations Between Variables for 2012 Sample Year \n n=156 oak plots")
 pairs(select(filter(microclimate_variables, sample_year == 2014), tot_lfct.log, avg_lfct.log, avg_hrs1422_wet_t_t1.log, hrs_abv25ds, avg_tmax_rs, avg_tmin_rs, avg_tmax_ds, avg_tmin_ds), lower.panel = panel.cor,
       main = "Correlations Between Variables for 2014 Sample Year \n n=156 oak plots")
-pairs(na.omit(select(filter(microclimate_variables, sample_year != 2004), tot_lfct.log, avg_lfct.log, avg_hrs1422_wet_t_t1.log, hrs_abv25ds, avg_tmax_rs, avg_tmax_ds, avg_tmin_rs, avg_tmin_ds, avgtmax_wet)), lower.panel = panel.cor,
+pairs(na.omit(select(filter(microclimate_variables, sample_year != 2004), tot_lfct.log, avg_lfct.log, avg_hrs1422_wet_t_t1.log, hrs_abv25ds, avg_tmax_rs, avg_tmax_ds, avg_tmin_rs, avg_tmin_ds, avgtmax_wet)), 
+      lower.panel = panel.cor,
       main = "Correlations Between Variables \n all oak plots 2005-2014")
 
 
 # pairs(select(filter(umca_plots, sample_year == 2005), tot_lfct, avg_lfct, avg_hrs1422_wet_t_t1, hrs_abv25ds, avg_tmax_rs, avgtmax_rs_t_t1, avg_tmax_ds, avg_tmin_rs, avg_tmin_ds), lower.panel = panel.cor,
 #       main = "Correlations Between Variables for 2005 Sample Year \n n=179 UMCA plots")
+```
 
 
+## Bivariate Linear Models
+This is another way to assess the relationships between microclimate and pathogen load. It will take more effort to make one of these for each variable, so I did it just for two that generally had the strongest correlations with pathogen load.
+
+```{r bivariate linear model avgtmaxds, echo=F, fig.height=8, message=F}
 reg_eqn <- function(df,y,x) {
-      y = df$avg_hrs1422_wet_t_t1.log
-      x = df$avgtmax_wet
+      y = df$tot_lfct.log
+      x = df$avg_tmax_ds
       # y = y
       # x = x
       m <- lm(y ~ x, data = df)
@@ -121,39 +146,164 @@ reg_eqn <- function(df,y,x) {
 # x <- "avgtmax_wet"
 # reg_eqn(df = na.omit(microclimate_variables), y = y, x = x)
 
-# eqns <- ddply(na.omit(microclimate_variables), "sample_year", reg_eqn)
+eqns <- ddply(na.omit(microclimate_variables), "sample_year", reg_eqn)
 
-ggplot(filter(microclimate_variables, sample_year != 2004) %>% 
-             group_by(sample_year), 
-       aes(avgtmax_wet, avg_hrs1422_wet_t_t1.log)) +
-      geom_point() +
-      facet_grid(sample_year ~ .) +
-      geom_smooth(method = "lm", size = 0.5) +
-      geom_text(aes(x = 0, y = 3, label = lab), data = eqns, parse = T, 
-                hjust = 0, vjust = -1.5) + 
-      facet_grid(sample_year ~ .)
+# ggplot(filter(microclimate_variables, sample_year != 2004) %>% 
+#              group_by(sample_year), 
+#        aes(avgtmax_wet, avg_hrs1422_wet_t_t1.log)) +
+#       geom_point() +
+#       facet_grid(sample_year ~ .) +
+#       geom_smooth(method = "lm", size = 0.5) +
+#       geom_text(aes(x = 0, y = 3, label = lab), data = eqns, parse = T, 
+#                 hjust = 0, vjust = -1.5) + 
+#       facet_grid(sample_year ~ .)
 
 ggplot(filter(microclimate_variables, sample_year != 2004) %>% 
              group_by(sample_year),
-       aes(y = tot_lfct)) +
-      geom_point(aes(x = avgtmax_wet)) +
-      # geom_point(aes(x = avgtmin_wet)) +
-      facet_grid(sample_year ~ .)
-
-ggplot(filter(microclimate_variables, sample_year != 2004), 
-       aes(avgtmin_wet, avg_hrs1422_wet_t_t1.log)) +
+       aes(x = avg_tmax_ds, y = tot_lfct.log)) +
       geom_point() +
-      facet_grid(sample_year ~ .)
+      geom_smooth(method = "lm", size = 0.7) +
+      geom_text(aes(x = 0, y = 3, label = lab), data = eqns, parse = T,
+                hjust = 0, vjust = -1) +
+      facet_grid(sample_year ~ .) +
+      # scale_x_continuous(limits = c(20,30), breaks = c(seq(15,35,5))) +
+      xlab("Average Daily Maximum Temperature - Dry Season") +
+      ylab("Pathogen Inoculum Load (ln(Total Symptomatic Leaf Count))") +
+      ggtitle("Oak Plots") +
+      theme_bw()
+
+# ggplot(filter(microclimate_variables, sample_year != 2004), 
+#        aes(avgtmin_wet, avg_hrs1422_wet_t_t1.log)) +
+#       geom_point() +
+#       facet_grid(sample_year ~ .)
 
 
-ggplot(filter(microclimate_variables, sample_year != 2004), 
-       aes(avg_tmax_rs, avg_hrs1422_wet_t_t1.log)) +
-      geom_point() +
-      facet_grid(sample_year ~ .)
+# ggplot(filter(microclimate_variables, sample_year != 2004), 
+#        aes(avg_tmax_rs, avg_hrs1422_wet_t_t1.log)) +
+#       geom_point() +
+#       facet_grid(sample_year ~ .)
 
-ggplot(filter(microclimate_variables, sample_year != 2004), 
-       aes(avg_tmax_ds, avg_hrs1422_wet_t_t1.log)) +
-      geom_point() +
-      facet_grid(sample_year ~ .)
-
+# ggplot(filter(microclimate_variables, sample_year != 2004), 
+#        aes(avg_tmax_ds, avg_hrs1422_wet_t_t1.log)) +
+#       geom_point() +
+#       facet_grid(sample_year ~ .)
 ```
+
+```{r bivariate linear model hrsabv25ds, echo=F, fig.height=8, message=F}
+reg_eqn <- function(df,y,x) {
+      y = df$tot_lfct.log
+      x = df$hrs_abv25ds
+      # y = y
+      # x = x
+      m <- lm(y ~ x, data = df)
+      
+      a <- coef(m)[1]
+      b <- coef(m)[2]
+      r2 <- summary(m)$r.squared
+      
+      expr <- substitute(italic(y) == a + b %.% italic(x)*","~~italic(r)^2~"="~r2,
+                         list(a = format(a, digits = 2),
+                              b = format(b, digits = 2),
+                              r2 = format(r2, digits = 3)))
+      c(lab = as.character(as.expression(expr)))
+}
+# y <- "avg_hrs1422_wet_t_t1.log"
+# x <- "avgtmax_wet"
+# reg_eqn(df = na.omit(microclimate_variables), y = y, x = x)
+
+eqns <- ddply(na.omit(microclimate_variables), "sample_year", reg_eqn)
+
+ggplot(filter(microclimate_variables, sample_year != 2004) %>% 
+             group_by(sample_year),
+       aes(x = hrs_abv25ds, y = tot_lfct.log)) +
+      geom_point() +
+      geom_smooth(method = "lm", size = 0.7) +
+      geom_text(aes(x = 0, y = 3, label = lab), data = eqns, parse = T,
+                hjust = 0, vjust = 1) +
+      facet_grid(sample_year ~ .) +
+      xlab("Dry-season Hours >25 C") +
+      ylab("Pathogen Inoculum Load (ln(Total Symptomatic Leaf Count))") +
+      ggtitle("Oak Plots") +
+      theme_bw()
+```
+
+Neither do a very good job of explaining the variation in leaf count. I wonder if this is at least partly due to the plots with zeroes.
+
+
+#### Below is a set using plots that have one or more bay laurel trees. This also boosts the number of plots in the sample to ~170.
+
+```{r bivariate models using umca plots, echo=F, fig.height=8, message=F}
+umca_plots <- left_join(umca_plots, select(rs_temps_lag, -avg_tmax_rs), by = c("plotid","sample_year"))
+umca_plots <- left_join(umca_plots, wet_hrs_lag, by = c("plotid","sample_year"))
+umca_plots$tot_lfct.log <- log(umca_plots$tot_lfct+1)
+umca_plots$avg_lfct.log <- log(umca_plots$avg_lfct+1)
+
+umca_plots <- filter(umca_plots, sample_year >= 2005)
+
+
+reg_eqn <- function(df,y,x) {
+      y = df$tot_lfct.log
+      x = df$hrs_abv25ds
+      # y = y
+      # x = x
+      m <- lm(y ~ x, data = df)
+      
+      a <- coef(m)[1]
+      b <- coef(m)[2]
+      r2 <- summary(m)$r.squared
+      
+      expr <- substitute(italic(y) == a + b %.% italic(x)*","~~italic(r)^2~"="~r2,
+                         list(a = format(a, digits = 2),
+                              b = format(b, digits = 2),
+                              r2 = format(r2, digits = 3)))
+      c(lab = as.character(as.expression(expr)))
+}
+eqns <- ddply(umca_plots, "sample_year", reg_eqn)
+ggplot(umca_plots %>% filter(sample_year > 2004) %>% 
+             group_by(sample_year),
+       aes(x = hrs_abv25ds, y = tot_lfct.log)) +
+      geom_point() +
+      geom_smooth(method = "lm", size = 0.7) +
+      geom_text(aes(x = 0, y = 3, label = lab), data = eqns, parse = T,
+                hjust = 0, vjust = 1) +
+      facet_grid(sample_year ~ .) +
+      xlab("Dry-season Hours >25 C") +
+      ylab("Pathogen Inoculum Load (ln(Total Symptomatic Leaf Count))") +
+      ggtitle("UMCA Plots") +
+      theme_bw()
+
+
+reg_eqn <- function(df,y,x) {
+      y = df$tot_lfct.log
+      x = df$avg_tmax_ds
+      # y = y
+      # x = x
+      m <- lm(y ~ x, data = df)
+      
+      a <- coef(m)[1]
+      b <- coef(m)[2]
+      r2 <- summary(m)$r.squared
+      
+      expr <- substitute(italic(y) == a + b %.% italic(x)*","~~italic(r)^2~"="~r2,
+                         list(a = format(a, digits = 2),
+                              b = format(b, digits = 2),
+                              r2 = format(r2, digits = 3)))
+      c(lab = as.character(as.expression(expr)))
+}
+eqns <- ddply(umca_plots, "sample_year", reg_eqn)
+ggplot(filter(umca_plots, sample_year > 2004) %>% 
+             group_by(sample_year),
+       aes(x = avg_tmax_ds, y = tot_lfct.log)) +
+      geom_point() +
+      geom_smooth(method = "lm", size = 0.7) +
+      geom_text(aes(x = 0, y = 3, label = lab), data = eqns, parse = T,
+                hjust = 0, vjust = -1) +
+      facet_grid(sample_year ~ .) +
+      # scale_x_continuous(limits = c(20,30), breaks = c(seq(15,35,5))) +
+      xlab("Average Daily Maximum Temperature - Dry Season") +
+      ylab("Pathogen Inoculum Load (ln(Total Symptomatic Leaf Count))") +
+      ggtitle("UMCA Plots") +
+      theme_bw()
+```
+
+These appear to do a little better in explaining the variation, but not for all years.
