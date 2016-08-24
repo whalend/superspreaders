@@ -1,0 +1,159 @@
+---
+title: "Microclimate Variable Correlations"
+author: "Whalen Dillon"
+date: "August 24, 2016"
+output: html_document
+---
+
+```{r load data, echo=F, message=F}
+library(knitr)
+load("climate_path_model_data.RData")
+library(piecewiseSEM)# version 1.1.1, tried most recent version & kept getting errror 7/18/2016 b/c matrices rows were unequal in sem.missing.paths function
+library(plyr); library(dplyr, verbose = F)
+library(lme4, verbose = F)
+library(lmerTest, verbose = F)
+
+# Calculate oak density variable as stems per hectare 
+oakplots.sub$umca_density_ha <- (oakplots.sub$tot_bay / (15*15))*10000
+oakplots.sub$umca_density_ha.log <- log(oakplots.sub$umca_density_ha+1)
+```
+
+```{r rescale variables, echo=F}
+## rescale variables
+# oakplots.sub2$inf_bay.scl <- scale((oakplots.sub2$infected_bay_ct))
+oakplots.sub$tot_bay.scl <- as.numeric(scale(oakplots.sub$tot_bay))
+oakplots.sub$tot_bay.log.scl <- as.numeric(scale(oakplots.sub$tot_bay.log))
+oakplots.sub$umca_density_ha.scl <- as.numeric(scale(oakplots.sub$umca_density_ha))
+oakplots.sub$umca_density_ha.log.scl <- as.numeric(scale(oakplots.sub$umca_density_ha.log))
+oakplots.sub$umca_basal_area.scl <- as.numeric(scale(oakplots.sub$umca_basal_area))
+oakplots.sub$umca_ba.log.scl <- as.numeric(scale(oakplots.sub$umca_ba.log))
+oakplots.sub$tot_lfct.scl <- as.numeric(scale(oakplots.sub$tot_lfct))
+oakplots.sub$tot_lfct.log.scl <- as.numeric(scale(oakplots.sub$tot_lfct.log))
+# oakplots.sub$avg_lfct.scl <- scale(oakplots.sub$avg_lfct)
+oakplots.sub$hrs_abv25ds.scl <- as.numeric(scale(oakplots.sub$hrs_abv25ds))
+oakplots.sub$dys_abv25ds.scl <- as.numeric(scale(oakplots.sub$dys_abv25ds))
+oakplots.sub$avg_tmax_ds.scl <- as.numeric(scale(oakplots.sub$avg_tmax_ds))
+oakplots.sub$avg_hrsblw14_wet_tminus1.scl <- as.numeric(scale(oakplots.sub$avg_hrsblw14_wet_tminus1))
+oakplots.sub$hrs1422_wet_tminus1.log.scl <- as.numeric(scale(oakplots.sub$hrs1422_wet_tminus1.log))
+# oakplots.sub$avg_hrs1422_wet_t_t1.scl <- scale(oakplots.sub$avg_hrs1422_wet_t_t1)
+oakplots.sub$avg_hrs1422_wet_t_t1.log.scl <- as.numeric(scale(oakplots.sub$avg_hrs1422_wet_t_t1.log))
+
+## static variables
+oakplots.sub$candens15m.scl <- as.numeric(scale(oakplots.sub$candens15m))
+oakplots.sub$shannons2005.scl <- as.numeric(scale(oakplots.sub$H.2005))
+oakplots.sub$shannons2014.scl <- as.numeric(scale(oakplots.sub$H.2014))
+oakplots.sub$twi15m.scl <- as.numeric(scale(oakplots.sub$twi15m))
+oakplots.sub$twi15m.log.scl <- as.numeric(scale(oakplots.sub$twi15m.log))
+```
+
+
+```{r microclimate correlations, echo=F}
+library(ggplot2)
+panel.cor <- function(x, y, digits = 2, cex.cor, ...){
+      usr <- par("usr"); on.exit(par(usr))
+      par(usr = c(0, 1, 0, 1))
+      # correlation coefficient
+      r <- cor(x, y)
+      txt <- format(c(r, 0.123456789), digits = digits)[1]
+      txt <- paste("r= ", txt, sep = "")
+      text(0.5, 0.5, txt, cex = 1.2)
+      
+      # p-value calculation
+      # p <- cor.test(x, y)$p.value
+      # txt2 <- format(c(p, 0.123456789), digits = digits)[1]
+      # txt2 <- paste("p= ", txt2, sep = "")
+      # if(p<0.01) txt2 <- paste("p= ", "<0.01", sep = "")
+      # text(0.5, 0.4, txt2)
+}
+
+microclimate_variables <- oakplots.sub %>% 
+      select(sample_year, plotid, tot_lfct.log, avg_lfct.log, contains("hrs"), contains("tmax"), contains("tmin"))
+summary(microclimate_variables)
+
+# umca_plots <- left_join(umca_plots, select(rs_temps_lag, -avg_tmax_rs), by = c("plotid","sample_year"))
+# umca_plots <- left_join(umca_plots, wet_hrs_lag, by = c("plotid","sample_year"))
+
+
+pairs(select(filter(microclimate_variables, sample_year == 2005), tot_lfct.log, avg_lfct.log, avg_hrs1422_wet_t_t1.log, hrs_abv25ds, avg_tmax_rs, avgtmax_rs_t_t1, avg_tmax_ds, avg_tmin_rs, avg_tmin_ds), lower.panel = panel.cor,
+      main = "Correlations Between Variables for 2005 Sample Year \n n=165 oak plots")
+pairs(select(filter(microclimate_variables, sample_year == 2006), tot_lfct.log, avg_lfct.log, avg_hrs1422_wet_t_t1.log, hrs_abv25ds, avg_tmax_rs, avgtmax_rs_t_t1, avg_tmax_ds, avg_tmin_rs, avg_tmin_ds), lower.panel = panel.cor,
+      main = "Correlations Between Variables for 2006 Sample Year \n n=167 oak plots")
+pairs(select(filter(microclimate_variables, sample_year == 2007), tot_lfct.log, avg_lfct.log, avg_hrs1422_wet_t_t1.log, hrs_abv25ds, avg_tmax_rs, avgtmax_rs_t_t1, avg_tmax_ds, avg_tmin_rs, avg_tmin_ds), lower.panel = panel.cor,
+      main = "Correlations Between Variables for 2007 Sample Year \n n=164 oak plots")
+pairs(select(filter(microclimate_variables, sample_year == 2008), tot_lfct.log, avg_lfct.log, avg_hrs1422_wet_t_t1.log, hrs_abv25ds, avg_tmax_rs, avgtmax_rs_t_t1, avg_tmax_ds, avg_tmin_rs, avg_tmin_ds), lower.panel = panel.cor,
+      main = "Correlations Between Variables for 2008 Sample Year \n n=163 oak plots")
+pairs(select(filter(microclimate_variables, sample_year == 2009), tot_lfct.log, avg_lfct.log, avg_hrs1422_wet_t_t1.log, hrs_abv25ds, avg_tmax_rs, avgtmax_rs_t_t1, avg_tmax_ds, avg_tmin_rs, avg_tmin_ds), lower.panel = panel.cor,
+      main = "Correlations Between Variables for 2009 Sample Year \n n=162 oak plots")
+pairs(select(filter(microclimate_variables, sample_year == 2010), tot_lfct.log, avg_lfct.log, avg_hrs1422_wet_t_t1.log, hrs_abv25ds, avg_tmax_rs, avg_tmax_ds, avg_tmin_rs, avg_tmin_ds), lower.panel = panel.cor,
+      main = "Correlations Between Variables for 2010 Sample Year \n n=159 oak plots")
+pairs(select(filter(microclimate_variables, sample_year == 2011), tot_lfct.log, avg_lfct.log, avg_hrs1422_wet_t_t1.log, hrs_abv25ds, avg_tmax_rs, avg_tmax_ds, avg_tmin_rs, avg_tmin_ds), lower.panel = panel.cor,
+      main = "Correlations Between Variables for 2011 Sample Year \n n=156 oak plots")
+pairs(select(filter(microclimate_variables, sample_year == 2012), tot_lfct.log, avg_lfct.log, avg_hrs1422_wet_t_t1.log, hrs_abv25ds, avg_tmax_rs, avg_tmax_ds, avg_tmin_rs, avg_tmin_ds), lower.panel = panel.cor,
+      main = "Correlations Between Variables for 2012 Sample Year \n n=156 oak plots")
+pairs(select(filter(microclimate_variables, sample_year == 2014), tot_lfct.log, avg_lfct.log, avg_hrs1422_wet_t_t1.log, hrs_abv25ds, avg_tmax_rs, avg_tmin_rs, avg_tmax_ds, avg_tmin_ds), lower.panel = panel.cor,
+      main = "Correlations Between Variables for 2014 Sample Year \n n=156 oak plots")
+pairs(na.omit(select(filter(microclimate_variables, sample_year != 2004), tot_lfct.log, avg_lfct.log, avg_hrs1422_wet_t_t1.log, hrs_abv25ds, avg_tmax_rs, avg_tmax_ds, avg_tmin_rs, avg_tmin_ds, avgtmax_wet)), lower.panel = panel.cor,
+      main = "Correlations Between Variables \n all oak plots 2005-2014")
+
+
+# pairs(select(filter(umca_plots, sample_year == 2005), tot_lfct, avg_lfct, avg_hrs1422_wet_t_t1, hrs_abv25ds, avg_tmax_rs, avgtmax_rs_t_t1, avg_tmax_ds, avg_tmin_rs, avg_tmin_ds), lower.panel = panel.cor,
+#       main = "Correlations Between Variables for 2005 Sample Year \n n=179 UMCA plots")
+
+
+reg_eqn <- function(df,y,x) {
+      y = df$avg_hrs1422_wet_t_t1.log
+      x = df$avgtmax_wet
+      # y = y
+      # x = x
+      m <- lm(y ~ x, data = df)
+      
+      a <- coef(m)[1]
+      b <- coef(m)[2]
+      r2 <- summary(m)$r.squared
+      
+      expr <- substitute(italic(y) == a + b %.% italic(x)*","~~italic(r)^2~"="~r2,
+                         list(a = format(a, digits = 2),
+                              b = format(b, digits = 2),
+                              r2 = format(r2, digits = 3)))
+      c(lab = as.character(as.expression(expr)))
+}
+# y <- "avg_hrs1422_wet_t_t1.log"
+# x <- "avgtmax_wet"
+# reg_eqn(df = na.omit(microclimate_variables), y = y, x = x)
+
+# eqns <- ddply(na.omit(microclimate_variables), "sample_year", reg_eqn)
+
+ggplot(filter(microclimate_variables, sample_year != 2004) %>% 
+             group_by(sample_year), 
+       aes(avgtmax_wet, avg_hrs1422_wet_t_t1.log)) +
+      geom_point() +
+      facet_grid(sample_year ~ .) +
+      geom_smooth(method = "lm", size = 0.5) +
+      geom_text(aes(x = 0, y = 3, label = lab), data = eqns, parse = T, 
+                hjust = 0, vjust = -1.5) + 
+      facet_grid(sample_year ~ .)
+
+ggplot(filter(microclimate_variables, sample_year != 2004) %>% 
+             group_by(sample_year),
+       aes(y = tot_lfct)) +
+      geom_point(aes(x = avgtmax_wet)) +
+      # geom_point(aes(x = avgtmin_wet)) +
+      facet_grid(sample_year ~ .)
+
+ggplot(filter(microclimate_variables, sample_year != 2004), 
+       aes(avgtmin_wet, avg_hrs1422_wet_t_t1.log)) +
+      geom_point() +
+      facet_grid(sample_year ~ .)
+
+
+ggplot(filter(microclimate_variables, sample_year != 2004), 
+       aes(avg_tmax_rs, avg_hrs1422_wet_t_t1.log)) +
+      geom_point() +
+      facet_grid(sample_year ~ .)
+
+ggplot(filter(microclimate_variables, sample_year != 2004), 
+       aes(avg_tmax_ds, avg_hrs1422_wet_t_t1.log)) +
+      geom_point() +
+      facet_grid(sample_year ~ .)
+
+```
