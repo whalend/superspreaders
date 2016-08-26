@@ -46,7 +46,7 @@ summary(wet_hrs)# since these are counts the NAs are in fact zeroes
 wet_hrs[is.na(wet_hrs)] <- 0# introduce a lot of zeroes for some columns
 anyDuplicated(wet_hrs)
 oak_sod <- left_join(
-      oak_sod, select(wet_hrs, -X), by = c("plotid","sample_year"))
+      oak_sod, wet_hrs, by = c("plotid","sample_year"))
 anyDuplicated(oak_sod)
 # oak_sod$plotid <- as.factor(oak_sod$plotid)
 
