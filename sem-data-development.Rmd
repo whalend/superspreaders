@@ -383,16 +383,18 @@ rs_temps <- as.tbl(rs_temps)
 rs_temps$plotid <- tolower(rs_temps$plotid)
 summary(rs_temps)
 rs_temps <- rename(rs_temps, 
-                   hrs_14_20_rs = hrs_14_20, hrs_abv25rs = hrs_abv25,
-                   hrs_abv20_rs = hrs_abv20, hrs_blw10rs = hrs_blw10,
-                   avg_tmax_rs = avg_tmax, avg_tmin_rs = avg_tmin)
+                   hrs_14_20_rs = hrs_14_20, hrs_10_20_rs = hrs_10_20,
+                   hrs_abv25rs = hrs_abv25, hrs_abv20_rs = hrs_abv20,
+                   hrs_blw20rs = hrs_blw20, hrs_blw10rs = hrs_blw10,
+                   hrs_blw14rs = hrs_blw14, avg_tmax_rs = avg_tmax,
+                   avg_tmin_rs = avg_tmin)
 
 summer_temps <- as.tbl(summer_temps)
 summer_temps$plotid <- tolower(summer_temps$plotid)
 summary(summer_temps)
 summer_temps <- rename(summer_temps, 
                        hrs_abv25ds = hrs_abv25, hrs_abv20ds = hrs_abv20,
-                       hrs_blw18ds = hrs_blw18, avg_tmax_ds = avg_tmax,
+                       hrs_blw20ds = hrs_blw20, avg_tmax_ds = avg_tmax,
                        avg_tmin_ds = avg_tmin)
 
 # Now I can join the data without duplicating variable names
@@ -804,8 +806,18 @@ rm(rs2d_lag)
 summary(wet_hrs); unique(wet_hrs$sample_year)
 
 hrsblw14_wet_lag <- as.tbl(select(wet_hrs, plotid, sample_year, hrsblw14_wet))
-avgtmax_wet_lag <- as.tbl(select(wet_hrs, plotid, sample_year, avgtmax_wet))
 hrs1422_wet_lag <- as.tbl(select(wet_hrs, plotid, sample_year, hrs1422_wet))
+hrsabv22_wet_lag <- as.tbl(select(wet_hrs, plotid, sample_year, hrsabv22_wet))
+hrsblw22_wet_lag <- as.tbl(select(wet_hrs, plotid, sample_year, hrsblw22_wet))
+hrsblw10_wet_lag <- as.tbl(select(wet_hrs, plotid, sample_year, hrsblw10_wet))
+hrs1020_wet_lag <- as.tbl(select(wet_hrs, plotid, sample_year, hrs1020_wet))
+hrs1022_wet_lag <- as.tbl(select(wet_hrs, plotid, sample_year, hrs1022_wet))
+hrsabv20_wet_lag <- as.tbl(select(wet_hrs, plotid, sample_year, hrsabv20_wet))
+hrsblw20_wet_lag <- as.tbl(select(wet_hrs, plotid, sample_year, hrsblw20_wet))
+
+avgtmax_wet_lag <- as.tbl(select(wet_hrs, plotid, sample_year, avgtmax_wet))
+avgtmin_wet_lag <- as.tbl(select(wet_hrs, plotid, sample_year, avgtmin_wet))
+
 wet_hrs_lag <- select(wet_hrs, plotid, sample_year)
 wet_hrs_lag <- wet_hrs_lag %>% 
       mutate(sample_year_minus1 = sample_year - 1,
@@ -825,6 +837,32 @@ wet_hrs_lag <- left_join(wet_hrs_lag, hrsblw14_wet_lag,
 wet_hrs_lag <- left_join(wet_hrs_lag, hrsblw14_wet_lag,
                 by = c("plotid", "sample_year"="sample_year"))
 
+## Number of wet-hours below 20 C lagged ####
+wet_hrs_lag <- left_join(wet_hrs_lag, hrsblw20_wet_lag,
+                by = c("plotid", "sample_year_minus1"="sample_year")) %>%
+      rename(hrsblw20_wet_tminus1 = hrsblw20_wet)
+wet_hrs_lag <- left_join(wet_hrs_lag, hrsblw20_wet_lag,
+                by = c("plotid", "sample_year_minus2"="sample_year")) %>%
+      rename(hrsblw20_wet_tminus2 = hrsblw20_wet)
+wet_hrs_lag <- left_join(wet_hrs_lag, hrsblw20_wet_lag,
+                by = c("plotid", "sample_year_minus3"="sample_year")) %>%
+      rename(hrsblw20_wet_tminus3 = hrsblw20_wet)
+wet_hrs_lag <- left_join(wet_hrs_lag, hrsblw20_wet_lag,
+                by = c("plotid", "sample_year"="sample_year"))
+
+## Number of wet-hours below 10 C lagged ####
+wet_hrs_lag <- left_join(wet_hrs_lag, hrsblw10_wet_lag,
+                by = c("plotid", "sample_year_minus1"="sample_year")) %>%
+      rename(hrsblw10_wet_tminus1 = hrsblw10_wet)
+wet_hrs_lag <- left_join(wet_hrs_lag, hrsblw10_wet_lag,
+                by = c("plotid", "sample_year_minus2"="sample_year")) %>%
+      rename(hrsblw10_wet_tminus2 = hrsblw10_wet)
+wet_hrs_lag <- left_join(wet_hrs_lag, hrsblw10_wet_lag,
+                by = c("plotid", "sample_year_minus3"="sample_year")) %>%
+      rename(hrsblw10_wet_tminus3 = hrsblw10_wet)
+wet_hrs_lag <- left_join(wet_hrs_lag, hrsblw10_wet_lag,
+                by = c("plotid", "sample_year"="sample_year"))
+
 ## Average daily maximum temperature on wet days lagged ####
 wet_hrs_lag <- left_join(wet_hrs_lag, avgtmax_wet_lag,
                 by = c("plotid", "sample_year_minus1"="sample_year")) %>%
@@ -836,6 +874,19 @@ wet_hrs_lag <- left_join(wet_hrs_lag, avgtmax_wet_lag,
                 by = c("plotid", "sample_year_minus3"="sample_year")) %>%
       rename(avgtmax_wet_tminus3 = avgtmax_wet)
 wet_hrs_lag <- left_join(wet_hrs_lag, avgtmax_wet_lag,
+                by = c("plotid", "sample_year"="sample_year"))
+
+## Average daily minimum temperature on wet days lagged ####
+wet_hrs_lag <- left_join(wet_hrs_lag, avgtmin_wet_lag,
+                by = c("plotid", "sample_year_minus1"="sample_year")) %>%
+      rename(avgtmin_wet_tminus1 = avgtmin_wet)
+wet_hrs_lag <- left_join(wet_hrs_lag, avgtmin_wet_lag,
+                by = c("plotid", "sample_year_minus2"="sample_year")) %>%
+      rename(avgtmin_wet_tminus2 = avgtmin_wet)
+wet_hrs_lag <- left_join(wet_hrs_lag, avgtmin_wet_lag,
+                by = c("plotid", "sample_year_minus3"="sample_year")) %>%
+      rename(avgtmin_wet_tminus3 = avgtmin_wet)
+wet_hrs_lag <- left_join(wet_hrs_lag, avgtmin_wet_lag,
                 by = c("plotid", "sample_year"="sample_year"))
 
 ## Number of hours 14-22 C on wet days ####
@@ -851,6 +902,19 @@ wet_hrs_lag <- left_join(wet_hrs_lag, hrs1422_wet_lag,
 wet_hrs_lag <- left_join(wet_hrs_lag, hrs1422_wet_lag,
                 by = c("plotid", "sample_year"="sample_year"))
 
+## Number of hours 10-20 C on wet days ####
+wet_hrs_lag <- left_join(wet_hrs_lag, hrs1020_wet_lag,
+                by = c("plotid", "sample_year_minus1"="sample_year")) %>%
+      rename(hrs1020_wet_tminus1 = hrs1020_wet)
+wet_hrs_lag <- left_join(wet_hrs_lag, hrs1020_wet_lag,
+                by = c("plotid", "sample_year_minus2"="sample_year")) %>%
+      rename(hrs1020_wet_tminus2 = hrs1020_wet)
+wet_hrs_lag <- left_join(wet_hrs_lag, hrs1020_wet_lag,
+                by = c("plotid", "sample_year_minus3"="sample_year")) %>%
+      rename(hrs1020_wet_tminus3 = hrs1020_wet)
+wet_hrs_lag <- left_join(wet_hrs_lag, hrs1020_wet_lag,
+                by = c("plotid", "sample_year"="sample_year"))
+
 ## ####
 wet_hrs_lag <- select(wet_hrs_lag, plotid, sample_year, starts_with("hrs"), starts_with("avg"))
 wet_hrs_lag <- wet_hrs_lag %>% 
@@ -858,11 +922,23 @@ wet_hrs_lag <- wet_hrs_lag %>%
             avg_hrsblw14_wet_tminus1 = rowMeans(cbind(hrsblw14_wet, hrsblw14_wet_tminus1)),
              avg_hrsblw14_wet_tminus2 = rowMeans(cbind(hrsblw14_wet, hrsblw14_wet_tminus1, hrsblw14_wet_tminus2)),
              avg_hrsblw14_wet_tminus3 = rowMeans(cbind(hrsblw14_wet, hrsblw14_wet_tminus1, hrsblw14_wet_tminus2, hrsblw14_wet_tminus3)),
+            
+            avg_hrsblw10_wet_tminus1 = rowMeans(cbind(hrsblw10_wet, hrsblw10_wet_tminus1)),
+             avg_hrsblw10_wet_tminus2 = rowMeans(cbind(hrsblw10_wet, hrsblw10_wet_tminus1, hrsblw10_wet_tminus2)),
+             avg_hrsblw10_wet_tminus3 = rowMeans(cbind(hrsblw10_wet, hrsblw10_wet_tminus1, hrsblw10_wet_tminus2, hrsblw10_wet_tminus3)),
+            
+            avg_hrsblw20_wet_tminus1 = rowMeans(cbind(hrsblw20_wet, hrsblw20_wet_tminus1)),
+             avg_hrsblw20_wet_tminus2 = rowMeans(cbind(hrsblw20_wet, hrsblw20_wet_tminus1, hrsblw20_wet_tminus2)),
+             avg_hrsblw20_wet_tminus3 = rowMeans(cbind(hrsblw20_wet, hrsblw20_wet_tminus1, hrsblw20_wet_tminus2, hrsblw20_wet_tminus3)),
              
             avgtmax_wet_t_t1 = rowMeans(cbind(avgtmax_wet, avgtmax_wet_tminus1)),
              avgtmax_wet_t_t1t2 = rowMeans(cbind(avgtmax_wet, avgtmax_wet_tminus1, avgtmax_wet_tminus2)),
              avgtmax_wet_t1t2 = rowMeans(cbind(avgtmax_wet_tminus1, avgtmax_wet_tminus2)),
-             
+            
+            avg_hrs1020_wet_t_t1 = rowMeans(cbind(hrs1020_wet, hrs1020_wet_tminus1)),
+             avg_hrs1020_wet_t_t1t2 = rowMeans(cbind(hrs1020_wet, hrs1020_wet_tminus1, hrs1020_wet_tminus2)),
+             avg_hrs1020_wet_t1t2 = rowMeans(cbind(hrs1020_wet_tminus1, hrs1020_wet_tminus2)),
+
             avg_hrs1422_wet_t_t1 = rowMeans(cbind(hrs1422_wet, hrs1422_wet_tminus1)),
              avg_hrs1422_wet_t_t1t2 = rowMeans(cbind(hrs1422_wet, hrs1422_wet_tminus1, hrs1422_wet_tminus2)),
              avg_hrs1422_wet_t1t2 = rowMeans(cbind(hrs1422_wet_tminus1, hrs1422_wet_tminus2))
@@ -873,9 +949,14 @@ wet_hrs_lag <- wet_hrs_lag %>%
 summary(rs_temps); unique(rs_temps$sample_year)
 
 hrs1420_rs_lag <- as.tbl(select(rs_temps, plotid, sample_year, hrs_14_20_rs))
+hrs1020_rs_lag <- as.tbl(select(rs_temps, plotid, sample_year, hrs_10_20_rs))
+avgtmin_rs_lag <- as.tbl(select(rs_temps, plotid, sample_year, avg_tmin_rs))
 avgtmax_rs_lag <- as.tbl(select(rs_temps, plotid, sample_year, avg_tmax_rs))
 hrsabv20_rs_lag <- as.tbl(select(rs_temps, plotid, sample_year, hrs_abv20_rs))
 hrsblw10_rs_lag <- as.tbl(select(rs_temps, plotid, sample_year, hrs_blw10rs))
+hrsblw14_rs_lag <- as.tbl(select(rs_temps, plotid, sample_year, hrs_blw14rs))
+hrsblw20_rs_lag <- as.tbl(select(rs_temps, plotid, sample_year, hrs_blw20rs))
+
 
 rs_temps_lag <- select(rs_temps, plotid, sample_year)
 rs_temps_lag <- rs_temps_lag %>% 
@@ -896,6 +977,19 @@ rs_temps_lag <- left_join(rs_temps_lag, hrs1420_rs_lag,
 rs_temps_lag <- left_join(rs_temps_lag, hrs1420_rs_lag,
                 by = c("plotid", "sample_year"="sample_year"))
 
+## Number of rainy season hours 10-20 C ####
+rs_temps_lag <- left_join(rs_temps_lag, hrs1020_rs_lag,
+                by = c("plotid", "sample_year_minus1"="sample_year")) %>%
+      rename(hrs1020_rs_tminus1 = hrs_10_20_rs)
+rs_temps_lag <- left_join(rs_temps_lag, hrs1020_rs_lag,
+                by = c("plotid", "sample_year_minus2"="sample_year")) %>%
+      rename(hrs1020_rs_tminus2 = hrs_10_20_rs)
+rs_temps_lag <- left_join(rs_temps_lag, hrs1020_rs_lag,
+                by = c("plotid", "sample_year_minus3"="sample_year")) %>%
+      rename(hrs1020_rs_tminus3 = hrs_10_20_rs)
+rs_temps_lag <- left_join(rs_temps_lag, hrs1020_rs_lag,
+                by = c("plotid", "sample_year"="sample_year"))
+
 ## Average daily maximum temperature during rainy season lagged ####
 rs_temps_lag <- left_join(rs_temps_lag, avgtmax_rs_lag,
                 by = c("plotid", "sample_year_minus1"="sample_year")) %>%
@@ -909,6 +1003,19 @@ rs_temps_lag <- left_join(rs_temps_lag, avgtmax_rs_lag,
 rs_temps_lag <- left_join(rs_temps_lag, avgtmax_rs_lag,
                 by = c("plotid", "sample_year"="sample_year"))
 
+## Average daily minimum temperature during rainy season lagged ####
+rs_temps_lag <- left_join(rs_temps_lag, avgtmin_rs_lag,
+                by = c("plotid", "sample_year_minus1"="sample_year")) %>%
+      rename(avgtmin_rs_tminus1 = avg_tmin_rs)
+rs_temps_lag <- left_join(rs_temps_lag, avgtmin_rs_lag,
+                by = c("plotid", "sample_year_minus2"="sample_year")) %>%
+      rename(avgtmin_rs_tminus2 = avg_tmin_rs)
+rs_temps_lag <- left_join(rs_temps_lag, avgtmin_rs_lag,
+                by = c("plotid", "sample_year_minus3"="sample_year")) %>%
+      rename(avgtmin_rs_tminus3 = avg_tmin_rs)
+rs_temps_lag <- left_join(rs_temps_lag, avgtmin_rs_lag,
+                by = c("plotid", "sample_year"="sample_year"))
+
 ## Number of hours above 20 C during rainy season lagged ####
 rs_temps_lag <- left_join(rs_temps_lag, hrsabv20_rs_lag,
                 by = c("plotid", "sample_year_minus1"="sample_year")) %>%
@@ -920,6 +1027,32 @@ rs_temps_lag <- left_join(rs_temps_lag, hrsabv20_rs_lag,
                 by = c("plotid", "sample_year_minus3"="sample_year")) %>%
       rename(hrsabv20_rs_tminus3 = hrs_abv20_rs)
 rs_temps_lag <- left_join(rs_temps_lag, hrsabv20_rs_lag,
+                by = c("plotid", "sample_year"="sample_year"))
+
+## Number of hours below 20 C during rainy season lagged ####
+rs_temps_lag <- left_join(rs_temps_lag, hrsblw20_rs_lag,
+                by = c("plotid", "sample_year_minus1"="sample_year")) %>%
+      rename(hrsblw20_rs_tminus1 = hrs_blw20rs)
+rs_temps_lag <- left_join(rs_temps_lag, hrsblw20_rs_lag,
+                by = c("plotid", "sample_year_minus2"="sample_year")) %>%
+      rename(hrsblw20_rs_tminus2 = hrs_blw20rs)
+rs_temps_lag <- left_join(rs_temps_lag, hrsblw20_rs_lag,
+                by = c("plotid", "sample_year_minus3"="sample_year")) %>%
+      rename(hrsblw20_rs_tminus3 = hrs_blw20rs)
+rs_temps_lag <- left_join(rs_temps_lag, hrsblw20_rs_lag,
+                by = c("plotid", "sample_year"="sample_year"))
+
+## Number of hours below 14 C during rainy season lagged ####
+rs_temps_lag <- left_join(rs_temps_lag, hrsblw14_rs_lag,
+                by = c("plotid", "sample_year_minus1"="sample_year")) %>%
+      rename(hrsblw14_rs_tminus1 = hrs_blw14rs)
+rs_temps_lag <- left_join(rs_temps_lag, hrsblw14_rs_lag,
+                by = c("plotid", "sample_year_minus2"="sample_year")) %>%
+      rename(hrsblw14_rs_tminus2 = hrs_blw14rs)
+rs_temps_lag <- left_join(rs_temps_lag, hrsblw14_rs_lag,
+                by = c("plotid", "sample_year_minus3"="sample_year")) %>%
+      rename(hrsblw14_rs_tminus3 = hrs_blw14rs)
+rs_temps_lag <- left_join(rs_temps_lag, hrsblw14_rs_lag,
                 by = c("plotid", "sample_year"="sample_year"))
 
 ## Number of hours below 10 C during rainy season lagged ####
@@ -944,15 +1077,35 @@ rs_temps_lag <- rs_temps_lag %>%
              avgtmax_rs_t_t1t2t3 = rowMeans(cbind(avg_tmax_rs, avgtmax_rs_tminus1, avgtmax_rs_tminus2, avgtmax_rs_tminus3)),
              avgtmax_rs_t1t2 = rowMeans(cbind(avgtmax_rs_tminus1, avgtmax_rs_tminus2)),
             
+            avgtmin_rs_t_t1 = rowMeans(cbind(avg_tmin_rs, avgtmin_rs_tminus1)),
+             avgtmin_rs_t_t1t2 = rowMeans(cbind(avg_tmin_rs, avgtmin_rs_tminus1, avgtmin_rs_tminus2)),
+             avgtmin_rs_t_t1t2t3 = rowMeans(cbind(avg_tmin_rs, avgtmin_rs_tminus1, avgtmin_rs_tminus2, avgtmin_rs_tminus3)),
+             avgtmin_rs_t1t2 = rowMeans(cbind(avgtmin_rs_tminus1, avgtmin_rs_tminus2)),
+            
             avg_hrs1420_rs_tminus1 = rowMeans(cbind(hrs_14_20_rs, hrs1420_rs_tminus1)),
              avg_hrs1420_rs_tminus2 = rowMeans(cbind(hrs_14_20_rs, hrs1420_rs_tminus1, hrs1420_rs_tminus2)),
              avg_hrs1420_rs_tminus3 = rowMeans(cbind(hrs_14_20_rs, hrs1420_rs_tminus1, hrs1420_rs_tminus2, hrs1420_rs_tminus3)),
              avg_hrs1420_rs_t1t2 = rowMeans(cbind(hrs1420_rs_tminus1, hrs1420_rs_tminus2)),
             
+            avg_hrs1020_rs_tminus1 = rowMeans(cbind(hrs_10_20_rs, hrs1020_rs_tminus1)),
+             avg_hrs1020_rs_tminus2 = rowMeans(cbind(hrs_10_20_rs, hrs1020_rs_tminus1, hrs1020_rs_tminus2)),
+             avg_hrs1020_rs_tminus3 = rowMeans(cbind(hrs_10_20_rs, hrs1020_rs_tminus1, hrs1020_rs_tminus2, hrs1020_rs_tminus3)),
+             avg_hrs1020_rs_t1t2 = rowMeans(cbind(hrs1020_rs_tminus1, hrs1020_rs_tminus2)),
+            
             avg_hrsblw10_rs_tminus1 = rowMeans(cbind(hrs_blw10rs, hrsblw10_rs_tminus1)),
              avg_hrsblw10_rs_tminus2 = rowMeans(cbind(hrs_blw10rs, hrsblw10_rs_tminus1, hrsblw10_rs_tminus2)),
              avg_hrsblw10_rs_tminus3 = rowMeans(cbind(hrs_blw10rs, hrsblw10_rs_tminus1, hrsblw10_rs_tminus2, hrsblw10_rs_tminus3)),
              avg_hrsblw10_rs_t1t2 = rowMeans(cbind(hrsblw10_rs_tminus1, hrsblw10_rs_tminus2)),
+            
+            avg_hrsblw14_rs_tminus1 = rowMeans(cbind(hrs_blw14rs, hrsblw14_rs_tminus1)),
+             avg_hrsblw14_rs_tminus2 = rowMeans(cbind(hrs_blw14rs, hrsblw14_rs_tminus1, hrsblw14_rs_tminus2)),
+             avg_hrsblw14_rs_tminus3 = rowMeans(cbind(hrs_blw14rs, hrsblw14_rs_tminus1, hrsblw14_rs_tminus2, hrsblw14_rs_tminus3)),
+             avg_hrsblw14_rs_t1t2 = rowMeans(cbind(hrsblw14_rs_tminus1, hrsblw14_rs_tminus2)),
+            
+            avg_hrsblw20_rs_tminus1 = rowMeans(cbind(hrs_blw20rs, hrsblw20_rs_tminus1)),
+             avg_hrsblw20_rs_tminus2 = rowMeans(cbind(hrs_blw20rs, hrsblw20_rs_tminus1, hrsblw20_rs_tminus2)),
+             avg_hrsblw20_rs_tminus3 = rowMeans(cbind(hrs_blw20rs, hrsblw20_rs_tminus1, hrsblw20_rs_tminus2, hrsblw20_rs_tminus3)),
+             avg_hrsblw20_rs_t1t2 = rowMeans(cbind(hrsblw20_rs_tminus1, hrsblw20_rs_tminus2)),
              
              avg_hrsabv20_rs_tminus1 = rowMeans(cbind(hrs_abv20_rs, hrsabv20_rs_tminus1)),
              avg_hrsabv20_rs_tminus2 = rowMeans(cbind(hrs_abv20_rs, hrsabv20_rs_tminus1, hrsabv20_rs_tminus2)),
@@ -965,8 +1118,10 @@ rs_temps_lag <- rs_temps_lag %>%
 summary(summer_temps); unique(summer_temps$sample_year)
 
 hrs_abv25ds_lag <- as.tbl(select(summer_temps, plotid, sample_year, hrs_abv25ds))
+hrs_abv20ds_lag <- as.tbl(select(summer_temps, plotid, sample_year, hrs_abv20ds))
+hrs_blw20ds_lag <- as.tbl(select(summer_temps, plotid, sample_year, hrs_blw20ds))
 avg_tmax_ds_lag <- as.tbl(select(summer_temps, plotid, sample_year, avg_tmax_ds))
-hrs_blw18ds_lag <- as.tbl(select(summer_temps, plotid, sample_year, hrs_blw18ds))
+avg_tmin_ds_lag <- as.tbl(select(summer_temps, plotid, sample_year, avg_tmin_ds))
 
 summer_temps_lag <- select(rs_temps, plotid, sample_year)
 summer_temps_lag <- summer_temps_lag %>% 
@@ -987,6 +1142,19 @@ summer_temps_lag <- left_join(summer_temps_lag, hrs_abv25ds_lag,
 summer_temps_lag <- left_join(summer_temps_lag, hrs_abv25ds_lag,
                               by = c("plotid", "sample_year"="sample_year"))
 
+## Number of dry-season hours above 20 C lagged ####
+summer_temps_lag <- left_join(summer_temps_lag, hrs_abv20ds_lag,
+                by = c("plotid", "sample_year_minus1"="sample_year")) %>%
+      rename(hrs_abv20ds_tminus1 = hrs_abv20ds)
+summer_temps_lag <- left_join(summer_temps_lag, hrs_abv20ds_lag,
+                by = c("plotid", "sample_year_minus2"="sample_year")) %>%
+      rename(hrs_abv20ds_tminus2 = hrs_abv20ds)
+summer_temps_lag <- left_join(summer_temps_lag, hrs_abv20ds_lag,
+                by = c("plotid", "sample_year_minus3"="sample_year")) %>%
+      rename(hrs_abv20ds_tminus3 = hrs_abv20ds)
+summer_temps_lag <- left_join(summer_temps_lag, hrs_abv20ds_lag,
+                              by = c("plotid", "sample_year"="sample_year"))
+
 ## Average daily maximum temperature during dry-season lagged ####
 summer_temps_lag <- left_join(summer_temps_lag, avg_tmax_ds_lag,
                 by = c("plotid", "sample_year_minus1"="sample_year")) %>%
@@ -1000,33 +1168,56 @@ summer_temps_lag <- left_join(summer_temps_lag, avg_tmax_ds_lag,
 summer_temps_lag <- left_join(summer_temps_lag, avg_tmax_ds_lag,
                               by = c("plotid","sample_year"="sample_year"))
 
-## Number of dry-season hours below 18 C lagged ####
-summer_temps_lag <- left_join(summer_temps_lag, hrs_blw18ds_lag,
+## Average daily minimum temperature during dry-season lagged ####
+summer_temps_lag <- left_join(summer_temps_lag, avg_tmin_ds_lag,
                 by = c("plotid", "sample_year_minus1"="sample_year")) %>%
-      rename(hrs_blw18ds_tminus1 = hrs_blw18ds)
-summer_temps_lag <- left_join(summer_temps_lag, hrs_blw18ds_lag,
+      rename(avg_tmin_ds_tminus1 = avg_tmin_ds)
+summer_temps_lag <- left_join(summer_temps_lag, avg_tmin_ds_lag,
                 by = c("plotid", "sample_year_minus2"="sample_year")) %>%
-      rename(hrs_blw18ds_tminus2 = hrs_blw18ds)
-summer_temps_lag <- left_join(summer_temps_lag, hrs_blw18ds_lag,
+      rename(avg_tmin_ds_tminus2 = avg_tmin_ds)
+summer_temps_lag <- left_join(summer_temps_lag, avg_tmin_ds_lag,
                 by = c("plotid", "sample_year_minus3"="sample_year")) %>%
-      rename(hrs_blw18ds_tminus3 = hrs_blw18ds)
-summer_temps_lag <- left_join(summer_temps_lag, hrs_blw18ds_lag,
+      rename(avg_tmin_ds_tminus3 = avg_tmin_ds)
+summer_temps_lag <- left_join(summer_temps_lag, avg_tmin_ds_lag,
+                              by = c("plotid","sample_year"="sample_year"))
+
+## Number of dry-season hours below 20 C lagged ####
+summer_temps_lag <- left_join(summer_temps_lag, hrs_blw20ds_lag,
+                by = c("plotid", "sample_year_minus1"="sample_year")) %>%
+      rename(hrs_blw20ds_tminus1 = hrs_blw20ds)
+summer_temps_lag <- left_join(summer_temps_lag, hrs_blw20ds_lag,
+                by = c("plotid", "sample_year_minus2"="sample_year")) %>%
+      rename(hrs_blw20ds_tminus2 = hrs_blw20ds)
+summer_temps_lag <- left_join(summer_temps_lag, hrs_blw20ds_lag,
+                by = c("plotid", "sample_year_minus3"="sample_year")) %>%
+      rename(hrs_blw20ds_tminus3 = hrs_blw20ds)
+summer_temps_lag <- left_join(summer_temps_lag, hrs_blw20ds_lag,
                               by = c("plotid", "sample_year"="sample_year"))
 
 ## ####
 summer_temps_lag <- select(summer_temps_lag, plotid, sample_year, starts_with("hrs"), starts_with("avg"))
 summer_temps_lag <- summer_temps_lag %>% 
       mutate(
-            avg_hrsblw18_ds_tminus1 = rowMeans(cbind(hrs_blw18ds, hrs_blw18ds_tminus1)),
-             avg_hrsblw18_ds_tminus2 = rowMeans(cbind(hrs_blw18ds, hrs_blw18ds_tminus1, hrs_blw18ds_tminus2)),
-             avg_hrsblw18_ds_tminus3 = rowMeans(cbind(hrs_blw18ds, hrs_blw18ds_tminus1, hrs_blw18ds_tminus2, hrs_blw18ds_tminus3)),
-             avg_hrsblw18_ds_t1t2 = rowMeans(cbind(hrs_blw18ds_tminus1, hrs_blw18ds_tminus2)),
+            avg_hrsblw20_ds_tminus1 = rowMeans(cbind(hrs_blw20ds, hrs_blw20ds_tminus1)),
+             avg_hrsblw20_ds_tminus2 = rowMeans(cbind(hrs_blw20ds, hrs_blw20ds_tminus1, hrs_blw20ds_tminus2)),
+             avg_hrsblw20_ds_tminus3 = rowMeans(cbind(hrs_blw20ds, hrs_blw20ds_tminus1, hrs_blw20ds_tminus2, hrs_blw20ds_tminus3)),
+             avg_hrsblw20_ds_t1t2 = rowMeans(cbind(hrs_blw20ds_tminus1, hrs_blw20ds_tminus2)),
             
             avgtmax_ds_t_t1 = rowMeans(cbind(avg_tmax_ds, avg_tmax_ds_tminus1)),
              avgtmax_ds_t_t1t2 = rowMeans(cbind(avg_tmax_ds, avg_tmax_ds_tminus1, avg_tmax_ds_tminus2)),
              avgtmax_ds_t_t1t2t3 = rowMeans(cbind(avg_tmax_ds, avg_tmax_ds_tminus1, avg_tmax_ds_tminus2, avg_tmax_ds_tminus3)),
              avgtmax_ds_t1t2 = rowMeans(cbind(avg_tmax_ds_tminus1, avg_tmax_ds_tminus2)),
             
+            avgtmin_ds_t_t1 = rowMeans(cbind(avg_tmin_ds, avg_tmin_ds_tminus1)),
+             avgtmin_ds_t_t1t2 = rowMeans(cbind(avg_tmin_ds, avg_tmin_ds_tminus1, avg_tmin_ds_tminus2)),
+             avgtmin_ds_t_t1t2t3 = rowMeans(cbind(avg_tmin_ds, avg_tmin_ds_tminus1, avg_tmin_ds_tminus2, avg_tmin_ds_tminus3)),
+             avgtmin_ds_t1t2 = rowMeans(cbind(avg_tmin_ds_tminus1, avg_tmin_ds_tminus2)),
+            
+            avg_hrsabv20_ds_tminus1 = rowMeans(cbind(hrs_abv20ds, hrs_abv20ds_tminus1)),
+             avg_hrsabv20_ds_tminus2 = rowMeans(cbind(hrs_abv20ds, hrs_abv20ds_tminus1, hrs_abv20ds_tminus2)),
+             avg_hrsabv20_ds_tminus3 = rowMeans(cbind(hrs_abv20ds, hrs_abv20ds_tminus1, hrs_abv20ds_tminus2, hrs_abv20ds_tminus3)),
+             avg_hrsabv20_ds_t1t2 = rowMeans(cbind(hrs_abv20ds_tminus1, hrs_abv20ds_tminus2)),
+
             avg_hrsabv25_ds_tminus1 = rowMeans(cbind(hrs_abv25ds, hrs_abv25ds_tminus1)),
              avg_hrsabv25_ds_tminus2 = rowMeans(cbind(hrs_abv25ds, hrs_abv25ds_tminus1, hrs_abv25ds_tminus2)),
              avg_hrsabv25_ds_tminus3 = rowMeans(cbind(hrs_abv25ds, hrs_abv25ds_tminus1, hrs_abv25ds_tminus2, hrs_abv25ds_tminus3)),
