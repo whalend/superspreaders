@@ -17,7 +17,7 @@ output:
 library(knitr)
 load("climate_path_model_data.RData")
 library(piecewiseSEM)# version 1.1.1, tried most recent version & kept getting errror 7/18/2016 b/c matrices rows were unequal in sem.missing.paths function
-library(dplyr, verbose = F)
+library(plyr); library(dplyr, verbose = F)
 library(lme4, verbose = F)
 library(lmerTest, verbose = F)
 
@@ -54,6 +54,7 @@ oakplots.sub$twi15m.scl <- as.numeric(scale(oakplots.sub$twi15m))
 oakplots.sub$twi15m.log.scl <- as.numeric(scale(oakplots.sub$twi15m.log))
 ```
 
+
 ### Path model 
 This is the list of models that make up the path model to be fit using the methods implemented in the 'piecewiseSEM' packag. The continuous variables in the models were standardized using the default settings of the 'scale' function in R, resulting in each having a mean of zero and standard deviation of one. Each variable is first centered by subtracting its mean and then scaled by dividing by its standard deviation.
 
@@ -65,9 +66,9 @@ model_list1 <- list(
       
       slc <- lmer(tot_lfct.log ~ umca_density_ha.log + hrs_abv25ds + avg_hrs1422_wet_t_t1.log + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
       
-      wet_hours_1422 <- lmer(avg_hrs1422_wet_t_t1.log ~ umca_density_ha.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      wet_hours_1422 <- lmer(avg_hrs1422_wet_t_t1.log ~ umca_density_ha.log + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
       
-      hrs_abv25 <- lmer(hrs_abv25ds ~ twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      hrs_abv25 <- lmer(hrs_abv25ds ~ umca_density_ha.log + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
       
       oak_infection <- glmer(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1.log + H.2005 + (1|plotid) + (1|sample_year), family = binomial(link = "logit"), data = oakplots.sub)
 )
@@ -81,9 +82,9 @@ model_list1.scl <- list(
       
       slc <- lmer(tot_lfct.log.scl ~ umca_density_ha.log.scl + hrs_abv25ds.scl + avg_hrs1422_wet_t_t1.log.scl + shannons2005.scl + twi15m.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
       
-      wet_hours_1422 <- lmer(avg_hrs1422_wet_t_t1.log.scl ~ umca_density_ha.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      wet_hours_1422 <- lmer(avg_hrs1422_wet_t_t1.log.scl ~ umca_density_ha.log.scl + twi15m.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
       
-      hrs_abv25 <- lmer(hrs_abv25ds.scl ~ twi15m.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      hrs_abv25 <- lmer(hrs_abv25ds.scl ~ umca_density_ha.log.scl + twi15m.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
       
       oak_infection <- glmer(oak.inf ~ tot_lfct.log.scl + avg_hrs1422_wet_t_t1.log.scl + shannons2005.scl + (1|plotid) + (1|sample_year), family = binomial(link = "logit"), data = oakplots.sub)
 )
