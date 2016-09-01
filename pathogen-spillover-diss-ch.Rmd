@@ -58,6 +58,39 @@ oakplots.sub$twi15m.log.scl <- as.numeric(scale(oakplots.sub$twi15m.log))
 ### Path model 
 This is the list of models that make up the path model to be fit using the methods implemented in the 'piecewiseSEM' packag. The continuous variables in the models were standardized using the default settings of the 'scale' function in R, resulting in each having a mean of zero and standard deviation of one. Each variable is first centered by subtracting its mean and then scaled by dividing by its standard deviation.
 
+```{r hours >25 path model no umca density unscaled, echo=F}
+model_list2 <- list(
+      shannons <- lm(H.2005 ~ twi15m.log, data = oakplots.sub),
+      
+      # umca_density <- lmer(umca_density_ha.log ~ twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      slc <- lmer(tot_lfct.log ~ hrs_abv25ds + avg_hrs1422_wet_t_t1.log + H.2005 + twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      wet_hours_1422 <- lmer(avg_hrs1422_wet_t_t1.log ~ twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      hrs_abv25 <- lmer(hrs_abv25ds ~ twi15m.log + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      oak_infection <- glmer(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1.log + H.2005 + (1|plotid) + (1|sample_year), family = binomial(link = "logit"), data = oakplots.sub)
+)
+```
+
+```{r hours >25 path model no umca density scaled}
+model_list2.scl <- list(
+      shannons <- lm(shannons2005.scl ~ twi15m.log.scl, data = oakplots.sub),
+      
+      # umca_density <- lmer(umca_density_ha.log.scl ~ twi15m.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      slc <- lmer(tot_lfct.log.scl ~ hrs_abv25ds.scl + avg_hrs1422_wet_t_t1.log.scl + shannons2005.scl + twi15m.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      wet_hours_1422 <- lmer(avg_hrs1422_wet_t_t1.log.scl ~ twi15m.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      hrs_abv25 <- lmer(hrs_abv25ds.scl ~ twi15m.log.scl + (1|plotid) + (1|sample_year), data = oakplots.sub),
+      
+      oak_infection <- glmer(oak.inf ~ tot_lfct.log.scl + avg_hrs1422_wet_t_t1.log.scl + shannons2005.scl + (1|plotid) + (1|sample_year), family = binomial(link = "logit"), data = oakplots.sub)
+)
+```
+
+
 ```{r hours >25 path model all oak plots unscaled, echo=F}
 model_list1 <- list(
       shannons <- lm(H.2005 ~ twi15m.log, data = oakplots.sub),
@@ -89,6 +122,7 @@ model_list1.scl <- list(
       oak_infection <- glmer(oak.inf ~ tot_lfct.log.scl + avg_hrs1422_wet_t_t1.log.scl + shannons2005.scl + (1|plotid) + (1|sample_year), family = binomial(link = "logit"), data = oakplots.sub)
 )
 ```
+
 
 In my assessment of model residuals I found no substantial violations of the assumption of homoscedacity for individual models, and no relationships between the model residuals and the predictor variable(s). The patterning in the residual plots for some of the models is likely in part due to observations of count variables where the value is zero. Since the dataset in this analysis is all plots with one or more susceptible oak species there are some plots that have zero bay laurel and zero symptomatic bay laurel leaves.
 
@@ -194,6 +228,11 @@ In this case, the significant missing path between diversity and bay laurel dens
 raw_variables_model <- sem.fit(model_list1, oakplots.sub, 
         corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log"))
 scaled_variables_model <- sem.fit(model_list1.scl, oakplots.sub,
+          corr.errors = c("hrs_abv25ds.scl ~~ avg_hrs1422_wet_t_t1.log.scl"))
+
+raw_variables_model_noUMCA <- sem.fit(model_list2, oakplots.sub, 
+        corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log"))
+scaled_variables_model_noUMCA <- sem.fit(model_list2.scl, oakplots.sub,
           corr.errors = c("hrs_abv25ds.scl ~~ avg_hrs1422_wet_t_t1.log.scl"))
 ```
 
