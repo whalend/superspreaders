@@ -21,6 +21,24 @@ library(plyr); library(dplyr, verbose = F)
 library(lme4, verbose = F)
 library(lmerTest, verbose = F)
 
+panel.cor <- function(x, y, digits = 2, cex.cor, ...)
+{
+      usr <- par("usr"); on.exit(par(usr))
+      par(usr = c(0, 1, 0, 1))
+      # correlation coefficient
+      r <- cor(x, y)
+      txt <- format(c(r, 0.123456789), digits = digits)[1]
+      txt <- paste("r= ", txt, sep = "")
+      text(0.5, 0.6, txt)
+      
+      # p-value calculation
+      # p <- cor.test(x, y)$p.value
+      # txt2 <- format(c(p, 0.123456789), digits = digits)[1]
+      # txt2 <- paste("p= ", txt2, sep = "")
+      # if(p<0.01) txt2 <- paste("p= ", "<0.01", sep = "")
+      # text(0.5, 0.4, txt2)
+}
+
 # Calculate oak density variable as stems per hectare 
 oakplots.sub$umca_density_ha <- (oakplots.sub$tot_bay / (15*15))*10000
 oakplots.sub$umca_density_ha.log <- log(oakplots.sub$umca_density_ha+1)
@@ -74,7 +92,7 @@ model_list2 <- list(
 )
 ```
 
-```{r hours >25 path model no umca density scaled}
+```{r hours >25 path model no umca density scaled, echo=F}
 model_list2.scl <- list(
       shannons <- lm(shannons2005.scl ~ twi15m.log.scl, data = oakplots.sub),
       
@@ -128,6 +146,7 @@ In my assessment of model residuals I found no substantial violations of the ass
 
 ### Examining the residual plots of each piece of the path model
 
+
 **Residual plots of Shannon's Diversity Index model**
 ```{r shannons residuals plot, echo=F}
 plot(shannons, main = "OLS regression of diversity ~ wetness index residuals")
@@ -148,7 +167,13 @@ plot(umca_density@frame$twi15m.log.scl, resid(umca_density),
 
 **Residual plots of symptomatic leaf count model**
 ```{r symptomatic leaf count residuals plot, echo=F}
-plot(slc, main = "LMM of symptomatic leaf count residuals")
+plot(resid(slc), main = "LMM of symptomatic leaf count residuals")
+# qqnorm(resid(slc), main="Q-Q plot for conditional residuals - SLC")
+# qqnorm(ranef(slc)$sample_year$`(Intercept)`, 
+#        main="Q-Q plot for Sample Year")
+# qqnorm(ranef(slc)$plotid$`(Intercept)`, 
+#        main="Q-Q plot for plot ID")
+
 plot(slc@frame$umca_density_ha.log.scl, resid(slc),
      xlab = "bay laurel density",
      ylab = "model residuals",
@@ -170,8 +195,8 @@ plot(slc@frame$twi15m.log.scl, resid(slc),
      ylab = "model residuals",
      main = "SLC model residuals vs. wetness index predictor")
 ```
-```{r pairs plot of slc predictor variables}
-pairs(select(oakplots.sub, umca_density_ha.log.scl, hrs_abv25ds.scl, avg_hrs1422_wet_t_t1.log.scl, shannons2005.scl, twi15m.log.scl),
+```{r pairs plot of slc predictor variables, echo=F}
+pairs(na.omit(select(oakplots.sub, umca_density_ha.log.scl, hrs_abv25ds.scl, avg_hrs1422_wet_t_t1.log.scl, shannons2005.scl, twi15m.log.scl)),
       lower.panel = panel.cor, diag.panel = panel.hist,
       main = "Predictor variables for symptomatic leaf count models")
 ```
@@ -212,7 +237,7 @@ plot(oak_infection@frame$shannons2005.scl, resid(oak_infection),
      main = "Oak infection model residuals vs. diversity predictor")
 ```
 ```{r pairs plot of oak infection predictor variables, echo=F}
-pairs(select(oakplots.sub, tot_lfct.log.scl, avg_hrs1422_wet_t_t1.log.scl, shannons2005.scl),
+pairs(na.omit(select(oakplots.sub, tot_lfct.log.scl, avg_hrs1422_wet_t_t1.log.scl, shannons2005.scl)),
       lower.panel = panel.cor, diag.panel = panel.hist,
       main = "Predictor variables for oak infection model")
 ```
@@ -224,16 +249,20 @@ I fit the path model by implementing the d-sep test using the 'sem.fit' function
 
 In this case, the significant missing path between diversity and bay laurel density may be explained ecologically, but neither variable can be determined as causal to the other. I chose to maintain the initial hypothesized structure of the path model since the overall fit of the model was still acceptable, though this relationship could also be included as a correlated error.
 
-```{r fit and compare all oak plots, echo=F, message=F}
+```{r fit and compare all oak plots, echo=F, message=F, warning=F}
 raw_variables_model <- sem.fit(model_list1, oakplots.sub, 
-        corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log"))
+        corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log"),
+        .progressBar = F)
 scaled_variables_model <- sem.fit(model_list1.scl, oakplots.sub,
-          corr.errors = c("hrs_abv25ds.scl ~~ avg_hrs1422_wet_t_t1.log.scl"))
+          corr.errors = c("hrs_abv25ds.scl ~~ avg_hrs1422_wet_t_t1.log.scl"),
+          .progressBar = F)
 
 raw_variables_model_noUMCA <- sem.fit(model_list2, oakplots.sub, 
-        corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log"))
+        corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log"),
+        .progressBar = F)
 scaled_variables_model_noUMCA <- sem.fit(model_list2.scl, oakplots.sub,
-          corr.errors = c("hrs_abv25ds.scl ~~ avg_hrs1422_wet_t_t1.log.scl"))
+          corr.errors = c("hrs_abv25ds.scl ~~ avg_hrs1422_wet_t_t1.log.scl"),
+          .progressBar = F)
 ```
 
 ```{r tables of d-sep test results from sem.fit, echo=F}
@@ -241,6 +270,11 @@ kable(raw_variables_model,
       caption = "Results of the d-sep test using raw variables.")
 kable(scaled_variables_model,
       caption = "Results of the d-sep test using standardized variables.")
+
+kable(raw_variables_model_noUMCA, 
+      caption = "Results of the d-sep test using raw variables - no UMCA density.")
+kable(scaled_variables_model_noUMCA,
+      caption = "Results of the d-sep test using standardized variables - no UMCA density.")
 ```
 
 ### Path coefficients
@@ -251,16 +285,25 @@ raw_coefficients <- sem.coefs(model_list1, oakplots.sub,
           corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log"))
 scaled_coefficients <- sem.coefs(model_list1.scl, oakplots.sub,
           corr.errors = c("hrs_abv25ds.scl ~~ avg_hrs1422_wet_t_t1.log.scl"))
+
+raw_coefficients_noUMCA <- sem.coefs(model_list2, oakplots.sub,
+          corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log"))
+scaled_coefficients_noUMCA <- sem.coefs(model_list2.scl, oakplots.sub,
+          corr.errors = c("hrs_abv25ds.scl ~~ avg_hrs1422_wet_t_t1.log.scl"))
 ```
 
 **Tables of the path coeffcients for the fitted path models with raw and standardized variables.** 
 
 ```{r tables of path coefficients, echo=F}
-library(knitr)
 kable(raw_coefficients,
       caption = "Raw path coefficients")
+kable(raw_coefficients_noUMCA,
+      caption = "Raw path coefficients - no UMCA density")
+
 kable(scaled_coefficients,
       caption = "Standardized path coefficients")
+kable(scaled_coefficients_noUMCA,
+      caption = "Standardized path coefficients - no UMCA density")
 ```
 
 There were five non-significant path coefficients at the p=0.05 level. Two of these (symptomatic leaf count ~ wet-hours and wet-hours ~ bay laurel density) were marginal, with p-values <0.10, which may warrant further investigation and I will address the ecological relevance in the Discussion section. The topographic wetness index was not a statistically significant predictor of bay laurel density nor symptomatic leaf count after accounting for other predictor variables and additional variability due to unmeasured plot-level factors and repeated measures. Locations with higher potential soil moisture (larger values of the wetness index) were significantly less diverse and had significanly fewer hours when the temperature was above 25 C during the dry-season. Based on the path model structure, the wetness index has only indirect effects on oak infection (pathogen spillover). The inference for the total effect of the wetness index on pathogen spillover was positive, indicating that oak trees located in areas with higher potential soil moisture are more likely to become infected.
@@ -276,7 +319,7 @@ Expectedly, bay laurel density and potential inoculum load are tightly related t
 The symptomatic leaf count represents potential inoculum load, and ecologically is the primary driver that I measured of the pathogen spillover process leading to oak infection. Oaks in locations with greater inoculum load are more likely to be infected. Additional factors have direct and indirect effects on the success of the pathogen spillover process as indicated by infection of oak trees.
 
 ## Temperature Figures
-```{r temperature figures, echo=F}
+```{r temperature figures, echo=F, warning=F, eval=F}
 library(ggplot2)
 library(scales)
 temperatures <- left_join(
@@ -287,50 +330,63 @@ temperatures <- left_join(
 
 temps_figure <- ggplot(oak_sod, aes(group = sample_year))
 
-sstemps_figure <- temps_figure + 
+(sstemps_figure <- temps_figure + 
       geom_boxplot(aes(as.factor(sample_year), hrs_abv25ds)) +
       theme_bw() +
       xlab("Sample Year") +
       ylab("Number of hours") +
       ggtitle("Dry-season Hours >25 C")
-      
-slc_avg_figure <- temps_figure + 
+)     
+(slc_avg_figure <- temps_figure + 
       geom_boxplot(aes(as.factor(sample_year), avg_lfct)) +
       theme_bw() +
       xlab("Sample Year") +
       ylab("Symptomatic leaf count") +
       ggtitle("California bay laurel leaf symptoms - plot averages")
-
-slc_total_figure <- temps_figure + 
+)
+(slc_total_figure <- temps_figure + 
       geom_boxplot(aes(as.factor(sample_year), tot_lfct)) +
       theme_bw() +
       xlab("Sample Year") +
       ylab("Symptomatic leaf count") +
       ggtitle("California bay laurel leaf symptoms - plot totals")
-
-rstemps_figure <- temps_figure + 
+)
+(rstemps_figure <- temps_figure + 
       geom_boxplot(aes(as.factor(sample_year), hrs1422_wet)) +
       theme_bw() +
       xlab("Sample Year") +
       ylab("Number of hours") +
       ggtitle("Wet-hours 14-22 C")
-
-oak_infection_figure <- temps_figure +
+)
+(oak_infection_figure <- temps_figure +
       geom_bar(aes(as.factor(sample_year), inf_oak_ct), stat = "identity") +
       # geom_boxplot(aes(as.factor(sample_year), inf_oak_ct)) +
       theme_bw() +
       xlab("Sample Year") +
       ylab("Number of infected oaks") +
       ggtitle("Incident oak infection")
+)
 ```
 
-## Rainfall Figures
-```{r rainfall figures}
+## Rainfall Figure
+Total annual rainfall estimated at plot locations using two-dimensional interpolation methods implemented in GRASS-GIS. The red line indicates the average rainfall from 2005-2014
+```{r plot rainfall figure, echo=F}
+library(ggplot2)
 # summary(rainy_season_ppt)
+# rainy_season_ppt$year <- as.factor(rainy_season_ppt$year)
+rainfall_figure <- ggplot(filter(rainy_season_ppt, year > 2004), 
+                          aes(year, rain2d_total))
+rainfall_figure +
+      geom_boxplot(aes(group = year)) +
+      geom_hline(aes(yintercept = mean(rain2d_total)),
+                 colour = "red") +
+      xlab("Sample Year") +
+      ylab("November-May Total Rainfall (cm)") +
+      ggtitle("Rainfall Estimated at Plots from Rain Gauges")
 ```
 
-
-```{r print session info}
+### Session Information
+```{r print session info, echo=FALSE}
 print(sessionInfo())
 ```
 
