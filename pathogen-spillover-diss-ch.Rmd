@@ -4,12 +4,13 @@ author: "Whalen Dillon"
 date: "July 18, 2016"
 output:
   html_document:
-    self_contained: no
+    toc: yes
   pdf_document: default
   word_document: default
 ---
 
-# CHAPTER 3: EFFECTS OF DIVERSITY, TOPOGRAPHY, AND INTERANNUAL CLIMATE VARIABILITY ON PATHOGEN SPILLOVER
+# Appendix 2: Analysis of Environmental Controls on Pathogen Spillover
+Effects of Diversity, Topography, and Interannual Climate Variability
 
 ## Results
 
@@ -318,8 +319,44 @@ Expectedly, bay laurel density and potential inoculum load are tightly related t
 
 The symptomatic leaf count represents potential inoculum load, and ecologically is the primary driver that I measured of the pathogen spillover process leading to oak infection. Oaks in locations with greater inoculum load are more likely to be infected. Additional factors have direct and indirect effects on the success of the pathogen spillover process as indicated by infection of oak trees.
 
+## Disease Figures
+```{r disease figures, echo=F, warning=F}
+library(ggplot2)
+temperatures <- left_join(
+      select(summer_temps, plotid, sample_year, hrs_abv25ds),
+      select(wet_hrs, plotid, sample_year, hrs1422_wet),
+      by = c("plotid","sample_year"))
+# oak_sod$year <- as.Date(oak_sod$sample_year)
+temps_figure <- ggplot(oak_sod, aes(group = sample_year))
+
+(oak_infection_figure <- temps_figure +
+      geom_bar(aes(as.factor(sample_year), inf_oak_ct), stat = "identity") +
+      # geom_boxplot(aes(as.factor(sample_year), inf_oak_ct)) +
+      theme_bw() +
+      xlab("Sample Year") +
+      ylab("Number of infected oaks") +
+      ggtitle("Oak infection")
+)
+
+(slc_avg_figure <- temps_figure + 
+      geom_boxplot(aes(as.factor(sample_year), avg_lfct)) +
+      theme_bw() +
+      xlab("Sample Year") +
+      ylab("Symptomatic leaf count") +
+      ggtitle("California bay laurel leaf symptoms - plot averages")
+)
+
+(slc_total_figure <- temps_figure + 
+      geom_boxplot(aes(as.factor(sample_year), tot_lfct)) +
+      theme_bw() +
+      xlab("Sample Year") +
+      ylab("Symptomatic leaf count") +
+      ggtitle("California bay laurel leaf symptoms - plot totals")
+)
+```
+
 ## Temperature Figures
-```{r temperature figures, echo=F, warning=F, eval=F}
+```{r temperature figures, echo=F, warning=F, eval=T}
 library(ggplot2)
 library(scales)
 temperatures <- left_join(
@@ -337,20 +374,7 @@ temps_figure <- ggplot(oak_sod, aes(group = sample_year))
       ylab("Number of hours") +
       ggtitle("Dry-season Hours >25 C")
 )     
-(slc_avg_figure <- temps_figure + 
-      geom_boxplot(aes(as.factor(sample_year), avg_lfct)) +
-      theme_bw() +
-      xlab("Sample Year") +
-      ylab("Symptomatic leaf count") +
-      ggtitle("California bay laurel leaf symptoms - plot averages")
-)
-(slc_total_figure <- temps_figure + 
-      geom_boxplot(aes(as.factor(sample_year), tot_lfct)) +
-      theme_bw() +
-      xlab("Sample Year") +
-      ylab("Symptomatic leaf count") +
-      ggtitle("California bay laurel leaf symptoms - plot totals")
-)
+
 (rstemps_figure <- temps_figure + 
       geom_boxplot(aes(as.factor(sample_year), hrs1422_wet)) +
       theme_bw() +
@@ -358,18 +382,12 @@ temps_figure <- ggplot(oak_sod, aes(group = sample_year))
       ylab("Number of hours") +
       ggtitle("Wet-hours 14-22 C")
 )
-(oak_infection_figure <- temps_figure +
-      geom_bar(aes(as.factor(sample_year), inf_oak_ct), stat = "identity") +
-      # geom_boxplot(aes(as.factor(sample_year), inf_oak_ct)) +
-      theme_bw() +
-      xlab("Sample Year") +
-      ylab("Number of infected oaks") +
-      ggtitle("Incident oak infection")
-)
+
 ```
 
 ## Rainfall Figure
-Total annual rainfall estimated at plot locations using two-dimensional interpolation methods implemented in GRASS-GIS. The red line indicates the average rainfall from 2005-2014
+Total annual rainfall estimated at plot locations using two-dimensional interpolation methods implemented in GRASS-GIS. The red line indicates the average rainfall from 2005-2014.
+
 ```{r plot rainfall figure, echo=F}
 library(ggplot2)
 # summary(rainy_season_ppt)
@@ -380,6 +398,7 @@ rainfall_figure +
       geom_boxplot(aes(group = year)) +
       geom_hline(aes(yintercept = mean(rain2d_total)),
                  colour = "red") +
+      theme_bw() +
       xlab("Sample Year") +
       ylab("November-May Total Rainfall (cm)") +
       ggtitle("Rainfall Estimated at Plots from Rain Gauges")
