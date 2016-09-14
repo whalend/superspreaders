@@ -113,11 +113,12 @@ summary(us_richness)
 filter(us_richness, is.na(us_rich05)); filter(us_richness, is.na(us_rich11))
 us_richness <- filter(us_richness, plotid != "bush01", plotid != "halow01",
                       plotid != "sweet01")
+
 us_richness$us_rich05[us_richness$plotid=="jlsp05"] <- 0
-us_richness$us_rich05[us_richness$plotid=="ann06"] <- 0
 us_richness$us_rich11[us_richness$plotid=="ann06"] <- 0
-us_richness$us_rich05[us_richness$plotid=="mroth03"] <- 0
 us_richness$us_rich11[us_richness$plotid=="mroth03"] <- 0
+# us_richness$us_rich11[us_richness$plotid=="sumtv02"] <- 0
+# us_richness$us_rich11[us_richness$plotid=="mcneil01"] <- 0
 
 
 us_sub_richness <- full_join(
@@ -129,7 +130,7 @@ us_sub_richness <- full_join(
 summary(us_sub_richness)
 filter(us_sub_richness, is.na(us_rich11)); filter(us_sub_richness, is.na(us_rich05))
 # remove plots abandoned early in study
-us_sub_richness <- filter(us_sub_richness, 
+us_sub_richness <- filter(us_sub_richness,
                       plotid != "bush01", plotid != "halow01",
                       plotid != "sweet01")
 # mcneil01 was lost in 2009 (road built through plot), so NA for later years
@@ -138,6 +139,7 @@ us_sub_richness <- filter(us_sub_richness,
 us_sub_richness$us_rich11[us_sub_richness$plotid=="ann06"] <- 0
 us_sub_richness$us_rich11[us_sub_richness$plotid=="mroth03"] <- 0
 us_sub_richness$us_rich05[us_sub_richness$plotid=="jlsp05"] <- 0
+# us_sub_richness$us_rich11[us_sub_richness$plotid=="sumtv02"] <- 0
 # This leaves two legitimate NAs for understory species in 2011
 
 
