@@ -1,0 +1,20 @@
+.title-slide {
+  background-color: #FFFFFF; /* #CE0000; /* #EDE0CF; #CA9F9D; */
+  background-image:url(http://cnr.ncsu.edu/geospatial/wp-content/uploads/sites/6/2014/07/cgaDynamicB2REV.png);
+  background-size: 800px;
+  background-repeat: no-repeat;
+  background-position: center top;
+}
+
+.title-slide hgroup > h1{
+ font-family: 'Oswald', 'Helvetica', sanserif; 
+}
+
+.title-slide hgroup > h1, 
+.title-slide hgroup > h2 {
+  color: #CE0000 ;  /* ; #EF5150*/
+}
+
+slides > slide:not(.nobackground):after {
+  content: ""
+}
