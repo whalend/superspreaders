@@ -80,7 +80,8 @@ print(Bu)
 Six claims equals six models. The first two variables listed in each item are claimed to be independent based on the following set of zero or more variables.
 
 ### Assess Independence Claims
-The first independence claim is that `Date` is independent of `Latitude` after controlling for `DD`. So, I need to obtain the *precise* null probability for this claim. Choosing the correct modeling procedure requires identifying the appropriate distribution of the dependent variable, in this case `Date`. Using some helper fucntions and the `pairs()` function in the base `graphics` package I can look at the correlations and distributions simultaneously.
+The first independence claim is that `Date` is independent of `Latitude` after controlling for `DD`. So, I need to obtain the *precise* null probability for this claim. Choosing the correct modeling procedure requires identifying the appropriate distribution of the dependent variable, in this case `Date`. Using some helper functions and the `pairs()` function in the base `graphics` package I can look at the correlations and distributions simultaneously.
+
 ```{r helper functions for scatterplot matrix, echo=FALSE}
 # These were copied from the help pages of the `pairs` function with minor alterations
 
