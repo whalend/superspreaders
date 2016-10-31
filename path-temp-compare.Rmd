@@ -25,6 +25,17 @@ oakplots.sub$umca_density_ha <- (oakplots.sub$tot_bay / (15*15))*10000
 oakplots.sub$umca_density_ha.log <- log(oakplots.sub$umca_density_ha+1)
 ```
 
+```{r plot rainy season totals, echo=F}
+library(ggplot2)
+ggplot(rainy_season_ppt, aes(year, rain_v_total, group = year)) +
+      geom_boxplot() +
+      ylab("Rainfall (mm)") +
+      xlab("Rainy Season Year") +
+      ggtitle("Rainy Season Rainfall at Plots (nearest-neighbor assignment)") +
+      theme_bw()
+# ggsave("figures/rainy-season-ppt.png", dpi = 600)
+```
+
 ```{r combine plots data, eval=F, echo=F}
 soco_plots <- stems %>%
       select(plotid, species, year) %>%
