@@ -84,6 +84,7 @@ rainfall$plotid <- tolower(rainfall$plotid)
 
 ## Join remotely sensed and derived physical data
 LiDAR products, variables derived from DEMs
+
 ```{r join remotely sensed data}
 plots_env <- inner_join(plots_env, plots_vegtopo, by = "PLOT_ID")
 summary(plots_env)
@@ -209,6 +210,7 @@ str(plots_env)
 ```
 
 Examine temperature data, which is in long format and covers sample years 2004 through 2014. This means that I will need to exclude disease-related sampling from 2003 of the ecological data (NAs should fill-in if missing data when joining).
+
 ```{r examine temperature & rain data}
 # Temperature Data
 summary(rs_temps)
