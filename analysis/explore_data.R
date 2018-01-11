@@ -63,6 +63,7 @@ summary(stems$species) # 5 host species listed, so this appears legit
 summary(stems$status) # There are a lot of different `X` statuses, which I am not particularly concerned about. These will all just be treated as missing. However, there are 26 stems that appear to have a `blank` status type. 
 class(stems$status)
 View(filter(stems, status == ""))
+
 ## A good number of these stems needed an `X` status, but there were at least 8 that needed correcting in the database. The primary cause for the blank status appeared to be a duplication of the visit date for a single stem. Once one of these records was deleted the data appeared. So, I am going to export the query from the data base again and reassess the data with these corrections.
 stems <- read.csv("analysis/data/stem_summary_qry2_04-14.csv")
 summary(stems)
@@ -220,7 +221,7 @@ stems <- read.csv("analysis/data/all_stems_corrected.csv")
 library(dplyr)
 
 plots_umca <- stems %>%
-      select(plot, Date, species, slc, year, status) %>%
+      select(plot, date, species, slc, year, status) %>%
       group_by(plot, year, species) %>%
       filter(species == "UMCA", status == "Alive") %>%
       summarise(uninfected_bay_ct = length(which(slc==0)), infected_bay_ct = length(which(slc > 0)), tot_bay = length(species))
@@ -234,7 +235,7 @@ length(which(plots_umca$ct_bay_NA > 0))
 # filter(plots_umca, infected == 0)
 summary(filter(plots_umca, infected_bay_ct == 0))# 49 plots, max year = 2010
 
-write.csv(plots_umca, "analysis/data/plots_umca_infection.csv")
+# write.csv(plots_umca, "analysis/data/plots_umca_infection.csv")
 # I sent this file to Francesco for informing the spread model
 
 
@@ -253,7 +254,7 @@ spread(plot_qusp, key = species, value = infected_oak_ct, drop = TRUE)
 
 gather(plot_qusp, inf_status, count, ends_with("ct")) %>% 
       unite(species, inf_status) %>% 
-      spread(inf_status, )
+      spread(inf_status)
 
 library(reshape2)
 tmp <- plot_qusp %>%

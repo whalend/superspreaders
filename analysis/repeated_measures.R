@@ -103,10 +103,12 @@ plot(m2)
 plot(m2a)
 plot(m2b)
 plot(m2c)
+
 #' All of them show a lot of spread - expected because I know the distributions for leaf count and density aren't even close to normal
 par(mfrow = c(2,2))
 hist(plot_umca$tot_slc)
 hist(plot_umca$live_dens)
+
 #' Log transformation improves the distributions, but with some zeroes for symptomatic leaf count I need to add a constant. The `log1p` function computes log(1+x) accurately for |x| much less than one (automatically adds the constant 1) 
 log_tot_slc <- log1p(plot_umca$tot_slc); hist(log_tot_slc)
 log_live_dens <- log(plot_umca$live_dens); hist(log_live_dens)
