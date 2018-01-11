@@ -182,6 +182,7 @@ oak_sod$avg_lfct[oak_sod$plotid == "yahng02" & oak_sod$sample_year == 2010] <- N
 #' 
 #' I am going to model each year independently, and use a "repeated measures" approach that accounts for correlation among plots sampled during the same season by applying the sample year as a random effect. This is effectively a single model implemented to account for the same plots being sampled repeatedly, i.e. once each year.
 #' 
+#' 
 #+ repeated measures plot-level path model ####
 # pairs(na.omit(select(oak_sod, inf_oak_ct, tot_bay, tot_lfct, H.2005, H.2014, us.H.2005, us.H.2011, hrsblw14_wet, hrs1020_wet, avg_tmax_ds, avg_tmin_ds, hrs_abv25ds, rs2d_total, rs_v_total, twi15m)),
 #       lower.panel = panel.cor, diag.panel = panel.hist)

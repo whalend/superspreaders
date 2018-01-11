@@ -55,6 +55,5 @@ pairs(na.omit(select(slc_plot_year, -plotid)),
       main = "Log Total Symptomatic Leaf Count Across Years")
 
 plot(lm(slc05 ~ slc04, data = slc_plot_year))
-
 ```
 
