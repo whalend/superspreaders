@@ -895,7 +895,7 @@ pairs(na.omit(select(oakplots.sub, tot_lfct.log, avg_hrs1422_wet_t_t1.log, H.200
 
 ```{r significant relationships figure}
 
-cowplot::plot_grid(
+(sig.rel.fig <- cowplot::plot_grid(
       inf.lfct.plot,
       inf.h2005.plot +
             xlab("Tree diversity (H')"),
@@ -904,12 +904,15 @@ cowplot::plot_grid(
             ggtitle(""),
       slc_vs_hrs25_plot +
             ggtitle(""),
-      shannon.plot +
-            ggtitle(""),
       hot.mod.plot +
+            ggtitle(""),
+      shannon.plot +
             ggtitle(""),
       labels = "auto", label_x = .01
       )
+)
+ggsave("figures/path-significant-relationships.png", plot = sig.rel.fig,
+       width = 7, height = 7, units = "in")
 
 ```
 
