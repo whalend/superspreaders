@@ -1,7 +1,7 @@
 ---
 title: "Pathogen Spillover - dissertation chapter"
 author: "Whalen Dillon"
-date: "`r Sys.Date()"
+date: "`r Sys.Date()`"
 output:
   html_document:
     self_contained: no
@@ -457,16 +457,18 @@ plot_model(shannon.mod, type = "resid", show.values = T)
 plot_model(shannon.mod, type = "slope", show.values = T)
 plot_model(shannon.mod, type = "std", show.values = T, 
            title = "Standardized coefficient estimate")
-S.plot <- plot_model(shannon.mod, type = "slope")
+S.plot <- plot_model(shannon.mod, type = "pred", terms = "twi15m")
 
 # line_color <- "black"
 # S.plot$data
 # str(S.plot)
 
-(shannon.plot <- ggplot(oaks.data, aes(twi15m, h2005)) +
-      geom_point(alpha = .7) +
+(shannon.plot <- plot_model(shannon.mod, type = "pred", terms = "twi15m") +
+      geom_point(data = oaks.data, 
+                 aes(twi15m, h2005), 
+                 alpha = .1, size = 1, position = "jitter") +
       # geom_smooth(method = "loess", se = F, color = "gray50", linetype = "dashed") +
-      geom_smooth(method = "lm", color = "black") +
+      # geom_smooth(method = "lm", color = "black") +
       theme_classic() +
       xlab("Topographic index") +
       ylab("Tree diversity (H')") +
@@ -566,33 +568,54 @@ plot_model(lfct.mod, show.values = T, type = "std",
 plot_model(lfct.mod, show.values = T, type = "re")
 
 # effect plots
-plot_model(lfct.mod, type = "slope") +
+plot_model(lfct.mod, type = "slope", show.data = T, colors = "blambus") +
+      # geom_point(color = "black", alpha = .1) +
+      # geom_smooth(method = "lm", color = "black", fill = "black") +
+      # geom_smooth(method = "loess", color = NA) +
       theme_bw() +
       ylab("log (leaf count + 1)") +
-      theme(strip.background = element_blank()) +
+      # theme(strip.text = element_blank()) +
       NULL
 
-plot_model(lfct.mod, type = "pred", terms = c("hrs25", "tot_bay.ln1")) +
+
+slc_vs_bay_plot <- plot_model(lfct.mod, type = "pred", terms = c("tot_bay.ln1"), show.data = F) +
+      geom_point(data = oaks.data, aes(x = tot_bay.ln1, y = lfct),alpha = .1, size = 1) +
       theme_classic() +
-      ylab("log( leaf count + 1 )") +
-      xlab("Hours >25 ºC") +
-      ggtitle("Predicted values") +
+      ylab("Symptomatic leaf count") +
+      xlab("Bay laurel density") +
+      ggtitle("Model fit") +
       NULL
 
-slc_vs_bay_plot <- ggplot(oaks.data, aes(tot_bay.ln1, lfct)) +
-      geom_point(alpha = .7) +
-      geom_smooth(method = "lm", color = "black") +
-      xlab("log( Bay laurel count )") +
-      ylab("log( Symptomatic leaf count )") +
-      theme_classic()
-slc_vs_hrs25_plot <- ggplot(oaks.data, aes(hrs25, lfct)) +
-      geom_point(alpha = .7) +
-      geom_smooth(method = "lm", color = "black") +
-      xlab("Number of hours >25 ºC") +
-      ylab("log( Symptomatic leaf count )") +
-      theme_classic()
+slc_vs_hrs25_plot <- plot_model(lfct.mod, type = "pred", terms = c("hrs25"), show.data = F) +
+      geom_point(data = oaks.data, 
+                 aes(x = hrs25, y = lfct),
+                 alpha = .1, size = 1) +
+      theme_classic() +
+      ylab("Symptomatic leaf count") +
+      xlab("Hours >25 ºC") +
+      ggtitle("Model fit") +
+      NULL
 
-cowplot::plot_grid(slc_vs_bay_plot, slc_vs_hrs25_plot, nrow = 2)
+# ggeffects::ggpredict(lfct.mod)
+
+# slc_vs_bay_plot <- ggplot(oaks.data, aes(tot_bay.ln1, lfct)) +
+#       geom_point(alpha = .7) +
+#       geom_smooth(method = "lm", color = "black") +
+#       xlab("log( Bay laurel count )") +
+#       ylab("log( Symptomatic leaf count )") +
+#       theme_classic()
+# 
+# slc_vs_hrs25_plot <- ggplot(oaks.data, aes(hrs25, lfct)) +
+#       geom_point(alpha = .7) +
+#       geom_smooth(method = "lm", color = "black") +
+#       xlab("Number of hours >25 ºC") +
+#       ylab("log( Symptomatic leaf count )") +
+#       theme_classic()
+
+cowplot::plot_grid(slc_vs_bay_plot, 
+                   slc_vs_hrs25_plot,
+                   labels = "auto",
+                   nrow = 2)
 
 # plot(resid(slc), main = "LMM of symptomatic leaf count residuals")
 # qqnorm(resid(slc), main="Q-Q plot for conditional residuals - SLC")
@@ -621,6 +644,11 @@ cowplot::plot_grid(slc_vs_bay_plot, slc_vs_hrs25_plot, nrow = 2)
 #      xlab = "wetness index",
 #      ylab = "model residuals",
 #      main = "SLC model residuals vs. wetness index predictor")
+
+# ggplot(oaks.data, aes(tot_bay, tot_lfct)) +
+#       geom_point() +
+#       scale_x_log10() +
+#       scale_y_log10()
 
 ```
 
@@ -700,12 +728,33 @@ plot_model(hot.mod, type = "slope", show.data = T) +
             strip.text = element_blank()) +
       NULL
 
-ggplot(oaks.data, aes(twi15m, hrs25)) +
-      geom_point(alpha = .3) +
-      geom_smooth(method = "lm", color = "black") +
+# Fitted line with the observed data.
+hot.mod.plot <- plot_model(hot.mod, type = "pred", terms = "twi15m", show.data = F) +
+      geom_point(data = oaks.data, 
+                         aes(x = twi15m, y = hrs25),
+                         alpha = .1) +
+      theme_classic() +
+      ylab("Number of hours >25 ºC") +
+      xlab("Topographic index") +
+      theme(strip.background = element_blank(),
+            strip.text = element_blank()) +
+      NULL
+
+
+(hot.mod.plot2 <- ggplot(oaks.data, 
+                         aes(twi15m, hrs25,
+                             # color = as.factor(year)
+                             )
+                         ) +
+      geom_point(alpha = .1) +
+      # geom_smooth(method = "lm", se = F) +
+      geom_smooth(method = "lm", se = T, color = "black") +
+      scale_color_viridis_d() +
       xlab("Topographic index") +
       ylab("Number of hours >25 ºC") +
-      theme_classic()
+      theme_classic() +
+      NULL
+      )
 
 # plot(hrs_abv25, main = "LMM of # of hours >25 C during prev. dry season residuals")
 # plot(hrs_abv25@frame$twi15m, resid(hrs_abv25),
@@ -735,32 +784,87 @@ plot_model(inf.mod, type = "resid")
 
 cowplot::plot_grid(
       plot_model(inf.mod, type = "est", show.values = T, 
-                 title = "Oak infection coefficient estimates") +
+                 title = "Oak infection coefficient estimates",
+                 vline.color = "gray80") +
             # geom_hline(yintercept = 1, color = "gray80",linetype = "dashed") +
             theme_classic(),
       plot_model(inf.mod, type = "std", show.values = T, 
                  title = "Oak infection std. coefficient estimates",
-                 # vline.color = "gray80"
+                 vline.color = "gray80"
                  ) +
             theme_classic(),
       nrow = 2
       )
 
-plot_model(inf.mod, type = "pred", terms = c("lfct"), show.data = T) +
+
+inf.lfct.plot <- plot_model(inf.mod, type = "pred", terms = c("lfct"), show.data = T) +
       # geom_point() +
       theme_classic() +
-      xlab("log( symptomatic leaf count + 1 )") +
-      ylab("Predicted probability for oak infection") +
+      xlab("Symptomatic leaf count") +
+      ylab("Infected oaks (%)") +
       ggtitle("") +
       NULL
 
-ggplot(oaks.data, aes(exp(lfct), inf_oak_ct/(inf_oak_ct+uninf_oak_ct))) +
-      # geom_point(alpha = .5) +
-      stat_sum() +
-      facet_grid(year~.) +
-      geom_smooth(method = "loess", color = "black") +
+# marginal effects of each significant predictor variable
+cowplot::plot_grid(
+inf.lfct.plot <- inf.lfct.plot +
+      geom_point(data = oaks.data, 
+                 aes(x = lfct, 
+                     y = inf_oak_ct/(inf_oak_ct+uninf_oak_ct)
+                     ),
+                 alpha = .1, size = 1),
+# inf.lfct.plot +
+#       geom_point(data = filter(oaks.data, inf_oak_ct/(inf_oak_ct+uninf_oak_ct) <.5), 
+#                  aes(x = lfct, 
+#                      y = inf_oak_ct/(inf_oak_ct+uninf_oak_ct)
+#                      ),
+#                  alpha = .4, size = 1),
+
+inf.h2005.plot <- plot_model(inf.mod, type = "pred", terms = c("h2005"), show.data = T) +
+      geom_point(data = oaks.data, 
+                 aes(x = h2005, 
+                     y = inf_oak_ct/(inf_oak_ct+uninf_oak_ct)
+                     ),
+                 alpha = .1, size = 1) +
+      theme_classic() +
+      xlab("Shannon's diversity index") +
+      ylab("Infected oaks (%)") +
+      ggtitle("") +
+      NULL,
+
+inf.hrs1422.plot <- plot_model(inf.mod, type = "pred", terms = c("hrs1422")) +
+      geom_point(data = oaks.data, aes(x = hrs1422, y = inf_oak_ct/(inf_oak_ct+uninf_oak_ct)), alpha = .1, size = 1) +
+      theme_classic() +
+      xlab("Hours 14-22 ºC") +
+      ylab("Infected oaks (%)") +
+      ggtitle("") +
+      NULL,
+labels = "auto"
+)
+
+
+ggplot(oaks.data, aes((lfct), inf_oak_ct/(inf_oak_ct+uninf_oak_ct), color = as.factor(year))) +
+      geom_point(alpha = .5) +
+      # geom_line(aes(x=lfct, y=predict(inf.mod))) +
+      geom_smooth(aes(y=predict(inf.mod, type = "response")), method = "gam", formula = y~s(x, bs="cs"), se=F) +
+      scale_color_viridis_d() +
+      # stat_sum() +
+      # facet_grid(year~.) +
+      # geom_smooth(method = "loess", color = "black") +
       theme_classic() +
       NULL
+# 
+# 
+# inf.pred <- ggeffects::ggpredict(inf.mod, full.data = T)
+# 
+# ggplot(inf.pred$lfct, aes(x, predicted)) +
+#       # geom_point(data = oaks.data, aes(x = lfct, y = )) +
+#       geom_path()
+#       
+# inf.pred$h2005
+# 
+# inf.mod.predict <- predict(inf.mod)
+
 
 # plot(oak_infection, main = "Binomial GLMM of oak infection residuals")
 # plot(oak_infection@frame$tot_lfct.log, resid(oak_infection),
@@ -783,6 +887,29 @@ ggplot(oaks.data, aes(exp(lfct), inf_oak_ct/(inf_oak_ct+uninf_oak_ct))) +
 pairs(na.omit(select(oakplots.sub, tot_lfct.log, avg_hrs1422_wet_t_t1.log, H.2005)),
       lower.panel = panel.cor, diag.panel = panel.hist,
       main = "Predictor variables for oak infection model")
+
+```
+
+
+# Combine significant relationships from fitted models
+
+```{r significant relationships figure}
+
+cowplot::plot_grid(
+      inf.lfct.plot,
+      inf.h2005.plot +
+            xlab("Tree diversity (H')"),
+      inf.hrs1422.plot,
+      slc_vs_bay_plot +
+            ggtitle(""),
+      slc_vs_hrs25_plot +
+            ggtitle(""),
+      shannon.plot +
+            ggtitle(""),
+      hot.mod.plot +
+            ggtitle(""),
+      labels = "auto", label_x = .01
+      )
 
 ```
 
