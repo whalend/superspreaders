@@ -1,0 +1,164 @@
+---
+title: "Response to reviewer comments Ecology manuscript ECY18-0093"
+author: "Whalen Dillon"
+date: "`r Sys.Date()`"
+output: word_document
+#bibliography: references.bib
+---
+
+Dear Editor,
+
+Enclosed is our substantially revised manuscript, **Direct and indirect effects of local microclimate on pathogen spillover** (ECY18-0093) for further consideration as an **Article** for publication in *Ecology*. In their major comments, Reviewer 1 noted that "*it is difficult to discern which results are novel and what is exciting or generalizable about the results from the paper as it is written.*" In their comments, Reviewer 2 asked about spatial independence of our sampling, which we did neglect to address in the original text and have remedied in this revised manuscript; and stated that "*abiotic/biotic interactions at the local scale and would be potentially very valuable information to have.*" These broad comments along with the more detailed comments provided inspired major revisions to the Introduction and Results sections to emphasize our analysis of the effects of local (plot-level) microclimate on local (plot-level) pathogen spillover.
+
+Below is a detailed account of how we implemented the requested revisions and responses for each reviewer comment. We organized the letter below to show the reviewer's comment in bold, with emphasis on the part(s) we are addressing, followed by our Response. To assist you with assessing our revisions, we refer to paragraph order within sections and line numbering and include added changed text (italics).
+
+
+Thank you again for your consideration of this revised manuscript for publication.
+
+Sincerely,
+
+Whalen W. Dillon and Ross K. Meentemeyer
+
+
+# Revisions following reviewer comments
+
+## Reviewer 1 Comments: 
+
+**In this paper, the authors use a path analysis on observational data collected from 2003 - 2014 to explore the abiotic and biotic divers of pathogen spillover of the Sudden Oak Death pathogen onto susceptible oak trees in California. It is an ecologically important disease, pathogen spillover is an understudied problem, and the observational study is impressively long. Despite these positive features, *it is difficult to discern which results are novel and what is exciting or generalizable about the results from the paper as it is written.* The major challenge with this paper is distinguishing the current work from previously published work in this system from the same research group. It wasn't clear to me which were novel results and which were supporting previous findings, but with a longer dataset. *The Results section is very brief, and most of the results were expected a priori from previous work in the same system.* It is very important to establish up front what is known from previous studies, what the major research gaps are, and how this study fills those gaps (i.e., how it differs from previous studies).**
+
+Response: Few studies have presented an analysis of measurements made at epidemiologically relevant scales for each aspect of the disease triangle over a time period that captures multiple fluctuations in these factors. For example, exposure measurements (e.g. time above a threshold temperature) are rarely available at the same location as disease measurements for a decade. We lay out how this study provides new insights in our revisions to the Introduction (paragraph 2, lines 60-82, text below in response to a different comment). 
+
+While many of the relationships in our results were expected a priori from previous work we would like to point out that having prior knowledge is a strength of path analysis. A key addition of this work is testing the relationships hypothesized by previous work that in most cases depended on just a few years of data or a few experiments. We also expanded the results section to add greater detail on the relationships and added/replaced a figure (Fig. 4).
+
+
+**As written, the paper does not appear to be very hypothesis-driven or focused on understanding mechanisms driving disease transmission (e.g., between lines 44 and 45 would be a good place to state them). Instead, it builds from the assumption that environmental heterogeneity is an interesting and important driver (lines 34-35) without really discussing what aspects of the environment are most likely to be important, or what is generalizable about this study. Phrases like "some key biotic and abiotic factors" (line 74) are too vague and generic to inspire much interest.**
+
+Response: We made a major revision/addition to the Introduction where we discuss in greater what environmental aspects are important and why in the second paragraph (text below, lines 60-82) 
+*Disease transmission and spillover fundamentally depends on the overlap of a pathogen, susceptible hosts, and abiotic environmental conditions that are favorable for disease. Abiotic factors such as temperature, rainfall, and physical landscape structure can all directly and/or indirectly affect the host-pathogen interactions that lead to disease. Abiotic conditions can directly affect pathogen survival especially when the pathogen is transmitted indirectly and must survive outside of the host. Landscape characteristics and changes in land use affect host density by influencing where hosts aggregate. Animal hosts may have preferred forage areas where they aggregate, while the aggregation of plant hosts is more strongly determined by landscape structure because individuals don’t move. Plant host density only increases in areas on the landscape where conditions are favorable or where conditions are made favorable by human action. The hosts and the pathogen experience the same climatic conditions but respond at different temporal scales to exposure to hot/cold or wet/dry extremes. Extreme conditions for the pathogen can reduce pathogen survival thereby reducing transmission. Extreme conditions for the host may increase its susceptibility to infection at a later time by stressing the host and compromising its immune response. Pathogen reproduction is also dependent on the host community because of differences in species’ competency for pathogen reproduction and tolerance of pathogen infection. Greater diversity may present more low-competency or non-hosts, which would reduce disease transmission through processes such as spillover. Although abiotic environmental conditions are a key component for many diseases, plant disease systems may be more regularly affected by abiotic environmental heterogeneity because the plants and their pathogens generally can’t move to change the conditions they are experiencing.*
+
+
+**In lines 79-83, the authors state what they will measure and assess, but again without giving rationale for why things like topography, microclimate, and community composition would be important for pathogen spillover or hypotheses for their directional effects and direct or indirect effects. There are lots of interesting potential mechanisms here, and they could use greater explanation up front for a broad ecological audience. It's not clear why host diversity per se should be an important driver, and not just the abundance of bay laurel (the reservoir host) and oak (the susceptible host). This rationale should be explained better.**
+
+Response we revised the last two paragraphs of the Introduction to build the rationale for why these factors are important components of pathogen spillover and explicitly lay out the hypothesized relationships and the directions of effects: 
+ 
+*Landscape characteristics, such as topography and geology, influence local moisture persistence, the vegetation community and, indirectly, disease dynamics. Local microclimate conditions, i.e. temperature and moisture, directly influence pathogen reproduction and may also affect host susceptibility. While the hosts and the pathogen experience the same abiotic conditions, they respond differently to extremes (too hot or too cold, too wet or too warm) because what is “extreme” for a microscopic pathogen is not the same as an “extreme” for a tree. Pathogen reproduction is also dependent on the host community because of differences in competency for pathogen reproduction and tolerance of pathogen infection.*
+ 
+*We hypothesize that biotic factors, in this case the density of bay laurel and diversity of  the tree community, affect spillover more strongly than abiotic factors of microclimate and landscape topography, but that abiotic factors still significantly affect the spillover process. Specifically, as a very competent host greater bay laurel density will generate greater pathogen loads and directly drive spillover to susceptible oak species. At the same time, infection of oaks is expected to be reduced by greater tree diversity (i.e. a dilution effect) because all other tree species in the community have low competency compared to bay laurel. Greater exposure to warm and wet conditions is hypothesized to directly increase pathogen loads and disease prevalence of oaks by simultaneously creating favorable conditions for the pathogen and increasing the susceptibility of oaks. At the same time, we hypothesize that heat exposure will directly reduce pathogen load in the bay laurel canopy due to poor conditions for pathogen reproduction and increased abscission of leaves damaged by infection. Finally, we hypothesize that the landscape context (measured as the topographic index) will indirectly affect pathogen spillover by influencing bay laurel density, heat exposure, exposure to warm and wet conditions, and tree diversity. Higher values of the topographic index will correlate with greater bay laurel density, less heat exposure, more exposure to warm and wet conditions, and lower tree diversity. Our results provide insights into the relative effects of biotic and abiotic environmental heterogeneity on disease dynamics, particularly the process of pathogen spillover, which can improve predictions of disease risk and strategies for disease control.*
+
+
+**In Fig. 2, it would be useful to walk through all the hypothesized mechanisms and explain the rationale for each (lines 190-191).**
+
+Response: The hypothesized mechanisms were previously laid out in the Methods section with the calculation of each variable. During revision these were moved to the last paragraph of the Introduction (lines 148-161; text above) and we reference the figure in that paragraph.
+
+
+**It is unsatisfying to see just a path diagram with estimated coefficients as the only results presented visually (Fig. 3). It would be much easier to follow the results with a direct visualization of the data and model fits (e.g., scatterplots of driver - response relationships). I realize this could be challenging with this type of path model, but seeing the data and how they align with the model is critical for gaining intuition into the results. Why are the rainfall totals shown in Fig. 4? Is this figure cited in the main text? It doesn't appear to contribute much.**
+
+Response: We agree with the reviewer comment on Fig. 4 and replaced it with the suggested figure of driver - response curves from the model fits plotted over the data points. In the new Fig. 4 we included only significant relationships from the path model.
+
+
+**The title is jargony and hard to engage with, as is the first sentence of the Abstract and lines 30-31. Why should we care about abiotic environmental heterogeneity? Why is this an interesting question to ask?** 
+
+Response: revised title, *Microclimate has a significant but relatively weak effect on pathogen spillover*
+
+
+**Line 135: unnecessary comma.** 
+
+Response: fixed
+
+
+**Line 172: seems kind of late to be first defining amplification and spillover.** 
+
+Response: Amplification and spillover were defined in the first paragraph of the Introduction. We made the role of amplification more clear *Reservoir hosts support high levels of pathogen reproduction (amplification) and transmission*
+
+
+**Line 193: define 'confirmatory approach'.** 
+
+Response: This text was removed during revision of the Methods as it caused some confoundment with the general principle of structural equation modeling. Structural equation modeling is generally a "confirmatory approach" because it lays out a set of hypotheses in the structural model that are then tested using data. This SEM "philosophy" has been well-covered in the literature, including references in this manuscript, and a full description is beyond the scope of our research paper.  
+
+
+**Lines 207-211: explain why independence is important and what happens when it fails.** 
+
+Response: this text was removed during revision in the interest of length. The independence test is related to some of the assumptions of statitistical regression models where inference is the goal. The independence test of the SEM is a check on the assumption that each model has all the important explantory variables from the pool of variables that are being examined in the system. A failure of the independence test indicates one or more missing paths in the structural model, i.e. the initial set of hypotheses of the relationships in the systems isn't entirely accurate. 
+
+
+**Line 212: what are the response variables?** 
+
+Response: We refer to what the response variables are in Fig. 1 in the first paragraph of the revised *Statistical analyses* section: *Each box in Fig. 1 that has at least one arrow pointing to it is a response variable in the model and each of the boxes where that arrow is rooted is a predictor variable.*
+
+
+**Lines 216-222: the model section is hard to follow.**
+
+Response: We made substantial revisions to this section of the Methods, which we hope improved the flow of the text and made it easier to follow.
+
+**Line 225: what are the random effects?**
+
+Response: The random effects (sample year and plot) are identified and described in the second paragraph of the *Statistical analyses* section: *For variables repeatedly measured at each plot during each year we used mixed-effects models with scalar random effects for the sample year and plot, which account for this cross-replication by allowing the intercepts for these grouping factors to vary. The random effect for year accounts for correlation between measurements made during the same year, while the random effect for plot accounts for correlation between the measurements from the same plot. Accounting for this induced correlation provides more accurate estimates of confidence intervals and p-values by preventing variation from being attributed to measured variables.*
+
+
+**Line 250-251: it would have been helpful for this explanation to come earlier.**
+
+Response: We moved this sentence to the first paragraph of the *Statistical analyses* section and added to the description in the caption of Fig.1. *The curved, double-headed arrow indicates a correlative but not causal relationship between variables, and this relationship is excluded from the model fitting.*
+
+
+**Lines 307-309: hard to understand this sentence.**
+
+Response: We revised this paragraph of the Discussion and this sentence now reads, *Previous studies indicated  individual variation in bay laurel susceptibility and competency (Anacker et al. 2008, Hüberli et al. 2011) that would be obscured by aggregation to the plot level in our study.*
+
+
+**Line 315: subject-verb agreement problem. Also, this point is speculative based on the data presented here.**
+
+Response: We revised the sentence, *Our analysis using a longer data set from a geographically distinct plot network with different forest types reinforces this previous finding in this system.*
+
+
+**Line 318: this dilution effect result was shown in previous work. A broader discussion of the dilution effect in this system (and why it goes beyond just the abundance of bay laurel vs. oak) would be interesting, and would frame the paper within the broader community ecology of disease context.**
+
+Response: We added the following text to this paragraph *An interesting contrast in our results is that the dilution effect did not extend to pathogen load (symptomatic leaf count) on bay laurel. One possible reason for observing a dilution effect of diversity on oak disease prevalence but no effect on pathogen load is because the P. ramorum infection on bay laurel occurs at the scale of the leaf, while on oaks it occurs at the scale of the tree (i.e., bole-cankers). At the leaf-scale, a single bay laurel tree with thousands of leaves could support a very large pathogen load even as the only bay laurel amongst a group of susceptible oaks. In this low-diversity scenario all of the oaks nearby the bay laurel tree would be at high risk of becoming infected. Therefore, increasing tree diversity to include more species with low or no competency (essentially any species that is not bay laurel) for P. ramorum infection would likely reduce the encounter rate between dispersed spores and susceptible oak species.*
+
+
+**Lines 335-337: What about rainfall changes? Seems like they would have a greater impact.**
+
+Response: We added two sentences discussing rainfall changes to this paragraph *Additionally, changes in rainfall patterns, such as shifts in the timing and length of the wet and dry seasons and the amount of rainfall, would dramatically affect sudden oak death disease dynamics. For example, extended drought would reduce pathogen loads and stress trees, potentially increasing oak tree susceptibility to infection during epidemic outbreaks by compromising their immune response.*
+
+
+**Lines 338-340: What is the evidence for this claim?**
+
+Response: We revised this sentence to reiterate our results *While these conditions could offset each other, the relative strength of the effects of heat exposure on bay laurel pathogen load and of optimal warm and wet temperatures on oak infection in our results suggests that increasing exposure to optimal warm and wet temperatures could override the limiting influence of summer heat exposure on pathogen load.*
+
+**Lines 343-344: This is a coin toss, indicating that the effect of drought is too variable to predict at this point.**
+
+Response: We agree that the effect of drought is variable and difficult to predict, in large part because it is a large-scale event that has direct and indirect effects on the pathogen and the host. We expanded the discussion of this context in this paragraph: *However, only 50% of the studies on Phytophthora related diseases in this review reported positive drought-disease interactions. The findings of positive interactions were frequently attributed to indirect effects of drought on the pathogen where host susceptibility to disease was increased by drought. A possible reason for this 50/50 finding for drought interactions with Phytophthora diseases is that in some situations the cost of drought to the host is greater than the cost of drought to the pathogen and in some cases the cost is greater for the pathogen than the host. The effect of drought also depends on the size and life-history of the organism – an effective drought for a pathogen would generally be at a smaller spatial and temporal scale than a drought for a tree. Our results suggest an antagonistic interaction between drought and disease for a Phytophthora-caused disease, where greater exposure to temperatures >25 ºC during the summer dry season (June – September) reduced pathogen load in bay laurel canopy foliage and therefore spillover that causes disease on susceptible oaks; i.e. the cost of “drought” was greater for the pathogen than for the host.*
+
+
+**Lines 387-389: This study doesn't make this clear. This comes off as a vacuous conclusion without much substance.**
+
+Response: Text removed/revised. 
+
+
+**Table 1: What is the d-sep test? This caption does not give enough information to interpret the results presented.**
+
+Response: We added greater detail to the caption *Results for the fitted path model indicating relationships between pairs of variables with missing path(s) and the metrics to assess the fit of the entire path model. All missing paths are statistically insignificant and the overall model fit is acceptable (p=0.409)*
+
+## Reviewer 2 Comments
+
+**This paper examines the relationship between biotic and abiotic variables in explaining prevalence of an economic and ecologically important pathogen. The paper is very well written, with excellent descriptions of the importance of the study, the measurements that went into the fit SEM, how the model was fit and what the implications are for the study.**
+
+**SEM is an excellent technique for integrating a deep research program on a topic and overall, I think I agree with the analysis and the interpretation.**
+
+**Two related points which are conceptual and technial stand out, however, and I would like the authors to address them. On the technical side, the authors have assumed independence of each spatial location.  Without knowing how far the pathogen disperses (or indeed, other spatial relationships expressed in the SEM), I cannot assess whether this assumption is valid.  Have the authors examined their residuals for spatial autocorrelation?  Is there other evidence that these sample locations should be independent?**
+
+Response: We made a few revisions to address this point. In the Introduction we add the detail that it is a primarily wind-dispersed pathogen, *The pathogen is wind-dispersed and thought to spread primarily between individuals of the foliar host. The majority of disease spread occurs locally (<60m; Swiecki and Bernhardt 2007, Dillon et al. 2014), though long-range dispersal events are an important contribution to regional spread (Meentemeyer et al. 2011).* In the Methods we added the assessment of spatial autocorrelation using correlograms (lines 313-317): *Models were checked for spatial autocorrelation by plotting and comparing correlograms of the response variable and the residuals from the fitted models. Models were checked for spatial autocorrelation by plotting and comparing correlograms of the response variable and the residuals from the fitted models. There was some minor spatial correlation in the modeled response variables, but the model residuals showed no significant spatial autocorrelation, indicating that the models accounted for any significant spatial correlation in the response.*
+
+
+**A second related issue, is that the SEM has separated the direct links between biotic and abiotic variables and prevalence. The presented information strongly suggests that all (or nearly all) oak infection is caused by spillover, so the current SEM can be interpreted as follows, I think: abiotic factors are responsible for determining long distance spillover into the patches, while biotic factors determine local spillover.** 
+
+Response: The known epidemiology of the disease indicates that infection of oaks (*Quercus*) must happen via spillover. We think that a major advantage of the SEM approach is the separation of direct linkages between variables (i.e. examining indirect effects) because it can provide insights into, and better estimates for, biological mechanisms. For example, in our model the heat exposure affects pathogen load but not disease prevalene, while exposure to warm and wet ("favorable") pathogen conditions affected disease prevalence on oaks but not pathogen load. Addression long-distance spillover of the pathogen was beyond the scope of this study, though estimates from this study could potentially be used to inform long-distance spread modeling under different future climate scenarios.
+
+**The point I'm getting to is that it seems that there is the possibility for abiotic/biotic interactions at the local scale and this would be potentially very valuable information to have. Can the authors exclude such interactions or are they simply to difficult to fit due to undersampling?  Please discuss!**
+
+Response: We didn't effectively communicate a key feature of this study, which is that we did measure and assess the interaction between biotic and abiotic factors at the local scale. That is, the temperature measurements were made in at each plot and then aggregated over a time period to create the threshold variables. While the temperature recorded would be responding to the broader climate pattern the observed pathogen load in the plot would be more closely responding to the local temperature variation and extremes. We made revisions in key areas throughout the manuscript to highlight that we are focused on local-scale pathogen spillover: 
+
+1. *Parsing these relationships necessitates long-term monitoring of disease dynamics under heterogeneous environmental conditions and taking measurements at epidemiologically relevant spatial and temporal scales, including interacting biotic and abiotic factors at **local scales**.*
+
+2. *We analyzed the relative effects of biotic and abiotic factors on **local-scale** pathogen spillover using sudden oak death (SOD) as a case study of an emerging infectious disease with asymmetric host competency and transmission patterns correlated with environmental heterogeneity* 
+
+3. *By observing fluctuations of environmental factors influencing pathogen reproduction and host susceptibility over time at multiple locations across a landscape, we aimed to disentangle the relative contributions of key biotic and abiotic factors on **local-scale** pathogen spillover in this disease system.*
