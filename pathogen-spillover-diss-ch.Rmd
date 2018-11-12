@@ -3,12 +3,12 @@ title: "Pathogen Spillover - dissertation chapter"
 author: "Whalen Dillon"
 date: "`r Sys.Date()`"
 output:
+  word_document: default
+  pdf_document: default
   html_document:
     self_contained: no
     toc: true
     toc_float: true
-  pdf_document: default
-  word_document: default
 ---
 
 # Appendix 2: Analysis of Environmental Controls on Pathogen Spillover
@@ -355,7 +355,7 @@ m_list_update <- list(
       # changed the bay response to be log-transformed 
       umca.mod <- lmer(tot_bay.ln1 ~ twi15m + (1|plotid) + (1|year), data = oaks.data, na.action = na.omit),
       
-      lfct.mod <- lmer(lfct ~ tot_bay.ln1 + hrs25 + hrs1422 + (1|plotid) + (1|year), data = oaks.data, na.action = na.omit),
+      lfct.mod <- lmer(lfct ~ tot_bay.ln1 + hrs25 + hrs1422 + h2005 + (1|plotid) + (1|year), data = oaks.data, na.action = na.omit),
       
       wet.mod <- lmer(hrs1422 ~ twi15m + (1|plotid) + (1|year), data = oaks.data, na.action = na.omit),
       
@@ -953,6 +953,7 @@ pl.dists.inv[1:20,1:20]
 plot.idist <- iDist(cbind(plots_coords$x, plots_coords$y))
 plot.idist[plot.idist==0] <- NA
 min(plot.idist, na.rm = T)
+length(plot.idist[plot.idist<=250 & is.na(plot.idist)=="FALSE"])/2
 max.dist <- .33*max(iDist(cbind(plots_coords$x, plots_coords$y)))
 
 oaks.data <- oaks.data %>% 
@@ -1015,7 +1016,62 @@ plot(cgram.lfct.resids, main = "Leaf count residuals correlogram")
 
 ```
 
-There was minimal spatial autocorrelation in the response variable. The spatial autocorrelation that was present was dramitically reduced in the model residuals.
+There was minimal spatial autocorrelation in the response variable. The spatial autocorrelation that was present was dramatically reduced in the model residuals.
+
+## **Optimal warm-wet conditions**
+```{r spatial autocorrelation wet.mod}
+Moran.I(oaks.data$hrs1422, pl.dists.inv)
+Moran.I(resid(wet.mod), pl.dists.inv)
+
+cgram.wet.mod <- correlog(oaks.data$x, oaks.data$y, oaks.data$hrs1422, increment = 300, resamp = 99)
+plot(cgram.wet.mod)
+
+cgram.wet.mod.resids <- correlog(oaks.data$x, oaks.data$y, resid(wet.mod), increment = 300, resamp = 99)
+plot(cgram.wet.mod.resids)
+
+```
+
+## **Hot summer temperatures**
+```{r spatial autocorrelation hot.mod}
+Moran.I(oaks.data$hrs25, pl.dists.inv)
+Moran.I(resid(hot.mod), pl.dists.inv)
+
+cgram.hot.mod <- correlog(oaks.data$x, oaks.data$y, oaks.data$hrs25, increment = 300, resamp = 99)
+plot(cgram.hot.mod)
+
+cgram.hot.mod.resids <- correlog(oaks.data$x, oaks.data$y, resid(hot.mod), increment = 300, resamp = 99)
+plot(cgram.hot.mod.resids)
+
+```
+
+## UMCA density
+```{r spatial autocorrelation umca.mod}
+
+Moran.I(oaks.data$tot_bay.ln1, pl.dists.inv)
+Moran.I(resid(umca.mod), pl.dists.inv)
+
+cgram.umca.mod <- correlog(oaks.data$x, oaks.data$y, oaks.data$hrs25, increment = 300, resamp = 99)
+plot(cgram.umca.mod)
+
+cgram.umca.mod.resids <- correlog(oaks.data$x, oaks.data$y, resid(umca.mod), increment = 300, resamp = 99)
+plot(cgram.umca.mod.resids)
+
+```
+
+```{r spatial autocorrelation shannon.mod}
+
+Moran.I(oaks.data$h2005, pl.dists.inv)
+Moran.I(resid(shannon.mod), pl.dists.inv)
+
+cgram.shannon.mod <- correlog(oaks.data$x, oaks.data$y, oaks.data$h2005, increment = 300, resamp = 99)
+plot(cgram.shannon.mod)
+
+cgram.shannon.mod.resids <- correlog(oaks.data$x, oaks.data$y, resid(shannon.mod), increment = 300, resamp = 99)
+plot(cgram.shannon.mod.resids)
+
+```
+
+
 
 # Fitting the path model
 
