@@ -349,9 +349,12 @@ summary(infmod)
 # Updated SEM uses untransformed UMCA variables ####
 # lfct is the ln(tot_lfct+1)
       # lmer(h2005 ~ twi15m + (1|plotid) + (1|year), data = oaks.data, na.action = na.omit),
+
+test.mod <- lm(h2005 ~ twi15m, data = filter(oaks.data, year==2006), na.action = na.omit)
+      
 m_list_update <- list(
 
-            shannon.mod <- lm(h2005 ~ twi15m, data = filter(oaks.data, year==2006), na.action = na.omit),
+      shannon.mod <- lmer(h2005 ~ twi15m + (1|plotid) + (1|year), data = oaks.data, na.action = na.omit),
       # changed the bay response to be log-transformed 
       umca.mod <- lmer(tot_bay.ln1 ~ twi15m + (1|plotid) + (1|year), data = oaks.data, na.action = na.omit),
       
@@ -366,6 +369,26 @@ m_list_update <- list(
       inf.mod <- glmer(oakinf ~ lfct + hrs1422 + h2005 + (1|plotid) + (1|year), family = binomial(link = "logit"), data = oaks.data, na.action = na.omit)
       
 )
+
+test.psem <- psem(
+      
+      lmer(h2005 ~ twi15m + (1|plotid) + (1|year), data = oaks.data, na.action = na.omit),
+      
+      # lmer(tot_bay.ln1 ~ twi15m + (1|plotid) + (1|year), data = oaks.data, na.action = na.omit),
+      # 
+      # lmer(lfct ~ tot_bay.ln1 + hrs25 + hrs1422 + h2005 + (1|plotid) + (1|year), data = oaks.data, na.action = na.omit),
+      # 
+      # lmer(hrs1422 ~ twi15m + (1|plotid) + (1|year), data = oaks.data, na.action = na.omit),
+      # 
+      # lmer(hrs25 ~ twi15m + (1|plotid) + (1|year), data = oaks.data, na.action = na.omit),
+      
+      # hrs25 %~~% hrs1422,
+      
+      glmer(oakinf ~ lfct + hrs1422 + h2005 + (1|plotid) + (1|year), family = binomial(link = "logit"), data = oaks.data, na.action = na.omit)
+      
+)
+
+
 
 # ggplot(oaks.data, aes(tot_bay.ln1, lfct)) +
 #       geom_point() +
@@ -806,13 +829,13 @@ inf.lfct.plot <- plot_model(inf.mod, type = "pred", terms = c("lfct"), show.data
       NULL
 
 # marginal effects of each significant predictor variable
-cowplot::plot_grid(
+
 inf.lfct.plot <- inf.lfct.plot +
       geom_point(data = oaks.data, 
                  aes(x = lfct, 
                      y = inf_oak_ct/(inf_oak_ct+uninf_oak_ct)
                      ),
-                 alpha = .1, size = 1),
+                 alpha = .1, size = 1)
 # inf.lfct.plot +
 #       geom_point(data = filter(oaks.data, inf_oak_ct/(inf_oak_ct+uninf_oak_ct) <.5), 
 #                  aes(x = lfct, 
@@ -830,7 +853,7 @@ inf.h2005.plot <- plot_model(inf.mod, type = "pred", terms = c("h2005"), show.da
       xlab("Shannon's diversity index") +
       ylab("Infected oaks (%)") +
       ggtitle("") +
-      NULL,
+      NULL
 
 inf.hrs1422.plot <- plot_model(inf.mod, type = "pred", terms = c("hrs1422")) +
       geom_point(data = oaks.data, aes(x = hrs1422, y = inf_oak_ct/(inf_oak_ct+uninf_oak_ct)), alpha = .1, size = 1) +
@@ -839,8 +862,6 @@ inf.hrs1422.plot <- plot_model(inf.mod, type = "pred", terms = c("hrs1422")) +
       ylab("Infected oaks (%)") +
       ggtitle("") +
       NULL,
-labels = "auto"
-)
 
 
 ggplot(oaks.data, aes((lfct), inf_oak_ct/(inf_oak_ct+uninf_oak_ct), color = as.factor(year))) +
@@ -911,8 +932,8 @@ pairs(na.omit(select(oakplots.sub, tot_lfct.log, avg_hrs1422_wet_t_t1.log, H.200
       labels = "auto", label_x = .01
       )
 )
-ggsave("figures/path-significant-relationships.png", plot = sig.rel.fig,
-       width = 7, height = 7, units = "in")
+ggsave("figures/Fig4-path_significant_relationships.png", plot = sig.rel.fig,
+       width = 7, height = 7, units = "in", dpi=600)
 
 ```
 
