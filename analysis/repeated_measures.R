@@ -60,7 +60,7 @@ library(lme4)
 #' The random intercept model implies that there is one average curve (the population estimate) that may be shifted up or down by something normally distributed with variance d^2
 
 #' Yi = Xi * B + Zi * bi + Ei
-#'   bi ~ N(0, d^2), 
+#'   bi ~ N(0, d^2^), 
 #'   Ei ~ N(0, covar)
 
 #' The fitted lines for each group are parallel to the average curve
@@ -89,7 +89,7 @@ m2c <- lmer(tot_slc ~ live_dens + (1 | year) + (1 + live_dens | plot), data = pl
 #' Compare all models using Chi-square test of ANOVA ####
 #' Refits model(s) with maximum likelihood instead of REML
 anova(m0, m1, m2, m0a, m0b, m1a, m1b, m2a, m2b, m2c)
-#' The random slope, random intercept model with the density:year interaction and the additional random effect is the best (lowest AIC), but the high values for the metrics may indicate some misspecification.
+#' The random slope, random intercept model with the density:year interaction and the additional random effect (m2b) is the best (lowest AIC), but the high values for the metrics may indicate some misspecification.
 
 #' Plot the fitted models
 par(mfrow = c(2,2))
@@ -103,10 +103,12 @@ plot(m2)
 plot(m2a)
 plot(m2b)
 plot(m2c)
+
 #' All of them show a lot of spread - expected because I know the distributions for leaf count and density aren't even close to normal
 par(mfrow = c(2,2))
 hist(plot_umca$tot_slc)
 hist(plot_umca$live_dens)
+
 #' Log transformation improves the distributions, but with some zeroes for symptomatic leaf count I need to add a constant. The `log1p` function computes log(1+x) accurately for |x| much less than one (automatically adds the constant 1) 
 log_tot_slc <- log1p(plot_umca$tot_slc); hist(log_tot_slc)
 log_live_dens <- log(plot_umca$live_dens); hist(log_live_dens)

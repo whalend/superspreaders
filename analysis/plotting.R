@@ -2,22 +2,20 @@
 
 library(plyr)
 library(dplyr)
+library(readr)
 library(tidyr)
 library(ggplot2)
 
-umca_stem <- read.csv("SH_data/UMCA_stems_live_2004-11.csv")
+umca_stem <- read_csv("SH_data/UMCA_stems_live_2004-11.csv")
 
 head(umca_stem)
 summary(umca_stem %>% group_by(year, tag))
 summary(umca_stem %>% group_by(year))
 
-#' Some observations repeated in this file, so subset to unique
-umca_stem <- unique(umca_stem[ , 1:8] )
-
 #' Get specific quantile values for SLC for each year ####
 #' If the same stems are consistently in the upper quantile then they may be superspreaders because they support more infections compared to the population. 
 #' The `plyr` method with sample code from <http://stackoverflow.com/questions/5473537/how-to-calculate-95th-percentile-of-values-with-grouping-variable-in-r-or-excel>
-library(plyr)
+
 #Random seed
 set.seed(42)
 #Sample data
@@ -25,8 +23,9 @@ dat <- data.frame(Watershed = sample(letters[1:2], 100, TRUE), WQ = rnorm(100))
 #plyr call
 ddply(dat, "Watershed", summarise, WQ95 = quantile(WQ, .95))
 
-library(dplyr)
-dat %>% group_by(Watershed) %>% summarise(WQ95 = quantile(slc, 0.95))
+dat %>% 
+      group_by(Watershed) %>% 
+      summarise(WQ95 = quantile(WQ, 0.95))
 
 ddply(umca_stem, "year", summarise, slc95 = quantile(slc, .95))
 
@@ -71,8 +70,7 @@ p2 + geom_text(aes(label = tag, color = ))
 
 #' "Seasonality" and symptoms ####
 #' Note that this has to be done within a sample season, so it's a bad assessment of true seasonality of symptoms. Jennifer Davidson's work addressed this pretty well, so it would be a proper reference.
-library(dplyr)
-library(ggplot2)
+
 ggplot(data = stems %>% select(Date, slc, species, status, year) %>% filter(species == "UMCA" & status == "Alive") %>% group_by(Date)) + 
       geom_point(aes(x=Date,y=slc)) +
       facet_grid(year ~ .)
@@ -109,7 +107,8 @@ library(ggplot2)
 #ggsave(plot=x1, filename="D:\\SOCO\\SOCO_space_time\\Figures\\annual_slc_jitter.jpeg", height=4, width=5)
 
 # Regular boxplot:
-p1 <- ggplot(data = umca_stem %>% group_by(tag, year), aes(x = year, y = slc, tag = tag))
+p1 <- ggplot(data = umca_stem %>% group_by(tag, year), 
+             aes(x = year, y = slc, tag = tag))
 
 p1 + geom_point(position = "jitter") +
       geom_text(aes(label = tag))
@@ -122,8 +121,7 @@ p2 <- p2 + geom_point(aes(color = plot.id), position = "jitter") +
       theme(legend.position = "top") +
       geom_line(aes(color = tag))
       
-p2 + geom_text(aes(label = tag, color = ))
-
+p2 + geom_text(aes(label = tag))
 
 p1 + geom_boxplot(na.rm=TRUE) +
   stat_summary(fun.y=mean, na.rm=TRUE, geom="line", aes(group=1))  + 
