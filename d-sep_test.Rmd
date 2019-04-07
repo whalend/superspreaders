@@ -1,5 +1,7 @@
 ---
-output: html_document
+output:
+  word_document: default
+  html_document: default
 ---
 
 ## Steps for Performing a d-Sep Test (Shipley 2000, 2003, 2004, 2009)
@@ -22,15 +24,18 @@ output: html_document
 
 This is just an example of what part of this table would look like. I can use the `ggm` package to find the entire list and define the basis set as described below.
 
-3. For each of the *k* pairs of variables (*Xi,Xj*), list the set of other variables, {*Z*} that are direct causes of either *Xi* or *Xj*. The pair of variables, (*Xi,Xj*), along with its conditioning set, {*Z*}, define an independence claim, (*Xi,Xj*) | {*Z*}, and the full set of the *k* independence claims defines the basis set, *Bu*. 
+3. For each of the *k* pairs of variables (*X$_i$,X$_j$*), list the set of other variables, {*Z*} that are direct causes of either *X$_i$* or *X$_j$*. The pair of variables, (*X$_i$,X$_j$*), along with its conditioning set, {*Z*}, define an independence claim, (*X$_i$,X$_j$*) | {*Z*}, and the full set of the *k* independence claims defines the basis set, *B$_u$*. 
 
-4. For each element in this basis set, obtain the _**exact**_ probability, *Pk* that the pair (*Xi,Xj*) is statistically independent conditional on the variables *Z*. In other words, perform a regression model using an appropriate method.
+4. For each element in this basis set, obtain the _**exact**_ probability, *P$_k$* that the pair (*X$_i$,X$_j$*) is statistically independent conditional on the variables *Z*. In other words, perform a regression model using an appropriate method.
 
 5. Combine the *k* probabilities into the *C*-statistic:
 
 $$
 C = -2\Sigma_{i=1}^k ln(P_i)
 $$ 
+6. Compare the value for *C* to a $\chi^2$ (chi-square) distribution with 2*k* degrees of freedom. If the P-value is greater than the *a priori* selected value, e.g. 0.05, then the data provides sufficient support for the model structure.
+
+7. If the data provide sufficent support for the model structure, then each component may be assessed and coefficients interpreted.
 
 This methodology can be extended into the mixed-model context using standard statistical programs with these capabilities, because you are testing multiple regressions hypothesized to be independent of each other. If too many independence claims are violated, then the model will be found to not fit the data.
 
@@ -65,6 +70,7 @@ I am now going to load the `ggm` library for identifying the directed acyclic gr
 This means composing each the regressions between variables directly connected by arrows in the graph, which is pretty easy in this simple example because each variable has no more than one direct cause. 
 
 ### Establish Basis Set
+
 ```{r get basis set, eval=TRUE}
 library(ggm)
 dag <- DAG(Live ~ Growth, Growth ~ Date, Date ~ DD, DD ~ Latitude)
@@ -74,9 +80,11 @@ Bu <- basiSet(dag)# Get the basis set as a list of vectors. The first two items 
 ```
 
 Following the directions of the Shipley (2009) supplement I will fit separate mixed models for each independence claim in the basis set. 
+
 ```{r print basis set, echo=TRUE}
 print(Bu)
 ```
+
 Six claims equals six models. The first two variables listed in each item are claimed to be independent based on the following set of zero or more variables.
 
 ### Assess Independence Claims
@@ -108,6 +116,7 @@ panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)
     text(0.5, 0.5, txt, cex = cex.cor * r)
 }
 ```
+
 ```{r correlations & distributions}
 #pairs(subset(data1, select = c(lat, Date, DD, Growth, Live)), diag.panel = panel.hist, lower.panel = panel.cor)
 sub_data1 <- data1[ ,c(3,5:7,9)] #subset(data1, , select = c("lat","Date","DD","Growth","Live"))
@@ -118,6 +127,7 @@ pairs(sub_data1, diag.panel = panel.hist, lower.panel = panel.cor)
 ```
 
 The `Date` variable appears close to a normal distribution, so either the `lmer()` in the `lme4` package or the `lme()` function in the `nlme` package are appropriate. Shipley says that the `lme()` prints out degrees of freedom but `lmer()` does not. I am going to check to see if that is still true.
+
 ```{r independence claim 1 test}
 fit1 <- lme(Date ~ DD + lat, data = data1, 
             random = ~1|site/tree, 
@@ -127,9 +137,11 @@ fit1lme4 <- lmer(Date ~ DD + lat + (1|site) + (1|tree), data = data1,
 summary(fit1)
 summary(fit1lme4)
 ```
+
 It is correct that `lmer()` does not provide degrees of freedom, and thus no probability estimate (p-value) for the coefficients. Aside from that it appears that the values estimate from both algorithms match up very well. Based on these results the null probability of observing a t-value at least as extreme for latitude (`lat`) is 0.9373, so pretty darn likely. That means that this independence claim is supported by the data.
 
 Now to do the same for the other normally distributed dependent variables
+
 ```{r independence claim test 2 & 3}
 # Independence of Growth and lat conditioned on Date
 fit2 <- lme(Growth ~ Date + lat, data = data1, 
