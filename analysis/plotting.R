@@ -125,7 +125,6 @@ p2 <- p2 + geom_point(aes(color = plot.id), position = "jitter") +
 p2 + geom_text(aes(label = tag, color = ))
 
 
-
 p1 + geom_boxplot(na.rm=TRUE) +
   stat_summary(fun.y=mean, na.rm=TRUE, geom="line", aes(group=1))  + 
   stat_summary(fun.y=mean, na.rm=TRUE,geom="point",shape=8) +
