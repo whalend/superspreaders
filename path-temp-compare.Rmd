@@ -187,10 +187,10 @@ plot(shannons$model$twi15m.log, resid(shannons),
 
 ```{r test SAC diversity model residuals, echo=F}
 library(spBayes); library(classInt); library(RColorBrewer); library(geoR)
-summary(na.omit(oakplots.2006))
-points <- select(na.omit(oakplots.2006), X, Y)
-points <- as.matrix(dist(cbind(points$X, points$Y)))
-points.inv <- 1/points
+summary(na.omit(as.data.frame(oakplots.2006)))
+points <- select(na.omit(as.data.frame(oakplots.2006)), X, Y)
+points <- as.matrix((cbind(points$X, points$Y)))
+points.inv <- 1/(iDist(points))
 diag(points.inv) <- 0
 shannons.resids <- resid(shannons)
 max.dist <- 0.33 * max(iDist(points))
@@ -201,7 +201,7 @@ vario.shannons <- variog(coords = points,
                      uvec = (seq(0, max.dist, length = bins)))
 fit.vario.shannons <- variofit(
       vario.shannons,
-      ini.cov.pars = c(300, 200/-log(0.5)),
+      # ini.cov.pars = c(300, 200/-log(0.5)),
       cov.model = "exponential",
       minimisation.function = "optim",
       weights = "equal"
@@ -260,14 +260,14 @@ str(plots2)
 # all.equal(plots1$plotid,plots2$plotid)
 points_rep <- left_join(plots1, plots2, by = c("plotid"="plot_id"))
 summary(points_rep)
-points_rep <- as.matrix(dist(cbind(points_rep$x, points_rep$y)))
-points_rep.inv <- 1/points_rep
-points_rep.inv[points_rep.inv == "Inf"] <- 0
+points_rep <- as.matrix(cbind(points_rep$x, points_rep$y))
+points_rep.inv <- 1/(iDist(points_rep))
+points_rep.inv[points_rep.inv=="Inf"] <- 0
 summary(points_rep.inv)
 
 # Plot variograms
 vario.umca_density <- variog(coords = points_rep, 
-                     data = na.omit(umca_density@frame$tot_bay.log),
+                     data = umca_density@frame$umca_density_ha.log.scl,
                      uvec = (seq(0, max.dist, length = bins)))
 fit.vario.umca_density <- variofit(
       vario.umca_density,
@@ -348,14 +348,14 @@ str(plots2)
 # all.equal(plots1$plotid,plots2$plotid)
 points_rep <- left_join(plots1, plots2, by = c("plotid"="plot_id"))
 summary(points_rep)
-points_rep <- as.matrix(dist(cbind(points_rep$x, points_rep$y)))
-points_rep.inv <- 1/points_rep
+points_rep <- cbind(points_rep$x, points_rep$y)
+points_rep.inv <- 1/iDist(points_rep)
 points_rep.inv[points_rep.inv == "Inf"] <- 0
-summary(points_rep.inv)
+str(points_rep.inv)
 
 # Plot variograms
 vario.slc <- variog(coords = points_rep, 
-                     data = na.omit(slc@frame$tot_lfct.log),
+                     data = slc@frame$tot_lfct.log,
                      uvec = (seq(0, max.dist, length = bins)))
 fit.vario.slc <- variofit(
       vario.slc,
@@ -417,46 +417,46 @@ str(plots2)
 # all.equal(plots1$plotid,plots2$plotid)
 points_rep <- left_join(plots1, plots2, by = c("plotid"="plot_id"))
 summary(points_rep)
-points_rep <- as.matrix(dist(cbind(points_rep$x, points_rep$y)))
-points_rep.inv <- 1/points_rep
+points_rep <- cbind(points_rep$x, points_rep$y)
+points_rep.inv <- 1/iDist(points_rep)
 points_rep.inv[points_rep.inv == "Inf"] <- 0
 summary(points_rep.inv)
 
 # Plot variograms
-vario. <- variog(coords = points_rep, 
-                     data = na.omit(umca_density@frame$tot_bay.log),
+vario <- variog(coords = points_rep, 
+                     data = wet_hours_1422@frame$avg_hrs1422_wet_t_t1.log,
                      uvec = (seq(0, max.dist, length = bins)))
-fit.vario.umca_density <- variofit(
-      vario.umca_density,
+fit.vario.wet_hours <- variofit(
+      vario,
       # ini.cov.pars = c(300, 200/-log(0.5)),
       cov.model = "exponential",
       minimisation.function = "optim",
       weights = "equal"
 )
 par(mfrow = c(1,2))
-plot(vario.umca_density)
-lines(fit.vario.umca_density)
-abline(h = fit.vario.umca_density$nugget, col = "blue")# nugget
-abline(h = fit.vario.umca_density$cov.pars[1] + fit.vario.umca_density$nugget, col = "green")# sill
-abline(v = -log(.05) * fit.vario.umca_density$cov.pars[2], col = "red3")# range
+plot(vario)
+lines(fit.vario.wet_hours)
+abline(h = fit.vario.wet_hours$nugget, col = "blue")# nugget
+abline(h = fit.vario.wet_hours$cov.pars[1] + fit.vario.wet_hours$nugget, col = "green")# sill
+abline(v = -log(.05) * fit.vario.wet_hours$cov.pars[2], col = "red3")# range
 
-vario.umca_density.resids <- variog(coords = points_rep,
-                               data = umca_density.resids,
+vario.wet_hours.resids <- variog(coords = points_rep,
+                               data = wet_hours.resids,
                                uvec = (seq(0, max.dist, length = bins)))
-fit.vario.umca_density.resids <- variofit(
-      vario.umca_density.resids,
+fit.vario.wet_hours.resids <- variofit(
+      vario.wet_hours.resids,
       cov.model = "exponential",
       minimisation.function = "optim",
       weights = "equal"
 )
 # par(mfrow = c(1,2))
-plot(vario.umca_density.resids, 
-     main = "Variogram - UMCA deensity model residuals",
+plot(vario.wet_hours.resids, 
+     main = "Variogram - Wet-hours model residuals",
      xlab = "distance (m)")
-lines(fit.vario.umca_density.resids)
-abline(h = fit.vario.umca_density.resids$nugget, col = "blue")# nugget
-abline(h = fit.vario.umca_density.resids$cov.pars[1] + fit.vario.umca_density.resids$nugget, col = "green")# sill
-abline(v = -log(.05) * fit.vario.umca_density.resids$cov.pars[2], col = "red3")# range
+lines(fit.vario.wet_hours.resids)
+abline(h = fit.vario.wet_hours.resids$nugget, col = "blue")# nugget
+abline(h = fit.vario.wet_hours.resids$cov.pars[1] + fit.vario.wet_hours.resids$nugget, col = "green")# sill
+abline(v = -log(.05) * fit.vario.wet_hours.resids$cov.pars[2], col = "red3")# range
 
 Moran.I(wet_hours.resids, points_rep.inv)
 ```
@@ -488,8 +488,8 @@ str(plots2)
 # all.equal(plots1$plotid,plots2$plotid)
 points_rep <- left_join(plots1, plots2, by = c("plotid"="plot_id"))
 summary(points_rep)
-points_rep <- as.matrix(dist(cbind(points_rep$x, points_rep$y)))
-points_rep.inv <- 1/points_rep
+points_rep <- cbind(points_rep$x, points_rep$y)
+points_rep.inv <- 1/iDist(points_rep)
 points_rep.inv[points_rep.inv == "Inf"] <- 0
 summary(points_rep.inv)
 
@@ -531,12 +531,31 @@ str(plots2)
 # all.equal(plots1$plotid,plots2$plotid)
 points_rep <- left_join(plots1, plots2, by = c("plotid"="plot_id"))
 summary(points_rep)
-points_rep <- as.matrix(dist(cbind(points_rep$x, points_rep$y)))
-points_rep.inv <- 1/points_rep
+points_rep <- cbind(points_rep$x, points_rep$y)
+points_rep.inv <- 1/iDist(points_rep)
 points_rep.inv[points_rep.inv == "Inf"] <- 0
 summary(points_rep.inv)
 
 Moran.I(oak_infection.resids, points_rep.inv)
+
+
+vario.oak_infection.resids <- variog(coords = points_rep,
+                               data = oak_infection.resids,
+                               uvec = (seq(0, max.dist, length = bins)))
+fit.vario.oak_infection.resids <- variofit(
+      vario.oak_infection.resids,
+      cov.model = "exponential",
+      minimisation.function = "optim",
+      weights = "equal"
+)
+# par(mfrow = c(1,2))
+plot(vario.oak_infection.resids, 
+     main = "Variogram - Wet-hours model residuals",
+     xlab = "distance (m)")
+lines(fit.vario.oak_infection.resids)
+abline(h = fit.vario.oak_infection.resids$nugget, col = "blue")# nugget
+abline(h = fit.vario.oak_infection.resids$cov.pars[1] + fit.vario.oak_infection.resids$nugget, col = "green")# sill
+abline(v = -log(.05) * fit.vario.oak_infection.resids$cov.pars[2], col = "red3")# range
 ```
 
 
