@@ -25,31 +25,17 @@ knitr::opts_chunk$set(warning = F)
 knitr::opts_chunk$set(message = F)
 ```
 
-```{r set options, echo=F}
-# knitr::opts_chunk$set(fig.width = 7.5, fig.height = 7)
-knitr::opts_chunk$set(dpi = 300)
-knitr::opts_chunk$set(echo = F)
-knitr::opts_chunk$set(warning = F)
-knitr::opts_chunk$set(message = F)
-```
-
 ```{r load data, echo=F, message=F}
 library(knitr)
 load("climate_path_model_data.RData")
 
 # devtools::install_github("jslefche/piecewiseSEM@devel", build_vignette = TRUE)
 library(piecewiseSEM)# version 1.1.1, tried most recent version & kept getting errror 7/18/2016 b/c matrices rows were unequal in sem.missing.paths function
-<<<<<<< HEAD
-## Avoided this error in 1.1.2 by removing observations with NA values, which gives the same results as before, so maybe it wasn't properly dropping levels when extracting info from the models.
-library(plyr); library(dplyr, verbose = F)
-library(lme4, verbose = F); library(nlme, verbose = F)
-=======
 ## Avoided this error in 1.1.2 by removing observations with NA values, which gives the same results as before, so maybe it wasn't properly dropping missing values when extracting info from the models.
 library(plyr); library(dplyr, verbose = F)
 library(lme4, verbose = F); library(nlme, verbose = F)
 library(ggplot2)
 library(viridisLite); library(viridisLite)
->>>>>>> 19a5932a3ae8ae3ec49d6f5819d3ac9c41433e5d
 # library(lmerTest, verbose = F)
 
 panel.cor <- function(x, y, digits = 2, cex.cor, ...)
@@ -103,11 +89,7 @@ oakplots.sub$twi15m.scl <- as.numeric(scale(oakplots.sub$twi15m))
 oakplots.sub$twi15m.log.scl <- as.numeric(scale(oakplots.sub$twi15m.log))
 
 ## make consolidated data frame only of variables in the path model
-<<<<<<< HEAD
-oakplots.model.data <- select(oakplots.sub, plotid, sample_year, oak.inf, tot_lfct, tot_lfct.log, hrs_abv25ds, avg_hrs1422_wet_t_t1, avg_hrs1422_wet_t_t1.log, umca_density_ha, umca_density_ha.log, H.2005, twi15m, twi15m.log#, twi15m.log.scl, tot_lfct.log.scl, hrs_abv25ds.scl, avg_hrs1422_wet_t_t1.log.scl, umca_density_ha.log.scl, shannons2005.scl
-=======
 oakplots.model.data <- select(oakplots.sub, plotid, sample_year, oak.inf, inf_oak_ct, uninf_oak_ct, tot_bay, umca_density_ha, tot_lfct, tot_lfct.log, hrs_abv25ds, avg_hrs1422_wet_t_t1, avg_hrs1422_wet_t_t1.log, umca_density_ha.log, H.2005, twi15m, twi15m.log#, twi15m.log.scl, tot_lfct.log.scl, hrs_abv25ds.scl, avg_hrs1422_wet_t_t1.log.scl, umca_density_ha.log.scl, shannons2005.scl
->>>>>>> 19a5932a3ae8ae3ec49d6f5819d3ac9c41433e5d
                               )
 
 oakplots.model.data <- filter(oakplots.model.data, avg_hrs1422_wet_t_t1 !="NA", H.2005 != "NA", tot_lfct != "NA")
@@ -159,15 +141,6 @@ model_list2.scl <- list(
 ```
 
 
-<<<<<<< HEAD
-```{r hours >25 path model all oak plots unscaled, echo=F}
-# slc_nlme <- lme(tot_lfct.log ~ umca_density_ha.log + hrs_abv25ds + avg_hrs1422_wet_t_t1.log + H.2005, random = ~1|plotid, data = oakplots.model.data)
-
-model_list1 <- list(
-      shannons <- lm(H.2005 ~ twi15m, data = filter(oakplots.model.data, sample_year == 2006)),
-      
-      umca_density <- lmer(umca_density_ha.log ~ twi15m + (1|plotid) + (1|sample_year), data = oakplots.model.data),
-=======
 ```{r hours >25 path model all oak plots unscaled, echo=F, eval=F}
 # slc_nlme <- lme(tot_lfct.log ~ umca_density_ha.log + hrs_abv25ds + avg_hrs1422_wet_t_t1.log + H.2005, random = ~1|plotid, data = oakplots.model.data)
 
@@ -388,7 +361,6 @@ m_list_update <- list(
       lfct.mod <- lmer(lfct ~ tot_bay.ln1 + hrs25 + hrs1422 + h2005 + (1|plotid) + (1|year), data = oaks.data, na.action = na.omit),
       
       wet.mod <- lmer(hrs1422 ~ twi15m + (1|plotid) + (1|year), data = oaks.data, na.action = na.omit),
->>>>>>> 19a5932a3ae8ae3ec49d6f5819d3ac9c41433e5d
       
       hot.mod <- lmer(hrs25 ~ twi15m + (1|plotid) + (1|year), data = oaks.data, na.action = na.omit),
       
@@ -436,48 +408,15 @@ model_list1.noLIDE <- list(
       
       wet_hours_1422 <- lmer(avg_hrs1422_wet_t_t1.log ~ 
                                    # umca_density_ha.log + twi15m.log +
-<<<<<<< HEAD
-                                   twi15m + (1|plotid) + (1|sample_year), data = oakplots.model.data),
-      
-      hrs_abv25 <- lmer(hrs_abv25ds ~ 
-                              # umca_density_ha.log + 
-                              twi15m + (1|plotid) + (1|sample_year), data = oakplots.model.data),
-=======
                                    twi15m + (1|plotid) + (1|sample_year), data = oakplots.model.data.sub),
       
       hrs_abv25 <- lmer(hrs_abv25ds ~ 
                               # umca_density_ha.log + 
                               twi15m + (1|plotid) + (1|sample_year), data = oakplots.model.data.sub),
->>>>>>> 19a5932a3ae8ae3ec49d6f5819d3ac9c41433e5d
       
       oak_infection <- glmer(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1.log + H.2005 + (1|plotid) + (1|sample_year), family = binomial(link = "logit"), data = oakplots.model.data.sub)
 )
 
-<<<<<<< HEAD
-model_list1_refit <- list(
-      shannons_refit <- lm(H.2005 ~ twi15m, data = filter(oakplots.model.data, sample_year == 2006)),
-      
-      umca_density_refit <- lmer(umca_density_ha.log ~ H.2005 + twi15m + (1|plotid) + (1|sample_year), data = oakplots.model.data),
-      
-      slc_refit <- lmer(tot_lfct.log ~ umca_density_ha.log + hrs_abv25ds +
-                        #avg_hrs1422_wet_t_t1.log + H.2005 + 
-                        (1|plotid) + (1|sample_year), 
-                  data = oakplots.model.data),
-      
-      wet_hours_1422_refit <- lmer(avg_hrs1422_wet_t_t1.log ~ 
-                                   # umca_density_ha.log + twi15m.log +
-                                   twi15m +
-                                   (1|plotid) + (1|sample_year), 
-                             data = oakplots.model.data),
-      
-      hrs_abv25_refit <- lmer(hrs_abv25ds ~ 
-                              # umca_density_ha.log + 
-                              twi15m + (1|plotid) + (1|sample_year), data = oakplots.model.data),
-      
-      oak_infection_refit <- glmer(oak.inf ~ tot_lfct.log + avg_hrs1422_wet_t_t1.log + H.2005 + (1|plotid) + (1|sample_year), family = binomial(link = "logit"), data = oakplots.model.data)
-)
-=======
->>>>>>> 19a5932a3ae8ae3ec49d6f5819d3ac9c41433e5d
 ```
 
 ```{r hours >25 path model all oak plots scaled, eval = F}
@@ -521,13 +460,10 @@ model_list1.scla <- list(
 
 
 In my assessment of model residuals I found no substantial violations of the assumption of homoscedacity for individual models (although there was some), and no relationships between the model residuals and the predictor variable(s). The patterning in the residual plots for some of the models is likely in part due to observations of count variables where the value is zero. Since the dataset in this analysis is all plots with one or more susceptible oak species there are some plots that have zero bay laurel and zero symptomatic bay laurel leaves.
-<<<<<<< HEAD
-=======
 
 # Examining the residual plots of each piece of the path model
 
 ## **Residual plots of Shannon's Diversity Index model**
->>>>>>> 19a5932a3ae8ae3ec49d6f5819d3ac9c41433e5d
 
 ### Diagnostic plots 
 ```{r shannon.mod diagnostic plots, echo=F}
@@ -536,24 +472,6 @@ library(sjPlot)
 plot_model(shannon.mod, type = "diag", show.values = T, grid = TRUE)
 plot_model(shannon.mod, type = "resid", show.values = T)
 
-<<<<<<< HEAD
-**Residual plots of Shannon's Diversity Index model**
-```{r shannons residuals plot, echo=F}
-plot(shannons, main = "OLS regression of diversity ~ wetness index residuals")
-plot(shannons$model$twi15m, resid(shannons),
-     xlab = "wetness index",
-     ylab = "model residuals",
-     main = "Diversity model residuals vs. wetness index predictor")
-```
-
-**Residual plots of bay laurel density model**
-```{r bay laurel density residuals plot, echo=F}
-plot(umca_density, main = "LMM of bay laurel density residuals")
-plot(umca_density@frame$twi15m, resid(umca_density),
-     xlab = "wetness index",
-     ylab = "model residuals",
-     main = "Bay laurel density model residuals vs. wetness index predictor")
-=======
 ```
 
 ### Fitted model plots
@@ -588,7 +506,6 @@ S.plot <- plot_model(shannon.mod, type = "pred", terms = "twi15m")
 #      ylab = "model residuals",
 #      main = "Diversity model residuals vs. wetness index predictor")
 
->>>>>>> 19a5932a3ae8ae3ec49d6f5819d3ac9c41433e5d
 ```
 
 ## **Residual plots of bay laurel density model**
@@ -730,24 +647,6 @@ cowplot::plot_grid(slc_vs_bay_plot,
 # qqnorm(ranef(slc)$plotid$`(Intercept)`, 
 #        main="Q-Q plot for plot ID")
 
-<<<<<<< HEAD
-plot(slc@frame$umca_density_ha.log, resid(slc),
-     xlab = "bay laurel density",
-     ylab = "model residuals",
-     main = "SLC model residuals vs. bay laurel density predictor")
-plot(slc@frame$hrs_abv25ds, resid(slc),
-     xlab = "# dry-season hours >25 C",
-     ylab = "model residuals",
-     main = "SLC model residuals vs. dry-season hours >25 C predictor")
-plot(slc@frame$avg_hrs1422_wet_t_t1.log,
-     xlab = "avg. wet-hours 14-22C",
-     ylab = "model residuals",
-     main = "SLC model residuals vs. wet-hours predictor")
-plot(slc@frame$H.2005, resid(slc),
-     xlab = "Shannon's diversity index",
-     ylab = "model residuals",
-     main = "SLC model residuals vs. Shannon's diversity predictor")
-=======
 # plot(slc@frame$umca_density_ha.log, resid(slc),
 #      xlab = "bay laurel density",
 #      ylab = "model residuals",
@@ -764,7 +663,6 @@ plot(slc@frame$H.2005, resid(slc),
 #      xlab = "Shannon's diversity index",
 #      ylab = "model residuals",
 #      main = "SLC model residuals vs. Shannon's diversity predictor")
->>>>>>> 19a5932a3ae8ae3ec49d6f5819d3ac9c41433e5d
 # plot(slc@frame$twi15m.log.scl, resid(slc),
 #      xlab = "wetness index",
 #      ylab = "model residuals",
@@ -776,13 +674,9 @@ plot(slc@frame$H.2005, resid(slc),
 #       scale_y_log10()
 
 ```
-<<<<<<< HEAD
-```{r pairs plot of slc predictor variables, echo=F}
-=======
 
 ```{r pairs plot of slc predictor variables, echo=F, eval=F}
 
->>>>>>> 19a5932a3ae8ae3ec49d6f5819d3ac9c41433e5d
 pairs(na.omit(select(oakplots.sub, umca_density_ha.log, hrs_abv25ds, avg_hrs1422_wet_t_t1.log, H.2005, twi15m)),
       lower.panel = panel.cor, diag.panel = panel.hist,
       main = "Predictor variables for symptomatic leaf count models")
@@ -820,21 +714,6 @@ plot_model(wet.mod, type = "slope") +
 #      xlab = "bay laurel density",
 #      ylab = "model residuals",
 #      main = "Wet-hours model residuals vs. bay laurel density predictor")
-<<<<<<< HEAD
-plot(wet_hours_1422@frame$twi15m, resid(wet_hours_1422),
-     xlab = "bay laurel density",
-     ylab = "model residuals",
-     main = "Wet-hours model residuals vs. bay laurel density predictor")
-```
-
-**Residual plots of dry-season temperature >25C model**
-```{r dry-season hours residuals plot, echo=F}
-plot(hrs_abv25, main = "LMM of # of hours >25 C during prev. dry season residuals")
-plot(hrs_abv25@frame$twi15m, resid(hrs_abv25),
-     xlab = "wetness index",
-     ylab = "model residuals",
-     main = "Dry-season hours model residuals vs. wetness index predictor")
-=======
 # plot(wet_hours_1422@frame$twi15m, resid(wet_hours_1422),
 #      xlab = "bay laurel density",
 #      ylab = "model residuals",
@@ -905,7 +784,6 @@ hot.mod.plot <- plot_model(hot.mod, type = "pred", terms = "twi15m", show.data =
 #      xlab = "wetness index",
 #      ylab = "model residuals",
 #      main = "Dry-season hours model residuals vs. wetness index predictor")
->>>>>>> 19a5932a3ae8ae3ec49d6f5819d3ac9c41433e5d
 # plot(hrs_abv25@frame$umca_density_ha.log.scl, resid(hrs_abv25),
 #      xlab = "wetness index",
 #      ylab = "model residuals",
@@ -1027,26 +905,6 @@ ggplot(oaks.data, aes((lfct), inf_oak_ct/(inf_oak_ct+uninf_oak_ct), color = as.f
 
 ```{r pairs plot of oak infection predictor variables, echo=F, eval=F}
 
-<<<<<<< HEAD
-**Residual plots of oak infection model**
-```{r oak infection residuals plot, echo=F}
-plot(oak_infection, main = "Binomial GLMM of oak infection residuals")
-plot(oak_infection@frame$tot_lfct.log, resid(oak_infection),
-     xlab = "symptomatic leaf count",
-     ylab = "model residuals",
-     main = "Oak infection model residuals vs. symptomatic leaf count predictor")
-plot(oak_infection@frame$avg_hrs1422_wet_t_t1.log, resid(oak_infection),
-     xlab = "avg. wet-hours 14-22C",
-     ylab = "model residuals",
-     main = "Oak infection model residuals vs. wet-hours predictor")
-plot(oak_infection@frame$H.2005, resid(oak_infection),
-     xlab = "Shannon's diversity index",
-     ylab = "model residuals",
-     main = "Oak infection model residuals vs. diversity predictor")
-```
-```{r pairs plot of oak infection predictor variables, echo=F}
-=======
->>>>>>> 19a5932a3ae8ae3ec49d6f5819d3ac9c41433e5d
 pairs(na.omit(select(oakplots.sub, tot_lfct.log, avg_hrs1422_wet_t_t1.log, H.2005)),
       lower.panel = panel.cor, diag.panel = panel.hist,
       main = "Predictor variables for oak infection model")
@@ -1243,15 +1101,6 @@ I fit the path model by implementing the d-sep test using the 'sem.fit' function
 In this case, the significant missing path between diversity and bay laurel density may be explained ecologically, but neither variable can be determined as causal to the other. I chose to maintain the initial hypothesized structure of the path model since the overall fit of the model was still acceptable, though this relationship could also be included as a correlated error.
 
 ```{r fit and compare all oak plots, echo=F, message=F, warning=F}
-<<<<<<< HEAD
-raw_variables_model <- sem.fit(model_list1, oakplots.model.data, 
-        corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log"),
-        conditional = T, .progressBar = F)
-
-raw_vars_refit <- sem.fit(model_list1_refit, oakplots.model.data, 
-        corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log"),
-        conditional = T, .progressBar = F)
-=======
 # raw_variables_model <- sem.fit(model_list1, oakplots.model.data, 
 #         corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log"),
 #         conditional = F, .progressBar = F)
@@ -1271,7 +1120,6 @@ raw_vars_update <- sem.fit(
 # sem.fit(model_list1.noLIDE, oakplots.model.data.sub, 
 #         corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log"),
 #         conditional = T, .progressBar = F)
->>>>>>> 19a5932a3ae8ae3ec49d6f5819d3ac9c41433e5d
 
 # scaled_variables_model <- sem.fit(model_list1.scl, oakplots.model.data,
 #           corr.errors = c("hrs_abv25ds.scl ~~ avg_hrs1422_wet_t_t1.log.scl"),
@@ -1299,10 +1147,7 @@ raw_vars_update <- sem.fit(
 
 kable(raw_vars_update, digits = 3,
       caption = "Results of the d-sep test using raw variables.")
-<<<<<<< HEAD
-=======
 
->>>>>>> 19a5932a3ae8ae3ec49d6f5819d3ac9c41433e5d
 # kable(scaled_variables_model,
 #       caption = "Results of the d-sep test using standardized variables.")
 
@@ -1317,19 +1162,6 @@ kable(raw_vars_update, digits = 3,
 The path model provides direct and indirect effects of predictor variables on multiple responses, which can be combined to calculate the total effect of a predictor variable on a response. Direct effects are from the variables that have a path pointing directly to a response variable, so effect on the response is the value of the path coefficient. Variables with indirect effects are those that are at least once removed from another response variable, that is the response variable of a predictor with an indirect effect is the predictor variable along another path in the model. Indirect effects are calculated by multiplying the coefficients along the path to the response variable of interest. The total effect of variables that have a direct and indirect effect(s) on a response is the sum of the direct and indirect effects. The standardized coefficients of the predictors that have the same response variable (i.e. direct effects) can be interpreted relative to each other in terms of influence on the response variable.
 
 ```{r get path coefficients, echo=F}
-<<<<<<< HEAD
-raw_coefficients <- sem.coefs(model_list1, oakplots.model.data,
-          corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log"))
-scaled_coefficients <- sem.coefs(model_list1, oakplots.model.data,
-          corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log"),
-          standardize = "scale")
-
-raw_coeff_refit <- sem.coefs(model_list1_refit, oakplots.model.data,
-          corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log"))
-scaled_coeff_refit <- sem.coefs(model_list1_refit, oakplots.model.data,
-          corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log"),
-          standardize = "scale")
-=======
 
 # raw_coefficients <- sem.coefs(model_list1, oakplots.model.data,
 #           corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log"))
@@ -1359,7 +1191,6 @@ scaled_coeff_update <- sem.coefs(
 # sem.coefs(model_list1.noLIDE, oakplots.model.data.sub,
 #           corr.errors = c("hrs_abv25ds ~~ avg_hrs1422_wet_t_t1.log"),
 #           standardize = "scale")
->>>>>>> 19a5932a3ae8ae3ec49d6f5819d3ac9c41433e5d
 
 
 # raw_coefficients_noUMCA <- sem.coefs(model_list2, oakplots.sub,
@@ -1501,20 +1332,6 @@ rainy_days_figure +
                  colour = "red") +
       theme_bw() +
       xlab("Sample Year") +
-<<<<<<< HEAD
-      ylab("Total Rainfall (mm)") +
-      ggtitle("Rainfall Estimated at Plots from Rain Gauges (November - May)")
-
-rainy_days_figure <- ggplot(filter(rainy_season_ppt, year > 2004), 
-                          aes(year, rain_days_v))
-rainy_days_figure +
-      geom_boxplot(aes(group = year), notch = F) +
-      geom_hline(aes(yintercept = mean(rain_days_v)),
-                 colour = "red") +
-      theme_bw() +
-      xlab("Sample Year") +
-=======
->>>>>>> 19a5932a3ae8ae3ec49d6f5819d3ac9c41433e5d
       ylab("Number of days w/precipitation") +
       ggtitle("Rainy Days at Plots (November - May)")
 ```
@@ -1525,8 +1342,6 @@ print(sessionInfo())
 ```
 
 ## Model a subset of the data
-<<<<<<< HEAD
-=======
 
 ### Bay laurel density ~ Diveristy relationship
 
@@ -1547,7 +1362,6 @@ ggplot(filter(d1, sample_year == 2006), aes(log1p(tot_oak), H.2005)) +
 
 ```
 
->>>>>>> 19a5932a3ae8ae3ec49d6f5819d3ac9c41433e5d
 I want to examine the different matrices of the mixed effects models using a smaller datset that will make them easier to visualize.
 ```{r model subset data, eval=F}
 small_data <- oakplots.model.data[1:103,]
